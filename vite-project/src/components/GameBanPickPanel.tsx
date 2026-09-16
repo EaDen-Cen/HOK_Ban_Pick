@@ -75,7 +75,7 @@ const GameBanPickPanel = ({ phases }: { phases: Phase[] }) => {
     if (currentPhase < phases.length) {
       setUserTeam(phases[currentPhase].team);
     }
-  }, [currentPhase]);
+  }, [currentPhase, phases]);
 
   const handleChampionClick = (championId: number): void => {
     if (currentPhase >= phases.length) return;

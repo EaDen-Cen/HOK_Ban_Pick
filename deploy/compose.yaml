@@ -1,0 +1,29 @@
+services:
+  broadcast:
+    build: ../vite-project
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      CONTROL_TOKEN: ${CONTROL_TOKEN:?Set CONTROL_TOKEN}
+      CASTER_TOKEN: ${CASTER_TOKEN:?Set CASTER_TOKEN}
+      OVERLAY_TOKEN: ${OVERLAY_TOKEN:?Set OVERLAY_TOKEN}
+      ALLOWED_ORIGINS: https://${DOMAIN:?Set DOMAIN}
+    volumes:
+      - match_data:/app/data
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+volumes:
+  match_data:
+  caddy_data:
+  caddy_config:

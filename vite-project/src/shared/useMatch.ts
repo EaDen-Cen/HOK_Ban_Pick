@@ -1,0 +1,73 @@
+import { useEffect, useRef, useState } from 'react';
+import type { Action, Role, Snapshot } from './types';
+const api = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const wsURL = import.meta.env.VITE_WS_URL || `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws`;
+export function useMatch(role: Role, token: string) {
+  const [snapshot, setSnapshot] = useState<Snapshot>();
+  const [status, setStatus] = useState('Connecting');
+  const [error, setError] = useState('');
+  const [pending, setPending] = useState(false);
+  const socket = useRef<WebSocket>();
+  const pendingID = useRef<string>();
+  const pendingTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let active: WebSocket | undefined;
+    let attempts = 0;
+    let abort: AbortController;
+    setSnapshot(undefined);
+    function clearPending() { pendingID.current = undefined; clearTimeout(pendingTimer.current); setPending(false); }
+    async function connect() {
+      if (stopped || !token) { setStatus('Access token required'); return; }
+      setStatus('Connecting');
+      abort = new AbortController();
+      const timeout = setTimeout(() => abort.abort(), 8000);
+      try {
+        const response = await fetch(`${api}/api/match`, { headers: { Authorization: `Bearer ${token}` }, signal: abort.signal, cache: 'no-store' });
+        if (response.status === 401) { setStatus('Invalid token'); return; }
+        if (!response.ok) throw new Error('Server unavailable');
+        const initial: Snapshot = await response.json();
+        if (stopped) return;
+        setSnapshot(initial);
+        const ws = new WebSocket(wsURL); active = ws; socket.current = ws;
+        let lastReceived = Date.now();
+        let authenticated = false;
+        const heartbeat = setInterval(() => {
+          if (Date.now() - lastReceived > 20000) ws.close();
+          else if (authenticated && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
+        }, 5000);
+        const connectTimeout = setTimeout(() => ws.close(), 8000);
+        ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', token }));
+        ws.onmessage = event => {
+          if (stopped) return;
+          lastReceived = Date.now();
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'match_state_update') { authenticated = true; clearTimeout(connectTimeout); attempts = 0; setSnapshot(msg); setStatus('Connected'); }
+          else if (msg.type === 'error') { setError(msg.error); if (msg.id === pendingID.current) clearPending(); }
+          else if (msg.type === 'ack' && msg.id === pendingID.current) clearPending();
+        };
+        ws.onclose = event => {
+          clearInterval(heartbeat);
+          clearTimeout(connectTimeout);
+          if (stopped) return;
+          if (pendingID.current) setError('Connection lost. State will reload; check the board before retrying.');
+          clearPending(); setStatus(event.code === 1008 ? 'Access rejected' : 'Reconnecting');
+          if (event.code !== 1008) schedule();
+        };
+        ws.onerror = () => ws.close();
+      } catch { if (!stopped) { setStatus('Reconnecting'); schedule(); } }
+      finally { clearTimeout(timeout); }
+    }
+    function schedule() { timer = setTimeout(connect, Math.min(10000, 500 * 2 ** attempts++) + Math.random() * 300); }
+    void connect();
+    return () => { stopped = true; clearTimeout(timer); clearTimeout(pendingTimer.current); abort?.abort(); active?.close(); pendingID.current = undefined; setPending(false); };
+  }, [role, token]);
+  function send(action: Action) {
+    if (role !== 'control' || status !== 'Connected' || !snapshot || pendingID.current || socket.current?.readyState !== WebSocket.OPEN) return;
+    setError(''); const id = crypto.randomUUID(); pendingID.current = id; setPending(true);
+    socket.current.send(JSON.stringify({ type: 'action', id, revision: snapshot.revision, action }));
+    pendingTimer.current = setTimeout(() => { setError('Acknowledgement timed out. Reloading server state; check before retrying.'); socket.current?.close(); }, 8000);
+  }
+  return { snapshot, status, error, pending, send };
+}
