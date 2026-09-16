@@ -27,7 +27,19 @@ test('caster sees picks only at the exact delay boundary, and no realtime revisi
 });
 test('all metadata and next-game resets follow the same delayed timeline', () => {
   let now = 1000000; const s = new Store(undefined, () => now);
-  apply(s, { type: 'settings', settings: { ...initialState(), blueTeam: { name: 'Secret finalist', logo: '/logo.png' }, blueScore: 1, gameNumber: 2 } });
+  apply(s, {
+    type: 'settings',
+    settings: {
+      ...initialState(),
+      blueTeam: {
+        ...initialState().blueTeam,
+        name: 'Secret finalist',
+        logo: '/logo.png',
+      },
+      blueScore: 1,
+      gameNumber: 2,
+    },
+  });
   assert.equal(s.snapshot('caster').state.blueScore, 0); assert.equal(s.snapshot('caster').state.gameNumber, 1);
   assert.equal(s.snapshot('caster').state.blueTeam.name, 'TEAM BLUE');
   now += 180000; assert.equal(s.snapshot('caster').state.blueScore, 1);

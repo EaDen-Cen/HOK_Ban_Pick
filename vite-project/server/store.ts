@@ -23,11 +23,30 @@ export class Store {
   snapshot(role: Role): Snapshot {
     if (role === 'caster') {
       const cutoff = this.clock() - this.data.delay * 1000;
-      const event = this.data.events.findLast(e => e.timestamp <= cutoff);
-      return { type: 'match_state_update', state: copy(event?.resultingState ?? initialState()), revision: event?.revision ?? 0, casterDelaySeconds: this.data.delay };
+
+      const event = [...this.data.events]
+        .reverse()
+        .find(e => e.timestamp <= cutoff);
+
+      return {
+        type: 'match_state_update',
+        state: copy(event?.resultingState ?? initialState()),
+        revision: event?.revision ?? 0,
+        casterDelaySeconds: this.data.delay,
+      };
     }
-    return { type: 'match_state_update', state: copy(this.data.state), revision: this.data.revision,
-      ...(role === 'control' ? { casterDelaySeconds: this.data.delay, canUndo: this.data.history.length > 0 } : {}) };
+
+    return {
+      type: 'match_state_update',
+      state: copy(this.data.state),
+      revision: this.data.revision,
+      ...(role === 'control'
+        ? {
+          casterDelaySeconds: this.data.delay,
+          canUndo: this.data.history.length > 0,
+        }
+        : {}),
+    };
   }
   apply(id: string, revision: number, action: Action) {
     if (typeof id !== 'string' || !/^[a-zA-Z0-9-]{8,100}$/.test(id)) throw new Error('Invalid action ID');
@@ -62,21 +81,88 @@ export class Store {
       next.history.push(copy(state)); next.state = initialState(); break;
     case 'settings': {
       const s = action.settings;
-      if (!s || !['BO1', 'BO3', 'BO5'].includes(s.seriesFormat) || !['match', 'normal'].includes(s.draftMode)) throw new Error('Invalid match settings');
+      if (
+        !s ||
+        !['BO1', 'BO3', 'BO5'].includes(s.seriesFormat) ||
+        !['match', 'normal'].includes(s.draftMode) ||
+        !['zh', 'eng'].includes(s.language) ||
+        !['panel', 'side'].includes(s.overlayLayout)
+      ) {
+        throw new Error('Invalid match settings');
+      }
       integer(s.blueScore, 0, 3); integer(s.redScore, 0, 3); integer(s.gameNumber, 1, 5);
       const wins = (Number(s.seriesFormat.slice(2)) + 1) / 2;
       if (s.blueScore > wins || s.redScore > wins || (s.blueScore === wins && s.redScore === wins) || s.gameNumber > Number(s.seriesFormat.slice(2))) throw new Error('Score/game exceeds series format');
       shortText(s.stage, 80);
       for (const team of [s.blueTeam, s.redTeam]) {
         if (!team) throw new Error('Missing team');
-        shortText(team.name, 60); shortText(team.logo, 1000);
-        if (!team.name.trim()) throw new Error('Team name is required');
-        if (team.logo && !/^https:\/\//.test(team.logo) && !/^\/(?!\/)/.test(team.logo)) throw new Error('Logo must be HTTPS or a local /path');
+
+        shortText(team.name, 60);
+        shortText(team.logo, 1000);
+
+        if (!Array.isArray(team.players) || team.players.length !== 5) {
+          throw new Error('Each team must have exactly 5 players');
+        }
+
+        if (!Array.isArray(team.playerRoles) || team.playerRoles.length !== 5) {
+          throw new Error('Each team must have exactly 5 player roles');
+        }
+
+        const validRoles = ['clash', 'jungle', 'mid', 'farm', 'roam'];
+
+        for (const role of team.playerRoles) {
+          if (!validRoles.includes(role)) {
+            throw new Error('Invalid player role');
+          }
+        }
+
+        for (const player of team.players) {
+          shortText(player, 40);
+        }
+
+        if (!team.name.trim()) {
+          throw new Error('Team name is required');
+        }
+
+        if (
+          team.logo &&
+          !/^https:\/\//.test(team.logo) &&
+          !/^\/(?!\/)/.test(team.logo)
+        ) {
+          throw new Error('Logo must be HTTPS or a local /path');
+        }
       }
       if (state.currentPhase > 0 && s.draftMode !== state.draftMode) throw new Error('Reset draft before changing mode');
       next.history.push(copy(state));
-      Object.assign(state, { blueTeam: { name: s.blueTeam.name, logo: s.blueTeam.logo }, redTeam: { name: s.redTeam.name, logo: s.redTeam.logo },
-        blueScore: s.blueScore, redScore: s.redScore, gameNumber: s.gameNumber, seriesFormat: s.seriesFormat, stage: s.stage, draftMode: s.draftMode });
+      Object.assign(state, {
+        blueTeam: {
+          name: s.blueTeam.name,
+          logo: s.blueTeam.logo,
+          players: [...s.blueTeam.players],
+          playerRoles: [...s.blueTeam.playerRoles],
+        },
+        redTeam: {
+          name: s.redTeam.name,
+          logo: s.redTeam.logo,
+          players: [...s.redTeam.players],
+          playerRoles: [...s.redTeam.playerRoles],
+        },
+
+        blueScore: s.blueScore,
+        redScore: s.redScore,
+
+        gameNumber: Math.min(
+          s.blueScore + s.redScore + 1,
+          Number(s.seriesFormat.slice(2))
+        ),
+        seriesFormat: s.seriesFormat,
+        stage: s.stage,
+
+        language: s.language,
+        overlayLayout: s.overlayLayout,
+
+        draftMode: s.draftMode,
+      });
       break;
     }
     case 'delay': integer(action.seconds, 0, 3600); next.delay = action.seconds; break;
