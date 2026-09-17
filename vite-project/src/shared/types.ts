@@ -74,14 +74,14 @@ export interface Snapshot {
 
 export const initialState = (): MatchState => ({
   blueTeam: {
-    name: 'TEAM BLUE',
+    name: '蓝方队伍',
     logo: '',
     players: ['', '', '', '', ''],
     playerRoles: ['clash', 'jungle', 'mid', 'farm', 'roam'],
   },
 
   redTeam: {
-    name: 'TEAM RED',
+    name: '红方队伍',
     logo: '',
     players: ['', '', '', '', ''],
     playerRoles: ['clash', 'jungle', 'mid', 'farm', 'roam'],
@@ -92,7 +92,7 @@ export const initialState = (): MatchState => ({
 
   gameNumber: 1,
   seriesFormat: 'BO3',
-  stage: 'COMMUNITY TOURNAMENT',
+  stage: '社区赛事',
 
   language: 'zh',
   overlayLayout: 'panel',

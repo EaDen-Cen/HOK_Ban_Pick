@@ -1,4 +1,7 @@
-const HeroList = [
+import additionalHeroes from '../data/additionalHeroes.js';
+import type { Hero } from '../data/heroTypes.js';
+
+const legacyHeroes: Hero[] = [
   {
     id: 1,
     englishName: "Agudo",
@@ -111,7 +114,7 @@ const HeroList = [
     imageLink: "/commons/images/3/3f/Butterfly_Hero_Icon_2019.png",
     occupation: "Jungling",
     altOccupation: '',
-    couter:[33,41],
+    counter:[33,41],
     beCountered:[77,35],
 
   },
@@ -968,7 +971,7 @@ const HeroList = [
     occupation: "Jungling",
     altOccupation: "Clash Lane",
     counter:[72],
-    beCountered:[93,46,35]
+    beCountered:[46,35]
   },
   {
     id: 94,
@@ -1004,4 +1007,23 @@ const HeroList = [
     beCountered:[34,77]
   }
 ];
-export default HeroList;
+const updatedNames: Record<number, string> = {
+  25: 'Dr Bian',
+  54: "Ao'yin",
+  73: 'Gao Changgong',
+  74: 'Wang Zhaojun',
+  92: 'Zhuangzi',
+};
+
+// ID 29 was an unnamed placeholder. Do not recycle IDs: persisted drafts use them.
+const heroes: Hero[] = [
+  ...legacyHeroes.filter(h => h.englishName.trim() && h.chineseName.trim()).map(h => ({
+    ...h,
+    imageLink: `/heroesImg/${h.id}.png`,
+    englishName: updatedNames[h.id] || h.englishName,
+    aliases: updatedNames[h.id] ? [h.englishName] : [],
+  })),
+  ...additionalHeroes,
+];
+
+export default heroes;

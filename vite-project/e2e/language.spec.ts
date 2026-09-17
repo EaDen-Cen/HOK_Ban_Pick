@@ -1,0 +1,162 @@
+import { test, expect, type Page } from '@playwright/test';
+
+const chineseCharacters = /[\u3400-\u9fff]/u;
+
+async function expectEnglishInterface(page: Page) {
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.locator('body')).not.toContainText(chineseCharacters);
+  const visibleLabels = await page.locator('input, select, button, img, [title], [aria-label]').evaluateAll(elements =>
+    elements.filter(element => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.width > 0 && bounds.height > 0;
+    }).flatMap(element => [
+      element.getAttribute('title') || '',
+      element.getAttribute('aria-label') || '',
+      element.getAttribute('placeholder') || '',
+      element.getAttribute('alt') || '',
+      element instanceof HTMLInputElement && element.type === 'text' ? element.value : '',
+    ]),
+  );
+  expect(visibleLabels.filter(label => chineseCharacters.test(label))).toEqual([]);
+}
+
+test('language switches every interface, persists on refresh, and follows the caster timeline', async ({ browser, baseURL }) => {
+  // Keep all mutations on Playwright's disposable match server.
+  expect(baseURL).toBe('http://127.0.0.1:3101');
+  const context = await browser.newContext();
+  const control = await context.newPage();
+  const caster = await context.newPage();
+  const overlay = await context.newPage();
+  const pageErrors: string[] = [];
+  for (const page of [control, caster, overlay]) page.on('pageerror', error => pageErrors.push(error.message));
+
+  await control.goto('/control#token=e2e-control');
+  await expect(control.locator('.status')).toHaveText(/^(已连接|Connected)$/);
+  control.on('dialog', dialog => dialog.accept());
+  await control.getByRole('button', { name: /^(重置整场比赛|Reset match)$/ }).click();
+  await expect(control.getByRole('button', { name: '重置整场比赛', exact: true })).toBeEnabled();
+  await control.locator('.delay-controls input').fill('180');
+  await control.getByRole('button', { name: '设置延迟', exact: true }).click();
+  await expect(control.getByRole('button', { name: '设置延迟', exact: true })).toBeEnabled();
+  await caster.goto('/caster#token=e2e-caster');
+  await overlay.setViewportSize({ width: 1920, height: 1080 });
+  await overlay.goto('/overlay/draft#token=e2e-overlay');
+  await expect(caster.locator('.status')).toHaveText('已连接');
+
+  await control.getByTitle('澜', { exact: true }).click();
+  await expect(overlay.locator('.blue .bans img')).toHaveCount(1);
+  await control.getByRole('button', { name: '比赛设置', exact: true }).click();
+  await control.getByLabel('界面语言', { exact: true }).selectOption('eng');
+  await expect(control.locator('html')).toHaveAttribute('lang', 'zh-CN');
+  await expect(control.getByRole('button', { name: '保存设置', exact: true })).toBeVisible();
+  await expect(overlay.locator('html')).toHaveAttribute('lang', 'zh-CN');
+  await control.getByRole('button', { name: '保存设置', exact: true }).click();
+
+  await expect(control.locator('.status')).toHaveText('Connected');
+  await expect(control.getByLabel('Interface language', { exact: true })).toHaveValue('eng');
+  await expect(overlay.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(caster.locator('html')).toHaveAttribute('lang', 'zh-CN');
+  await expect(caster.locator('.analysis[data-side="blue"] h2')).toHaveText('蓝方队伍');
+  await expect(caster.locator('.blue .bans img')).toHaveCount(0);
+
+  await control.locator('.delay-controls input').fill('0');
+  await control.getByRole('button', { name: 'Set delay', exact: true }).click();
+  await expect(caster.locator('.status')).toHaveText('Connected');
+  await expect(caster.locator('.blue .bans img')).toHaveCount(1);
+  for (const page of [control, caster]) {
+    await expect(page.locator('.analysis[data-side="blue"] .analysis-side')).toHaveText('Blue draft analysis');
+    await expect(page.locator('.analysis[data-side="red"] .analysis-side')).toHaveText('Red draft analysis');
+    await expect(page.locator('.analysis[data-side="blue"] h2')).toHaveText('TEAM BLUE');
+    await expect(page.locator('.analysis[data-side="red"] h2')).toHaveText('TEAM RED');
+  }
+  for (const page of [control, caster, overlay]) {
+    await expect(page.locator('.blue .bans img')).toHaveAttribute('alt', 'Lam');
+    await expectEnglishInterface(page);
+  }
+  await control.screenshot({ path: 'artifacts/settings-en.png', fullPage: true });
+
+  // Server validation must be translated too, without changing the saved match.
+  for (const score of await control.locator('.score-control').all()) {
+    await score.getByRole('button', { name: 'Increase series score', exact: true }).click();
+    await score.getByRole('button', { name: 'Increase series score', exact: true }).click();
+  }
+  await control.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await expect(control.getByRole('alert')).toBeVisible();
+  await expect(control.getByRole('alert')).not.toContainText(chineseCharacters);
+  await expect(control.getByRole('alert')).toContainText(/score|series|game/i);
+  await expect(overlay.locator('.blue header strong')).toHaveText('0');
+  await expect(overlay.locator('.red header strong')).toHaveText('0');
+
+  for (const score of await control.locator('.score-control').all()) {
+    await score.getByRole('button', { name: 'Decrease series score', exact: true }).click();
+    await score.getByRole('button', { name: 'Decrease series score', exact: true }).click();
+  }
+  await control.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await expect(control.getByRole('alert')).toHaveCount(0);
+  await control.getByRole('button', { name: 'Hide match settings', exact: true }).click();
+  await control.getByLabel('Search heroes', { exact: true }).fill('澜');
+  await expect(control.locator('.hero-grid button')).toHaveCount(1);
+  await expect(control.locator('.hero-grid button')).toHaveAttribute('title', 'Lam');
+  await expect(control.locator('.hero-grid button')).toHaveText('Lam');
+  await control.getByLabel('Search heroes', { exact: true }).fill('');
+  await control.getByRole('button', { name: 'Jungling', exact: true }).click();
+  await expect(control.getByTitle('Feyd', { exact: true })).toBeVisible();
+  await expect(control.getByTitle('Haya', { exact: true })).toHaveCount(0);
+  await control.getByRole('button', { name: 'All', exact: true }).click();
+  await expect(control.locator('.hero-grid button')).toHaveCount(116);
+
+  for (const page of [control, caster, overlay]) await page.reload();
+  for (const page of [control, caster]) await expect(page.locator('.status')).toHaveText('Connected');
+  for (const page of [control, caster, overlay]) await expectEnglishInterface(page);
+  await control.screenshot({ path: 'artifacts/control-en.png', fullPage: true });
+  await caster.screenshot({ path: 'artifacts/caster-en.png', fullPage: true });
+  await overlay.screenshot({ path: 'artifacts/overlay-en.png', omitBackground: true });
+
+  // The alternative OBS layout also contains translated team and player defaults.
+  await control.getByRole('button', { name: 'Match settings', exact: true }).click();
+  const layoutSelect = control.locator('.settings select').filter({ has: control.locator('option[value="side"]') });
+  await layoutSelect.selectOption('side');
+  await control.getByRole('button', { name: 'Save settings', exact: true }).click();
+  await expect(overlay.locator('.side-overlay')).toBeVisible();
+  await expect(overlay.locator('.side-player').first()).toContainText('Player 1');
+  await expectEnglishInterface(overlay);
+  const gameWindow = await overlay.locator('.game-window').boundingBox();
+  expect(gameWindow).not.toBeNull();
+  expect(gameWindow!.width).toBeGreaterThanOrEqual(1000);
+  expect(gameWindow!.height).toBeGreaterThanOrEqual(600);
+  await expect(overlay.locator('.game-window')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  for (const slot of await overlay.locator('.side-overlay .hero-slot').all()) {
+    const box = await slot.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThan(0);
+    expect(box!.width).toBeLessThanOrEqual(220);
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(1920);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(1080);
+  }
+  const leftPlayer = await overlay.locator('.side-pick-column.blue .side-player').first().boundingBox();
+  const rightPlayer = await overlay.locator('.side-pick-column.red .side-player').first().boundingBox();
+  expect(leftPlayer!.x + leftPlayer!.width).toBeLessThanOrEqual(gameWindow!.x);
+  expect(rightPlayer!.x).toBeGreaterThanOrEqual(gameWindow!.x + gameWindow!.width);
+  await overlay.screenshot({ path: 'artifacts/overlay-side-en.png', omitBackground: true });
+
+  await layoutSelect.selectOption('panel');
+  await control.getByLabel('Interface language', { exact: true }).selectOption('zh');
+  await expect(control.getByRole('button', { name: 'Save settings', exact: true })).toBeVisible();
+  await expect(control.locator('html')).toHaveAttribute('lang', 'en');
+  await control.getByRole('button', { name: 'Save settings', exact: true }).click();
+  for (const page of [control, caster, overlay]) {
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
+    await expect(page.locator('.blue .bans img')).toHaveAttribute('alt', '澜');
+    await expect(page.locator('.blue h2')).toHaveText('蓝方队伍');
+    await expect(page.locator('.red h2')).toHaveText('红方队伍');
+  }
+  await expect(control.getByRole('button', { name: '设置延迟', exact: true })).toBeVisible();
+  await expect(control.getByLabel('搜索英雄', { exact: true })).toBeVisible();
+  await expect(control.getByRole('button', { name: '打野', exact: true })).toBeVisible();
+  await expect(control.getByTitle('暃', { exact: true })).toBeVisible();
+  await expect(caster.locator('.analysis-side')).toHaveText(['蓝方阵容分析', '红方阵容分析']);
+  expect(pageErrors).toEqual([]);
+  await context.close();
+});

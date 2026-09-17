@@ -1,0 +1,90 @@
+{
+  "checkedAt": "2026-09-16",
+  "note": "补齐前次保留英文占位的9个中文显示名。community-roster为第三方国际服资料；aov-official-name为联动角色沿用Garena官方中文名，不宣称已逐项核实HOK客户端本地化。Chicha保留目录原写法蚩奼，兼容蚩姹搜索；弗洛伦由官方繁体弗洛倫转换。",
+  "records": [
+    {
+      "id": 99,
+      "englishName": "Garuda",
+      "chineseName": "迦楼罗",
+      "sourceType": "community-roster",
+      "sources": [
+        "https://wiki.bittopup.com/zh-CN/hok/110",
+        "https://hokstats.gg/heroes/garuda/"
+      ]
+    },
+    {
+      "id": 102,
+      "englishName": "Fatih",
+      "chineseName": "法提赫",
+      "sourceType": "community-roster",
+      "sources": [
+        "https://hokstats.gg/heroes/fatih/"
+      ]
+    },
+    {
+      "id": 105,
+      "englishName": "Lapulapu",
+      "chineseName": "拉普拉普",
+      "sourceType": "community-roster",
+      "sources": [
+        "https://hokstats.gg/heroes/lapulapu/"
+      ]
+    },
+    {
+      "id": 106,
+      "englishName": "Chano",
+      "chineseName": "苍",
+      "sourceType": "community-roster",
+      "sources": [
+        "https://hokstats.gg/heroes/chano/"
+      ]
+    },
+    {
+      "id": 108,
+      "englishName": "Annette",
+      "chineseName": "安奈特",
+      "sourceType": "aov-official-name",
+      "sources": [
+        "https://moba.garena.tw/news/show/1231"
+      ]
+    },
+    {
+      "id": 112,
+      "englishName": "Devara",
+      "chineseName": "谛梵罗",
+      "sourceType": "community-roster",
+      "sources": [
+        "https://wiki.bittopup.com/zh-CN/hok/537",
+        "https://hokstats.gg/heroes/devara/"
+      ]
+    },
+    {
+      "id": 114,
+      "englishName": "Chicha",
+      "chineseName": "蚩奼",
+      "sourceType": "community-roster",
+      "sources": [
+        "https://wiki.bittopup.com/zh-CN/hok/172",
+        "https://hokstats.gg/heroes/chicha/"
+      ]
+    },
+    {
+      "id": 115,
+      "englishName": "Florentino",
+      "chineseName": "弗洛伦",
+      "sourceType": "aov-official-name",
+      "sources": [
+        "https://moba.garena.tw/game/hero/78"
+      ]
+    },
+    {
+      "id": 116,
+      "englishName": "Lorion",
+      "chineseName": "洛里昂",
+      "sourceType": "aov-official-name",
+      "sources": [
+        "https://moba.garena.tw/game/hero/110"
+      ]
+    }
+  ]
+}

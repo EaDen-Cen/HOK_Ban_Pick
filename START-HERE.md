@@ -116,6 +116,10 @@ token 经 Authorization 头和 WS 初始认证消息发送，分享链接使用 
 
 ## 验证
 
+比赛设置中的“界面语言”控制整套界面和英雄名称。选择中文或英文并保存后，按钮、设置、状态、错误、阵容分析与直播画面统一切换，每处只显示当前语言；搜索始终支持中英文。
+语言由服务器随比赛状态保存，刷新后保留；控制台和直播画面实时更新，解说页继续使用延迟时间轴上的语言设置。自定义队名与选手名保留原文。
+解说页的两组关系分析分别标注蓝方、红方、实际队名和对手，队名与队徽同样遵守解说延迟。
+
 ```powershell
 npm test
 npm run build
@@ -132,8 +136,11 @@ npm run test:e2e
 
 实现参考：[ws 官方文档](https://github.com/websockets/ws/blob/master/README.md)、[Vite 代理文档](https://vite.dev/config/server-options.html#server-proxy)。
 
-## 后续工作最后一步：英雄数据核对
+## 最后一步已完成：英雄名单与头像补齐
 
-默认采用每队 4 Ban / 5 Pick 的赛事模式。英雄数据来自旧项目，功能测试通过不代表名单已同步。
-按用户要求，完成其他开发与验证后再核对英雄数据。顺序和原则见 [WORKFLOW.md](WORKFLOW.md)，
-本轮差异清单见 [HERO-DATA-AUDIT.md](HERO-DATA-AUDIT.md)。
+默认采用每队 4 Ban / 5 Pick 的赛事模式。本轮新增 21 条英雄/形态记录及全部本地头像，
+目前共 116 条有效记录，保留旧有效 ID 与旧名搜索别名。图标显示不依赖外部网站。
+未核实的新英雄关系保持“暂无数据”；Flowborn 形态及联动英雄以实际比赛房间为准。
+顺序和原则见 [WORKFLOW.md](WORKFLOW.md)，
+同步内容与来源见 [HERO-DATA-AUDIT.md](HERO-DATA-AUDIT.md)、
+[图标来源清单](research/new-hero-assets.json)。

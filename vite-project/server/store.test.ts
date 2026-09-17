@@ -41,7 +41,7 @@ test('all metadata and next-game resets follow the same delayed timeline', () =>
     },
   });
   assert.equal(s.snapshot('caster').state.blueScore, 0); assert.equal(s.snapshot('caster').state.gameNumber, 1);
-  assert.equal(s.snapshot('caster').state.blueTeam.name, 'TEAM BLUE');
+  assert.equal(s.snapshot('caster').state.blueTeam.name, initialState().blueTeam.name);
   now += 180000; assert.equal(s.snapshot('caster').state.blueScore, 1);
   apply(s, { type: 'reset_match' }); assert.equal(s.snapshot('caster').state.blueScore, 1);
   now += 180000; assert.equal(s.snapshot('caster').state.blueScore, 0);

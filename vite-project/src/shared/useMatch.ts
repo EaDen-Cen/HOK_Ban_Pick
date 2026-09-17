@@ -26,7 +26,7 @@ export function useMatch(role: Role, token: string) {
       try {
         const response = await fetch(`${api}/api/match`, { headers: { Authorization: `Bearer ${token}` }, signal: abort.signal, cache: 'no-store' });
         if (response.status === 401) { setStatus('Invalid token'); return; }
-        if (!response.ok) throw new Error('Server unavailable');
+        if (!response.ok) throw new Error('暂时无法连接服务器');
         const initial: Snapshot = await response.json();
         if (stopped) return;
         setSnapshot(initial);
@@ -51,7 +51,7 @@ export function useMatch(role: Role, token: string) {
           clearInterval(heartbeat);
           clearTimeout(connectTimeout);
           if (stopped) return;
-          if (pendingID.current) setError('Connection lost. State will reload; check the board before retrying.');
+          if (pendingID.current) setError('连接已断开，正在重新加载比赛状态。请确认当前选禁结果后再重试。');
           clearPending(); setStatus(event.code === 1008 ? 'Access rejected' : 'Reconnecting');
           if (event.code !== 1008) schedule();
         };
@@ -67,7 +67,7 @@ export function useMatch(role: Role, token: string) {
     if (role !== 'control' || status !== 'Connected' || !snapshot || pendingID.current || socket.current?.readyState !== WebSocket.OPEN) return;
     setError(''); const id = crypto.randomUUID(); pendingID.current = id; setPending(true);
     socket.current.send(JSON.stringify({ type: 'action', id, revision: snapshot.revision, action }));
-    pendingTimer.current = setTimeout(() => { setError('Acknowledgement timed out. Reloading server state; check before retrying.'); socket.current?.close(); }, 8000);
+    pendingTimer.current = setTimeout(() => { setError('操作确认超时，正在重新加载比赛状态。请确认结果后再重试。'); socket.current?.close(); }, 8000);
   }
   return { snapshot, status, error, pending, send };
 }

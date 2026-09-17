@@ -1,0 +1,233 @@
+[
+  {
+    "id": 97,
+    "englishName": "Yango",
+    "campId": 125,
+    "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/en5o11rK.png",
+    "occupation": "Clash Lane",
+    "localPath": "/heroesImg/97.png",
+    "sha256": "34F044C20764D9A81DC48EE11355BC3D4B7CB5DE6BE5D870C5F65F830C50672B",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/125"
+  },
+  {
+    "id": 98,
+    "englishName": "Flowborn (Tank)",
+    "campId": 581,
+    "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/jbrX5mQc.jpeg",
+    "occupation": "Clash Lane",
+    "localPath": "/heroesImg/98.jpeg",
+    "sha256": "0DBA75C1F72B29B282553061856C9D114DD10215A7004312FB153753BAB94CC2",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/581"
+  },
+  {
+    "id": 99,
+    "englishName": "Garuda",
+    "campId": 110,
+    "iconUrl": "https://camp.honorofkings.com/camp/admin/default/h6UHy1TN.png",
+    "occupation": "Mid Lane",
+    "localPath": "/heroesImg/99.png",
+    "sha256": "9166BDCA5C5966F66E7348BAB3510F07EFFD3C3984683A9A5FF010116870B581",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/110"
+  },
+  {
+    "id": 100,
+    "englishName": "Arke",
+    "campId": 116,
+    "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/IUMPYUy4.png",
+    "occupation": "Jungling",
+    "localPath": "/heroesImg/100.png",
+    "sha256": "C49F40C75D0BFC21E6FCC1F2CDB54589EAA6405CA408BAEC04693A1A6B06C59B",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/116"
+  },
+  {
+    "id": 101,
+    "englishName": "Bai Qi",
+    "campId": 120,
+    "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/uY7c38Tt.png",
+    "occupation": "Clash Lane",
+    "localPath": "/heroesImg/101.png",
+    "sha256": "F48E00A5324A04E9DFED3E620D2F8DA80D09E448D1D6471B75A99B1A2466C68D",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/120"
+  },
+  {
+    "id": 102,
+    "englishName": "Fatih",
+    "campId": 128,
+    "iconUrl": "https://camp.honorofkings.com/camp/admin/default/6IY77h7c.png",
+    "occupation": "Clash Lane",
+    "localPath": "/heroesImg/102.png",
+    "sha256": "BF2A606DD83DD76B2294BDFD80FFEC3AEB0AFECBF83354DEAEDA122490A68D9E",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/128"
+  },
+  {
+    "id": 103,
+    "englishName": "Umbrosa",
+    "campId": 558,
+    "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/ioDVAbAf.jpg",
+    "occupation": "Clash Lane",
+    "localPath": "/heroesImg/103.jpg",
+    "sha256": "F89F1A3F86E8C4ABF4A43CE4F8616BBE52E70B5AE7C4B8ABC8B9592F422074E1",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/558"
+  },
+  {
+    "id": 104,
+    "englishName": "Flowborn (Marksman)",
+    "campId": 584,
+    "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/WuG07My1.jpeg",
+    "occupation": "Farm Lane",
+    "localPath": "/heroesImg/104.jpeg",
+    "sha256": "1C589EB6944BC7A92919BC2E0781A518AC6B27DF601D901E48BAC32AACD7BEE5",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/584"
+  },
+  {
+    "id": 105,
+    "englishName": "Lapulapu",
+    "campId": 168,
+    "iconUrl": "https://camp.honorofkings.com/camp/admin/default/AuWJ7G0J.png",
+    "occupation": "Roaming",
+    "localPath": "/heroesImg/105.png",
+    "sha256": "F94990E715C41035E5949F6EFE6834706CB961139C88A978B8B1C26DD64D8CB9",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/168"
+  },
+  {
+    "id": 106,
+    "englishName": "Chano",
+    "campId": 177,
+    "iconUrl": "https://camp.honorofkings.com/camp/admin/default/sJURXorM.png",
+    "occupation": "Farm Lane",
+    "localPath": "/heroesImg/106.png",
+    "sha256": "014095D03C1A0BD8E4B2A088FBE66531BA7D20C5FD0EFAA5E9A63FBD3DC5FC57",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/177"
+  },
+  {
+    "id": 107,
+    "englishName": "Xuance",
+    "campId": 195,
+    "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/keW8Hfo0.png",
+    "occupation": "Jungling",
+    "localPath": "/heroesImg/107.png",
+    "sha256": "1B9EB42A1031816EE15B0D655406659EA1867FC3A43A5F81F03029AF61803422",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/195"
+  },
+  {
+    "id": 108,
+    "englishName": "Annette",
+    "campId": 640,
+    "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/49o0xBua.png",
+    "occupation": "Roaming",
+    "localPath": "/heroesImg/108.png",
+    "sha256": "90ED2212EBF1F85C1BF7287A9D613AAADE5C3960BCF387A82C04CD30FBF3EDA1",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/640"
+  },
+  {
+    "id": 109,
+    "englishName": "Yixing",
+    "campId": 197,
+    "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/RLA5jvBk.png",
+    "occupation": "Mid Lane",
+    "localPath": "/heroesImg/109.png",
+    "sha256": "0CEC55ABC8FF7178BBAA9A41BB807D00CB317F997619666F0120414DCB96BE0D",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/197"
+  },
+  {
+    "id": 110,
+    "englishName": "Sakeer",
+    "campId": 534,
+    "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/ionwVFtV.png",
+    "occupation": "Roaming",
+    "localPath": "/heroesImg/110.png",
+    "sha256": "214917B96E7ADFA09BF122CC53A10BA741F92BCA57C4B01E5775AC6333339FC8",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/534"
+  },
+  {
+    "id": 111,
+    "englishName": "Haya",
+    "campId": 521,
+    "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/iIdXNhQ5.png",
+    "occupation": "Mid Lane",
+    "localPath": "/heroesImg/111.png",
+    "sha256": "E605F8FE4CD646572D5DBED354243D4AFFD869C23935242DE21473ACDC447547",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/521"
+  },
+  {
+    "id": 112,
+    "englishName": "Devara",
+    "campId": 537,
+    "iconUrl": "https://camp.honorofkings.com/camp/admin/default/MagzAk8i.png",
+    "occupation": "Clash Lane",
+    "localPath": "/heroesImg/112.png",
+    "sha256": "FA825033024F59046A663A3B5C6D75F2074A6F066AE109D6104A5EF20A31224B",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/537"
+  },
+  {
+    "id": 113,
+    "englishName": "Feyd",
+    "campId": 542,
+    "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/m8aOqFQE.png",
+    "occupation": "Jungling",
+    "localPath": "/heroesImg/113.png",
+    "sha256": "116D5869D61ACB97AF414A45E5B5E777861C303E81AFD528D431AB6ABD1AB832",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/542"
+  },
+  {
+    "id": 114,
+    "englishName": "Chicha",
+    "campId": 172,
+    "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/lkU98jAV.png",
+    "occupation": "Clash Lane",
+    "localPath": "/heroesImg/114.png",
+    "sha256": "DE59D4D56F8ACFE0846F1333986B5AAA8CDDEED38D54A34FCF0BCCFC49A45782",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/172"
+  },
+  {
+    "id": 115,
+    "englishName": "Florentino",
+    "campId": 631,
+    "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/skJXGWLF.png",
+    "occupation": "Clash Lane",
+    "localPath": "/heroesImg/115.png",
+    "sha256": "110778E950DB2192328A1A3A01B60F32591B63C7E72E99408B5CA93A5443682B",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/631"
+  },
+  {
+    "id": 116,
+    "englishName": "Lorion",
+    "campId": 635,
+    "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/UDiFFfId.png",
+    "occupation": "Mid Lane",
+    "localPath": "/heroesImg/116.png",
+    "sha256": "88348AA86F3852BEB43F651918208DC1BD780F3768AC77B8AACB89A080F10452",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/635"
+  },
+  {
+    "id": 117,
+    "englishName": "Flowborn (Mage)",
+    "campId": 582,
+    "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/66xErXNs.jpeg",
+    "occupation": "Mid Lane",
+    "localPath": "/heroesImg/117.jpeg",
+    "sha256": "8F0C2A436DC1CECA91D28D7A10D2BF19905C078AB63904AE757BFE7102406444",
+    "fetchedAt": "2026-09-16",
+    "catalogUrl": "https://wiki.bittopup.com/hok/582"
+  }
+]

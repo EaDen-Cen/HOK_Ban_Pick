@@ -30,26 +30,26 @@ const server = createServer(async (req, res) => {
   }
   const json = (status: number, data: unknown) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)); };
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
-  if (req.method !== 'GET') { json(405, { error: 'Method not allowed' }); return; }
+  if (req.method !== 'GET') { json(405, { error: '不支持此请求方式' }); return; }
   try {
     const url = new URL(req.url || '/', 'http://localhost');
     if (url.pathname === '/api/health') { json(200, { ok: true }); return; }
     if (url.pathname.startsWith('/api/')) {
       const role = roleFor(req.headers.authorization?.replace(/^Bearer /, ''));
-      if (!role) { json(401, { error: 'Access token required' }); return; }
+      if (!role) { json(401, { error: '访问口令缺失或无效，请重新输入' }); return; }
       if (url.pathname === '/api/match') json(200, store.snapshot(role));
       else if (url.pathname === '/api/heroes') json(200, heroes);
-      else json(404, { error: 'Not found' });
+      else json(404, { error: '找不到请求的内容' });
       return;
     }
     const root = resolve(project, 'dist');
     const route = ['/', '/control', '/caster', '/overlay/draft'].includes(url.pathname);
     const file = resolve(root, route ? 'index.html' : `.${decodeURIComponent(url.pathname)}`);
-    if (!file.startsWith(root + '/') && !file.startsWith(root + '\\')) { json(404, { error: 'Not found' }); return; }
-    const mime: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
+    if (!file.startsWith(root + '/') && !file.startsWith(root + '\\')) { json(404, { error: '找不到请求的内容' }); return; }
+    const mime: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
     res.setHeader('Content-Type', mime[extname(file)] || 'application/octet-stream');
     res.end(await readFile(file));
-  } catch { json(404, { error: 'Not found; run npm run build for frontend' }); }
+  } catch { json(404, { error: '找不到页面或文件，请联系导播检查网页是否已构建' }); }
 });
 const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 16384 });
 interface Client { role?: Role; last?: string; alive: boolean; count: number; window: number }
@@ -65,9 +65,9 @@ function update(ws: WebSocket, force = false) {
 }
 wss.on('connection', (ws, req) => {
   const origin = req.headers.origin;
-  if (production && origin && !allowedOrigins.includes(origin)) { ws.close(1008, 'Origin not allowed'); return; }
+  if (production && origin && !allowedOrigins.includes(origin)) { ws.close(1008, '此页面地址无权连接'); return; }
   clients.set(ws, { alive: true, count: 0, window: Date.now() });
-  const authTimeout = setTimeout(() => { if (!clients.get(ws)?.role) ws.close(1013, 'Authentication timeout; retry'); }, 5000);
+  const authTimeout = setTimeout(() => { if (!clients.get(ws)?.role) ws.close(1013, '身份验证超时，请重试'); }, 5000);
   ws.on('pong', () => { const c = clients.get(ws); if (c) c.alive = true; });
   ws.on('error', () => ws.terminate());
   ws.on('close', () => { clearTimeout(authTimeout); clients.delete(ws); });
@@ -76,21 +76,24 @@ wss.on('connection', (ws, req) => {
     let id: unknown;
     try {
       if (Date.now() - c.window > 1000) { c.window = Date.now(); c.count = 0; }
-      if (++c.count > 30) { ws.close(1008, 'Too many messages'); return; }
-      const message = JSON.parse(raw.toString()); id = message.id;
+      if (++c.count > 30) { ws.close(1008, '操作过于频繁，请稍后重试'); return; }
+      let message;
+      try { message = JSON.parse(raw.toString()); } catch { throw new Error('消息格式无效，请重新连接后重试'); }
+      if (!message || typeof message !== 'object') throw new Error('消息格式无效，请重新连接后重试');
+      id = message.id;
       if (!c.role) {
         c.role = message.type === 'auth' ? roleFor(message.token) : undefined;
-        if (!c.role) { ws.close(1008, 'Invalid token'); return; }
+        if (!c.role) { ws.close(1008, '访问口令无效'); return; }
         clearTimeout(authTimeout); update(ws, true); return;
       }
       if (message.type === 'ping') { ws.send(JSON.stringify({ type: 'pong' })); return; }
-      if (c.role !== 'control') throw new Error('Read-only connection');
-      if (message.type !== 'action') throw new Error('Unknown message');
+      if (c.role !== 'control') throw new Error('当前页面仅供查看，无法修改比赛');
+      if (message.type !== 'action') throw new Error('不支持此消息类型');
       store.apply(message.id, message.revision, message.action);
       for (const client of clients.keys()) update(client);
       ws.send(JSON.stringify({ type: 'ack', id: message.id }));
     } catch (e) {
-      ws.send(JSON.stringify({ type: 'error', id: typeof id === 'string' ? id : undefined, error: e instanceof Error ? e.message : 'Invalid message' }));
+      ws.send(JSON.stringify({ type: 'error', id: typeof id === 'string' ? id : undefined, error: e instanceof Error ? e.message : '消息无效' }));
       update(ws, true);
     }
   });
@@ -99,6 +102,6 @@ const tick = setInterval(() => { for (const ws of clients.keys()) update(ws); },
 const heartbeat = setInterval(() => { for (const [ws, c] of clients) { if (!c.alive) ws.terminate(); else { c.alive = false; ws.ping(); } } }, 15000);
 server.listen(Number(process.env.PORT || 3001), process.env.HOST || (production ? '0.0.0.0' : '127.0.0.1'), () => console.log('HOK Broadcast server ready on port ' + (process.env.PORT || 3001)));
 for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => {
-  clearInterval(tick); clearInterval(heartbeat); for (const ws of clients.keys()) ws.close(1001, 'Server stopping');
+  clearInterval(tick); clearInterval(heartbeat); for (const ws of clients.keys()) ws.close(1001, '服务器正在停止');
   server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 2000).unref();
 });

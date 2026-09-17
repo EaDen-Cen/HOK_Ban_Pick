@@ -1,0 +1,14 @@
+[
+  {
+    "id": 12,
+    "englishName": "Cai Yan",
+    "chineseName": "蔡文姬",
+    "campId": 184,
+    "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/kQXkW7ab.png",
+    "catalogUrl": "https://wiki.bittopup.com/hok/184",
+    "localPath": "/heroesImg/12.png",
+    "fetchedAt": "2026-09-16",
+    "sha256": "EB68962707702FF0B0706AEAEE83627F5E740503CFD18896BB6F36128E837019",
+    "reason": "Replace the old portrait with a borderless official portrait; the white frame was baked into the original asset."
+  }
+]

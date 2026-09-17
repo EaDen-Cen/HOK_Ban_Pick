@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './BroadcastApp.css';
 import heroes from './components/HeroList';
 import {
@@ -11,17 +11,22 @@ import {
   type Side,
 } from './shared/types';
 import { useMatch } from './shared/useMatch';
+import { connectionLabel, lanes, laneName, phaseName, seriesName, stageName, teamName } from './shared/display';
+import { translator } from './shared/i18n';
+import { errorMessage } from './shared/errorMessages';
 import './broadcast.css';
 const hero = (id: number) => heroes.find(h => h.id === id);
 const name = (id: number, lang: Language) => { const h = hero(id); return h ? (lang === 'zh' ? h.chineseName : h.englishName) : '—'; };
 function HeroSlot({ id, ban = false, lang }: { id?: number; ban?: boolean; lang: Language }) {
-  return <div className={`hero-slot ${ban ? 'ban' : ''} ${id ? 'filled' : ''}`} key={id || 'empty'}>{id ? <><img src={`/heroesImg/${id}.png`} alt={name(id, lang)} /><span>{name(id, lang)}</span>{ban && <b className="ban-mark">╱</b>}</> : <span className="empty">{ban ? 'BAN' : 'PICK'}</span>}</div>;
+  const t = translator(lang);
+  return <div className={`hero-slot ${ban ? 'ban' : ''} ${id ? 'filled' : ''}`} key={id || 'empty'}>{id ? <><img src={hero(id)?.imageLink} alt={name(id, lang)} /><span>{name(id, lang)}</span>{ban && <b className="ban-mark">╱</b>}</> : <span className="empty">{t(ban ? 'ban' : 'emptyPick')}</span>}</div>;
 }
 function Board({ state, lang }: { state: MatchState; lang: Language }) {
+  const t = translator(lang);
   const phase = phases(state.draftMode)[state.currentPhase];
-  return <section className="board"><div className="match-strip"><span>HONOR OF KINGS</span><span>{state.stage} · GAME {state.gameNumber} · {state.seriesFormat}</span></div>
-    <div className="team-grid">{(['blue', 'red'] as const).map(side => <section key={side} className={`team ${side} ${phase?.team === side ? 'active' : ''}`}><header>{state[`${side}Team`].logo && <img className="logo" src={state[`${side}Team`].logo} alt="" />}<h2>{state[`${side}Team`].name}</h2><strong>{state[`${side}Score`]}</strong></header><div className="picks">{Array.from({ length: 5 }, (_, i) => <HeroSlot key={i} id={state[`${side}Picks`][i]} lang={lang} />)}</div><div className="bans"><small>BANS</small>{Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, i) => <HeroSlot key={i} id={state[`${side}Bans`][i]} ban lang={lang} />)}</div></section>)}</div>
-    <footer className={`phase ${phase?.team || ''}`} key={state.currentPhase}>{phase ? `${phase.team.toUpperCase()} ${phase.action.toUpperCase()} · ${state.currentPhase + 1} / ${phases(state.draftMode).length}` : 'DRAFT COMPLETE'}</footer></section>;
+  return <section className="board"><div className="match-strip"><span>{t('gameTitle')}</span><span>{stageName(state.stage, lang)} · {t('gameNumber', { number: state.gameNumber })} · {seriesName(state.seriesFormat, lang)}</span></div>
+    <div className="team-grid">{(['blue', 'red'] as const).map(side => <section key={side} className={`team ${side} ${phase?.team === side ? 'active' : ''}`}><header>{state[`${side}Team`].logo && <img className="logo" src={state[`${side}Team`].logo} alt="" />}<h2>{teamName(state, side, lang)}</h2><strong>{state[`${side}Score`]}</strong></header><div className="picks">{Array.from({ length: 5 }, (_, i) => <HeroSlot key={i} id={state[`${side}Picks`][i]} lang={lang} />)}</div><div className="bans"><small>{t('ban')}</small>{Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, i) => <HeroSlot key={i} id={state[`${side}Bans`][i]} ban lang={lang} />)}</div></section>)}</div>
+    <footer className={`phase ${phase?.team || ''}`} key={state.currentPhase}>{phase ? `${phaseName(state, lang)} · ${t('phaseStep', { step: state.currentPhase + 1, total: phases(state.draftMode).length })}` : t('draftComplete')}</footer></section>;
 }
 function SideOverlay({
   state,
@@ -30,6 +35,7 @@ function SideOverlay({
   state: MatchState;
   lang: Language;
 }) {
+  const t = translator(lang);
   const phase = phases(state.draftMode)[state.currentPhase];
 
   return (
@@ -41,20 +47,20 @@ function SideOverlay({
             <img src={state.blueTeam.logo} alt="" />
           )}
 
-          <strong>{state.blueTeam.name}</strong>
+          <strong>{teamName(state, 'blue', lang)}</strong>
           <b>{state.blueScore}</b>
         </div>
 
         <div className="side-match-info">
-          <span>{state.stage}</span>
+          <span>{stageName(state.stage, lang)}</span>
           <strong>
-            GAME {state.gameNumber} · {state.seriesFormat}
+            {t('gameNumber', { number: state.gameNumber })} · {seriesName(state.seriesFormat, lang)}
           </strong>
         </div>
 
         <div className="side-team red">
           <b>{state.redScore}</b>
-          <strong>{state.redTeam.name}</strong>
+          <strong>{teamName(state, 'red', lang)}</strong>
 
           {state.redTeam.logo && (
             <img src={state.redTeam.logo} alt="" />
@@ -106,7 +112,7 @@ function SideOverlay({
 
               <span>
                 {state.blueTeam.players[i] ||
-                  `Player ${i + 1}`}
+                  t('playerNumber', { number: i + 1 })}
               </span>
             </div>
           ))}
@@ -121,7 +127,7 @@ function SideOverlay({
             <div className="side-player" key={i}>
               <span>
                 {state.redTeam.players[i] ||
-                  `Player ${i + 1}`}
+                  t('playerNumber', { number: i + 1 })}
               </span>
 
               <HeroSlot
@@ -136,8 +142,7 @@ function SideOverlay({
 
       {phase && (
         <div className={`side-phase ${phase.team}`}>
-          {phase.team === 'blue' ? 'BLUE' : 'RED'}{' '}
-          {phase.action === 'ban' ? 'BAN' : 'PICK'}
+          {phaseName(state, lang)}
         </div>
       )}
 
@@ -153,18 +158,25 @@ function TeamAnalysis({
   lang: Language;
   side: Side;
 }) {
+  const t = translator(lang);
   const picks = state[`${side}Picks`], enemy = state[`${side === 'blue' ? 'red' : 'blue'}Picks`];
   const selected = [...state.bluePicks, ...state.redPicks];
   const groups = [
-    { title: 'Synergy / Combo · 搭配', sources: picks, field: 'combo' as const },
-    { title: 'Our picks counter · 我方克制', sources: picks, field: 'counter' as const },
-    { title: 'Potential enemy counters · 我方被克制', sources: picks, field: 'beCountered' as const },
-    { title: 'Counters enemy picks · 克制敌方推荐', sources: enemy, field: 'beCountered' as const },
+    { title: t('synergy'), sources: picks, field: 'combo' as const },
+    { title: t('ourCounters'), sources: picks, field: 'counter' as const },
+    { title: t('counteredBy'), sources: picks, field: 'beCountered' as const },
+    { title: t('enemyCounters'), sources: enemy, field: 'beCountered' as const },
   ];
-  return <section className="panel analysis"><div className="section-head"><h2>Draft intelligence</h2></div><small>Original hero relationship data · 原项目数据，供解说参考</small><div className="analysis-grid">{groups.map(g => {
-    const ids = [...new Set(g.sources.flatMap(id => hero(id)?.[g.field] || []))].filter(id => hero(id) && !state.blueBans.includes(id) && !state.redBans.includes(id));
-    return <article key={g.title}><h3>{g.title}</h3>{ids.length ? <div className="recommendations">{ids.map(id => <div className="recommendation" key={id}><img src={`/heroesImg/${id}.png`} alt="" /><div><b>{name(id, lang)}{selected.includes(id) ? ' ✓' : ''}</b><small>{g.sources.filter(s => hero(s)?.[g.field]?.includes(id)).map(s => name(s, lang)).join(' · ')}</small></div></div>)}</div> : <p className="muted">No relationships yet / 暂无数据</p>}</article>;
-  })}</div></section>;
+  return <section className={`panel analysis analysis-${side}`} data-side={side}>
+    <header className="analysis-team-header">
+      {state[`${side}Team`].logo && <img className="analysis-logo" src={state[`${side}Team`].logo} alt="" />}
+      <div><span className="analysis-side">{t(side === 'blue' ? 'blueAnalysis' : 'redAnalysis')}</span><h2>{teamName(state, side, lang)}</h2></div>
+      <span className="analysis-opponent">{t('opponent', { team: teamName(state, side === 'blue' ? 'red' : 'blue', lang) })}</span>
+    </header>
+    <small>{t('relationshipHint')}</small><div className="analysis-grid">{groups.map(g => {
+      const ids = [...new Set(g.sources.flatMap(id => hero(id)?.[g.field] || []))].filter(id => hero(id) && !state.blueBans.includes(id) && !state.redBans.includes(id));
+      return <article key={g.title}><h3>{g.title}</h3>{ids.length ? <div className="recommendations">{ids.map(id => <div className="recommendation" key={id}><img src={hero(id)?.imageLink} alt="" /><div><b>{name(id, lang)}{selected.includes(id) ? ' ✓' : ''}</b><small>{g.sources.filter(s => hero(s)?.[g.field]?.includes(id)).map(s => name(s, lang)).join(' · ')}</small></div></div>)}</div> : <p className="muted">{t('noRelationships')}</p>}</article>;
+    })}</div></section>;
 }
 function Analysis({
   state,
@@ -198,7 +210,14 @@ function Settings({
   send: (a: Action) => void;
   disabled: boolean;
 }) {
-  const [form, setForm] = useState<MatchSettings>(state);
+  const lang = state.language ?? 'zh';
+  const t = translator(lang);
+  const [form, setForm] = useState<MatchSettings>(() => ({
+    ...state,
+    blueTeam: { ...state.blueTeam, name: teamName(state, 'blue', lang) },
+    redTeam: { ...state.redTeam, name: teamName(state, 'red', lang) },
+    stage: stageName(state.stage, lang),
+  }));
 
   const maxWins =
     (Number(form.seriesFormat.slice(2)) + 1) / 2;
@@ -215,7 +234,7 @@ function Settings({
       }}
     >
       <h2>
-        Match settings / 比赛设置
+        {t('matchSettings')}
       </h2>
 
       <div className="settings-grid">
@@ -226,13 +245,11 @@ function Settings({
           return (
             <div key={side}>
               <h3>
-                {side === 'blue'
-                  ? 'BLUE TEAM / 蓝方'
-                  : 'RED TEAM / 红方'}
+                {t(side === 'blue' ? 'blueTeam' : 'redTeam')}
               </h3>
 
               <label>
-                Team name / 队名
+                {t('teamName')}
 
                 <input
                   maxLength={60}
@@ -251,10 +268,10 @@ function Settings({
               </label>
 
               <label>
-                Logo URL
+                {t('logoAddress')}
 
                 <input
-                  placeholder="https://… or /teamLogo/blue.png"
+                  placeholder={t('logoPlaceholder')}
                   value={form[teamKey].logo}
                   onChange={e =>
                     setForm({
@@ -269,16 +286,16 @@ function Settings({
               </label>
 
               <div className="player-settings">
-                <b>Players / 选手</b>
+                <b>{t('players')}</b>
 
                 {form[teamKey].players.map((player, index) => (
                   <div className="player-setting-row" key={index}>
                     <label>
-                      Player {index + 1}
+                      {t('playerNumber', { number: index + 1 })}
 
                       <input
                         maxLength={40}
-                        placeholder={`Player ${index + 1}`}
+                        placeholder={t('playerNumber', { number: index + 1 })}
                         value={player}
                         onChange={e => {
                           const players = [...form[teamKey].players];
@@ -296,7 +313,7 @@ function Settings({
                     </label>
 
                     <label>
-                      Role / 分路
+                      {t('lane')}
 
                       <select
                         value={
@@ -321,11 +338,11 @@ function Settings({
                           });
                         }}
                       >
-                        <option value="clash">Clash Lane / 对抗路</option>
-                        <option value="jungle">Jungling / 打野</option>
-                        <option value="mid">Mid Lane / 中路</option>
-                        <option value="farm">Farm Lane / 发育路</option>
-                        <option value="roam">Roaming / 游走</option>
+                        <option value="clash">{t('clash')}</option>
+                        <option value="jungle">{t('jungle')}</option>
+                        <option value="mid">{t('mid')}</option>
+                        <option value="farm">{t('farm')}</option>
+                        <option value="roam">{t('roam')}</option>
                       </select>
                     </label>
                   </div>
@@ -333,11 +350,12 @@ function Settings({
               </div>
 
               <label>
-                Series score / 比分
+                {t('seriesScore')}
 
                 <div className="score-control">
                   <button
                     type="button"
+                    aria-label={t('decreaseScore')}
                     disabled={form[scoreKey] <= 0}
                     onClick={() =>
                       setForm({
@@ -356,6 +374,7 @@ function Settings({
 
                   <button
                     type="button"
+                    aria-label={t('increaseScore')}
                     disabled={
                       form[scoreKey] >= maxWins
                     }
@@ -377,11 +396,11 @@ function Settings({
 
         <div>
           <h3>
-            MATCH / 比赛
+            {t('matchDisplay')}
           </h3>
 
           <label>
-            Stage / 阶段
+            {t('stage')}
 
             <input
               value={form.stage}
@@ -396,7 +415,7 @@ function Settings({
           </label>
 
           <label>
-            Series / 赛制
+            {t('seriesFormat')}
 
             <select
               value={form.seriesFormat}
@@ -429,32 +448,28 @@ function Settings({
               }}
             >
               <option value="BO1">
-                BO1
+                {t('bo1')}
               </option>
 
               <option value="BO3">
-                BO3
+                {t('bo3')}
               </option>
 
               <option value="BO5">
-                BO5
+                {t('bo5')}
               </option>
             </select>
           </label>
 
           <label>
-            Game / 当前局
+            {t('currentGame')}
             <div className="readonly-field">
-              Game {Math.min(
-                form.blueScore + form.redScore + 1,
-                Number(form.seriesFormat.slice(2))
-              )}
-              <span> · 自动计算</span>
+              {t('gameNumber', { number: Math.min(form.blueScore + form.redScore + 1, Number(form.seriesFormat.slice(2))) })}<span> · {t('automatic')}</span>
             </div>
           </label>
 
           <label>
-            BP mode / BP 模式
+            {t('draftMode')}
 
             <select
               value={form.draftMode}
@@ -468,19 +483,20 @@ function Settings({
               }
             >
               <option value="match">
-                Match · 4 bans
+                {t('matchMode')}
               </option>
 
               <option value="normal">
-                Normal · 2 bans
+                {t('normalMode')}
               </option>
             </select>
           </label>
 
           <label>
-            Language / 界面语言
+            {t('language')}
 
             <select
+              aria-label={t('language')}
               value={form.language}
               onChange={e =>
                 setForm({
@@ -492,17 +508,18 @@ function Settings({
               }
             >
               <option value="zh">
-                中文
+                {t('chinese')}
               </option>
 
               <option value="eng">
-                English
+                {t('english')}
               </option>
             </select>
+            <small>{t('languageHint')}</small>
           </label>
 
           <label>
-            Overlay layout / 直播布局
+            {t('overlayLayout')}
 
             <select
               value={form.overlayLayout}
@@ -516,11 +533,11 @@ function Settings({
               }
             >
               <option value="panel">
-                Panel / 信息面板
+                {t('panelLayout')}
               </option>
 
               <option value="side">
-                Side / 左右侧栏
+                {t('sideLayout')}
               </option>
             </select>
           </label>
@@ -531,7 +548,7 @@ function Settings({
         disabled={disabled}
         className="primary"
       >
-        Save settings / 保存
+        {t('saveSettings')}
       </button>
     </form>
   );
@@ -549,29 +566,87 @@ export default function BroadcastApp() {
   const [filter, setFilter] = useState('all');
   const [showSettings, setShowSettings] = useState(false);
   const [delayInput, setDelayInput] = useState(180);
+  const [lastLanguage, setLastLanguage] = useState<Language>(() => sessionStorage.getItem(`hok-language-${role}`) === 'eng' ? 'eng' : 'zh');
   const { snapshot, status, error, pending, send } = useMatch(role, token);
   const connected = status === 'Connected', disabled = !connected || pending, state = snapshot?.state;
-  const lang: Language = state?.language ?? 'zh';
+  const lang: Language = token && !['Invalid token', 'Access rejected'].includes(status) ? state?.language ?? lastLanguage : lastLanguage;
+  const t = translator(lang);
+  useEffect(() => {
+    document.documentElement.lang = lang === 'eng' ? 'en' : 'zh-CN';
+    document.title = translator(lang)('appName');
+    sessionStorage.setItem(`hok-language-${role}`, lang);
+    setLastLanguage(lang);
+  }, [lang, role]);
   if (role === 'overlay') {
-    return (
-      <main className="overlay">
-        {state &&
-          (
-            state.overlayLayout === 'side'
-              ? <SideOverlay state={state} lang={lang} />
-              : <Board state={state} lang={lang} />
-          )}
-      </main>
-    );
+    return <main className="overlay">{state && (
+      state.overlayLayout === 'side'
+        ? <SideOverlay state={state} lang={lang} />
+        : <Board state={state} lang={lang} />
+    )}</main>;
   }
-  if (!token || status === 'Invalid token' || status === 'Access rejected') return <main className="login panel"><p>HOK BROADCAST SYSTEM</p><h1>{role.toUpperCase()} ACCESS</h1><form onSubmit={e => { e.preventDefault(); sessionStorage.setItem(`hok-${role}`, tokenInput); setToken(tokenInput); }}><label>Access token<input type="password" required value={tokenInput} onChange={e => setTokenInput(e.target.value)} /></label><button className="primary">Connect</button></form><p>{status}</p></main>;
+  if (!token || status === 'Invalid token' || status === 'Access rejected') {
+    return <main className="login panel">
+      <p>{t('appName')}</p><h1>{t(role === 'caster' ? 'casterLogin' : 'controlLogin')}</h1>
+      <label>{t('language')}<select aria-label={t('language')} value={lang} onChange={e => setLastLanguage(e.target.value as Language)}>
+        <option value="zh">{t('chinese')}</option><option value="eng">{t('english')}</option>
+      </select></label>
+      <form onSubmit={e => { e.preventDefault(); sessionStorage.setItem(`hok-${role}`, tokenInput); setToken(tokenInput); }}>
+        <label>{t('accessToken')}<input type="password" required value={tokenInput} onChange={e => setTokenInput(e.target.value)} /></label>
+        <button className="primary">{t('connect')}</button>
+      </form><p>{connectionLabel(status, lang)}</p>
+    </main>;
+  }
   const phase = state && phases(state.draftMode)[state.currentPhase];
   const used = state ? [...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks] : [];
-  return <main className="workspace"><header className="topbar"><div><span className="eyebrow">COMMUNITY ESPORTS / PRODUCTION</span><h1>HOK <span>Broadcast</span></h1></div><div className="toolbar"><b className={connected ? 'status live' : 'status'}>{status}</b><span>{role === 'caster' ? `DELAYED · ${snapshot?.casterDelaySeconds ?? '—'}s` : 'CONTROL · REALTIME'}</span><button onClick={() => { sessionStorage.removeItem(`hok-${role}`); setToken(''); }}>Disconnect</button></div></header>
-    {!connected && <p className="notice">连接未就绪，操作已禁用。现有画面保留，正在恢复服务器状态。</p>}{error && <p role="alert" className="error">{error}</p>}
-    {state ? <><Board state={state} lang={lang} />{role === 'control' && <><section className="operator-bar panel"><div className="toolbar"><button disabled={disabled || !snapshot?.canUndo} onClick={() => send({ type: 'undo' })}>Undo / 撤销上次比赛操作</button><button disabled={disabled} onClick={() => confirm('Reset draft? Team settings and scores are preserved. 清空当前 BP？') && send({ type: 'reset_draft' })}>Reset draft</button><button className="danger" disabled={disabled} onClick={() => confirm('Reset the entire match, teams and scores? 重置整场比赛？') && send({ type: 'reset_match' })}>Reset match</button><button onClick={() => setShowSettings(!showSettings)}>Match settings</button></div>
-      <div className="delay-controls"><b>Caster delay · {snapshot?.casterDelaySeconds}s</b>{[-10, -5, -1, 1, 5, 10].map(n => <button key={n} disabled={disabled || (snapshot?.casterDelaySeconds || 0) + n < 0 || (snapshot?.casterDelaySeconds || 0) + n > 3600} onClick={() => send({ type: 'delay', seconds: (snapshot?.casterDelaySeconds || 0) + n })}>{n > 0 ? '+' : ''}{n}</button>)}<input aria-label="Caster delay seconds" type="number" min={0} max={3600} value={delayInput} onChange={e => setDelayInput(Number(e.target.value))} /><button disabled={disabled} onClick={() => send({ type: 'delay', seconds: delayInput })}>Set seconds</button></div></section>
-    {showSettings && <Settings key={JSON.stringify([state.blueTeam, state.redTeam, state.blueScore, state.redScore, state.gameNumber, state.seriesFormat, state.stage, state.draftMode])} state={state} send={send} disabled={disabled} />}
-    <section className="panel"><div className="section-head"><h2>{phase ? `${phase.team.toUpperCase()} ${phase.action.toUpperCase()}` : 'DRAFT COMPLETE'} <small> · Select one hero</small></h2><input aria-label="Search heroes" placeholder="Search hero / 搜索英雄" value={search} onChange={e => setSearch(e.target.value)} /></div><div className="filters">{['all', 'Clash Lane', 'Jungling', 'Mid Lane', 'Farm Lane', 'Roaming'].map(r => <button key={r} className={filter === r ? 'selected' : ''} onClick={() => setFilter(r)}>{r === 'all' ? 'All / 全部' : r}</button>)}</div><div className="hero-grid">{heroes.filter(h => (filter === 'all' || h.occupation === filter || h.altOccupation === filter) && `${h.englishName} ${h.chineseName}`.toLowerCase().includes(search.toLowerCase())).map(h => <button key={h.id} title={`${h.englishName} / ${h.chineseName}`} disabled={disabled || !phase || used.includes(h.id)} onClick={() => phase && send({ type: 'draft_action', ...phase, heroId: h.id })}><img src={`/heroesImg/${h.id}.png`} alt="" /><span>{name(h.id, lang)}</span></button>)}</div></section></>}<Analysis state={state} lang={lang} /></> : <section className="panel"><h2>Connecting to match server…</h2></section>}
-    <footer className="page-footer">HOK BROADCAST SYSTEM · {role === 'caster' ? 'READ ONLY / DELAYED TIMELINE' : 'SERVER AUTHORITATIVE'} · Hero data: qiqi47/HOK_Ban_Pick</footer></main>;
+  return <main className="workspace">
+    <header className="topbar">
+      <div><span className="eyebrow">{t(role === 'caster' ? 'casterEyebrow' : 'controlEyebrow')}</span><h1>{t('brandTitle')} <span>{t('brandSubtitle')}</span></h1></div>
+      <div className="toolbar">
+        <b className={connected ? 'status live' : 'status'}>{connectionLabel(status, lang)}</b>
+        <span>{role === 'caster' ? t('delayedFeed', { seconds: snapshot?.casterDelaySeconds ?? '—' }) : t('controlRealtime')}</span>
+        <button onClick={() => { sessionStorage.removeItem(`hok-${role}`); setToken(''); }}>{t('logout')}</button>
+      </div>
+    </header>
+    {!connected && <p className="notice">{t('disconnectedNotice')}</p>}
+    {error && <p role="alert" className="error">{errorMessage(error, lang)}</p>}
+    {state ? <>
+      <Board state={state} lang={lang} />
+      {role === 'control' && <>
+        <section className="operator-bar panel">
+          <div className="toolbar">
+            <button disabled={disabled || !snapshot?.canUndo} onClick={() => send({ type: 'undo' })}>{t('undo')}</button>
+            <button disabled={disabled} onClick={() => confirm(t('confirmResetDraft')) && send({ type: 'reset_draft' })}>{t('resetDraft')}</button>
+            <button className="danger" disabled={disabled} onClick={() => confirm(t('confirmResetMatch')) && send({ type: 'reset_match' })}>{t('resetMatch')}</button>
+            <button onClick={() => setShowSettings(!showSettings)}>{t(showSettings ? 'hideSettings' : 'matchSettings')}</button>
+          </div>
+          <div className="delay-controls">
+            <b>{t('casterDelay', { seconds: snapshot?.casterDelaySeconds ?? '—' })}</b>
+            {[-10, -5, -1, 1, 5, 10].map(n => <button key={n}
+              aria-label={t(n > 0 ? 'increaseDelay' : 'decreaseDelay', { seconds: Math.abs(n) })}
+              disabled={disabled || (snapshot?.casterDelaySeconds || 0) + n < 0 || (snapshot?.casterDelaySeconds || 0) + n > 3600}
+              onClick={() => send({ type: 'delay', seconds: (snapshot?.casterDelaySeconds || 0) + n })}>{n > 0 ? '+' : ''}{n} {t('secondsShort')}</button>)}
+            <input aria-label={t('delayInput')} type="number" min={0} max={3600} value={delayInput} onChange={e => setDelayInput(Number(e.target.value))} />
+            <button disabled={disabled} onClick={() => send({ type: 'delay', seconds: delayInput })}>{t('setDelay')}</button>
+          </div>
+        </section>
+        {showSettings && <Settings key={JSON.stringify([state.blueTeam, state.redTeam, state.blueScore, state.redScore, state.gameNumber, state.seriesFormat, state.stage, state.draftMode, state.language, state.overlayLayout])} state={state} send={send} disabled={disabled} />}
+        <section className="panel">
+          <div className="section-head">
+            <h2>{phaseName(state, lang)}{phase && <small> · {t('selectHero')}</small>}</h2>
+            <input aria-label={t('searchHeroes')} placeholder={t('searchHeroes')} value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className="filters">{lanes.map(r => <button key={r} className={filter === r ? 'selected' : ''} onClick={() => setFilter(r)}>{laneName(r, lang)}</button>)}</div>
+          <p className="muted">{t('availabilityHint')}</p>
+          <div className="hero-grid">{heroes.filter(h => (filter === 'all' || h.occupation === filter || h.altOccupation === filter)
+            && `${h.englishName} ${h.chineseName} ${(h.aliases || []).join(' ')}`.toLowerCase().includes(search.toLowerCase())).map(h => <button
+            key={h.id} title={name(h.id, lang)} disabled={disabled || !phase || used.includes(h.id)}
+            onClick={() => phase && send({ type: 'draft_action', ...phase, heroId: h.id })}>
+            <img src={h.imageLink} alt="" /><span>{name(h.id, lang)}</span>
+          </button>)}</div>
+        </section>
+      </>}
+      <Analysis state={state} lang={lang} />
+    </> : <section className="panel"><h2>{t('connectingServer')}</h2></section>}
+    <footer className="page-footer">{t('communitySystem')} · {t(role === 'caster' ? 'readOnlyFooter' : 'serverFooter')} · {t('rosterUpdated', { date: '2026-09-16' })}</footer>
+  </main>;
 }

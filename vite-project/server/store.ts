@@ -7,10 +7,10 @@ interface Event { id: string; timestamp: number; type: string; resultingState: M
 interface Data { version: 1; state: MatchState; events: Event[]; history: MatchState[]; revision: number; delay: number; ids: string[] }
 const copy = <T>(v: T): T => structuredClone(v);
 function integer(v: unknown, min: number, max: number): asserts v is number {
-  if (!Number.isInteger(v) || Number(v) < min || Number(v) > max) throw new Error(`Expected integer ${min}–${max}`);
+  if (!Number.isInteger(v) || Number(v) < min || Number(v) > max) throw new Error(`请输入 ${min} 至 ${max} 之间的整数`);
 }
 function shortText(v: unknown, max: number): asserts v is string {
-  if (typeof v !== 'string' || v.length > max) throw new Error('Invalid text');
+  if (typeof v !== 'string' || v.length > max) throw new Error(`文字格式不正确，最多可输入 ${max} 个字符`);
 }
 export class Store {
   data: Data;
@@ -18,7 +18,7 @@ export class Store {
     this.data = file && existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {
       version: 1, state: initialState(), events: [], history: [], revision: 0, delay: 180, ids: [],
     };
-    if (this.data.version !== 1 || !Array.isArray(this.data.events) || !Array.isArray(this.data.history)) throw new Error('Invalid store: restore a valid backup');
+    if (this.data.version !== 1 || !Array.isArray(this.data.events) || !Array.isArray(this.data.history)) throw new Error('比赛存档无效，请恢复有效备份');
   }
   snapshot(role: Role): Snapshot {
     if (role === 'caster') {
@@ -49,18 +49,18 @@ export class Store {
     };
   }
   apply(id: string, revision: number, action: Action) {
-    if (typeof id !== 'string' || !/^[a-zA-Z0-9-]{8,100}$/.test(id)) throw new Error('Invalid action ID');
+    if (typeof id !== 'string' || !/^[a-zA-Z0-9-]{8,100}$/.test(id)) throw new Error('操作编号无效，请刷新页面后重试');
     if (this.data.ids.includes(id)) return;
-    if (revision !== this.data.revision) throw new Error('State changed: review the updated board and try again');
-    if (!action || typeof action !== 'object') throw new Error('Invalid action');
+    if (revision !== this.data.revision) throw new Error('比赛状态已更新，请确认当前选禁结果后重试');
+    if (!action || typeof action !== 'object') throw new Error('操作无效');
     const next = copy(this.data);
     const state = next.state;
     switch (action.type) {
     case 'draft_action': {
       const phase = phases(state.draftMode)[state.currentPhase];
-      if (!phase || phase.team !== action.team || phase.action !== action.action) throw new Error('Wrong draft phase');
-      if (!heroes.some(h => h.id === action.heroId)) throw new Error('Unknown hero');
-      if ([...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks].includes(action.heroId)) throw new Error('Hero already selected');
+      if (!phase || phase.team !== action.team || phase.action !== action.action) throw new Error('当前选禁阶段不支持此操作，请确认轮次和队伍');
+      if (!heroes.some(h => h.id === action.heroId)) throw new Error('找不到该英雄');
+      if ([...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks].includes(action.heroId)) throw new Error('该英雄已被选择或禁用');
       next.history.push(copy(state));
       state[`${phase.team}${phase.action === 'ban' ? 'Bans' : 'Picks'}`].push(action.heroId);
       state.currentPhase++;
@@ -69,7 +69,7 @@ export class Store {
     }
     case 'undo': {
       const previous = next.history.pop();
-      if (!previous) throw new Error('Nothing to undo');
+      if (!previous) throw new Error('没有可以撤销的操作');
       next.state = previous;
       break;
     }
@@ -88,31 +88,31 @@ export class Store {
         !['zh', 'eng'].includes(s.language) ||
         !['panel', 'side'].includes(s.overlayLayout)
       ) {
-        throw new Error('Invalid match settings');
+        throw new Error('比赛设置无效，请检查赛制、语言和画面布局');
       }
       integer(s.blueScore, 0, 3); integer(s.redScore, 0, 3); integer(s.gameNumber, 1, 5);
       const wins = (Number(s.seriesFormat.slice(2)) + 1) / 2;
-      if (s.blueScore > wins || s.redScore > wins || (s.blueScore === wins && s.redScore === wins) || s.gameNumber > Number(s.seriesFormat.slice(2))) throw new Error('Score/game exceeds series format');
+      if (s.blueScore > wins || s.redScore > wins || (s.blueScore === wins && s.redScore === wins) || s.gameNumber > Number(s.seriesFormat.slice(2))) throw new Error('比分或局数不符合当前赛制');
       shortText(s.stage, 80);
       for (const team of [s.blueTeam, s.redTeam]) {
-        if (!team) throw new Error('Missing team');
+        if (!team) throw new Error('请填写队伍信息');
 
         shortText(team.name, 60);
         shortText(team.logo, 1000);
 
         if (!Array.isArray(team.players) || team.players.length !== 5) {
-          throw new Error('Each team must have exactly 5 players');
+          throw new Error('每支队伍必须填写 5 个选手位置');
         }
 
         if (!Array.isArray(team.playerRoles) || team.playerRoles.length !== 5) {
-          throw new Error('Each team must have exactly 5 player roles');
+          throw new Error('每支队伍必须设置 5 个选手分路');
         }
 
         const validRoles = ['clash', 'jungle', 'mid', 'farm', 'roam'];
 
         for (const role of team.playerRoles) {
           if (!validRoles.includes(role)) {
-            throw new Error('Invalid player role');
+            throw new Error('选手分路无效');
           }
         }
 
@@ -121,7 +121,7 @@ export class Store {
         }
 
         if (!team.name.trim()) {
-          throw new Error('Team name is required');
+          throw new Error('队伍名称不能为空');
         }
 
         if (
@@ -129,10 +129,10 @@ export class Store {
           !/^https:\/\//.test(team.logo) &&
           !/^\/(?!\/)/.test(team.logo)
         ) {
-          throw new Error('Logo must be HTTPS or a local /path');
+          throw new Error('队标地址须使用加密网页链接，或以单个斜线开头的本地路径');
         }
       }
-      if (state.currentPhase > 0 && s.draftMode !== state.draftMode) throw new Error('Reset draft before changing mode');
+      if (state.currentPhase > 0 && s.draftMode !== state.draftMode) throw new Error('请先重置选禁，再修改选禁赛制');
       next.history.push(copy(state));
       Object.assign(state, {
         blueTeam: {
@@ -166,18 +166,22 @@ export class Store {
       break;
     }
     case 'delay': integer(action.seconds, 0, 3600); next.delay = action.seconds; break;
-    default: throw new Error('Unknown action');
+    default: throw new Error('不支持此操作');
     }
     next.revision++;
     if (action.type !== 'delay') next.events.push({ id, timestamp: Math.max(this.clock(), next.events.at(-1)?.timestamp ?? 0), type: action.type, resultingState: copy(next.state), revision: next.revision });
     next.ids = [...next.ids.slice(-999), id];
     // Commit durable state before acknowledging or broadcasting. Failure leaves memory unchanged.
     if (this.file) {
-      mkdirSync(dirname(this.file), { recursive: true });
-      const temporary = `${this.file}.tmp`;
-      const fd = openSync(temporary, 'w');
-      try { writeSync(fd, JSON.stringify(next)); fsyncSync(fd); } finally { closeSync(fd); }
-      renameSync(temporary, this.file);
+      try {
+        mkdirSync(dirname(this.file), { recursive: true });
+        const temporary = `${this.file}.tmp`;
+        const fd = openSync(temporary, 'w');
+        try { writeSync(fd, JSON.stringify(next)); fsyncSync(fd); } finally { closeSync(fd); }
+        renameSync(temporary, this.file);
+      } catch (cause) {
+        throw new Error('比赛状态保存失败，本次操作未生效，请联系导播检查服务器存储后重试', { cause });
+      }
     }
     this.data = next;
   }

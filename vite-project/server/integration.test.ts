@@ -36,7 +36,7 @@ test('HTTP/WS auth, realtime broadcast, delayed REST/WS, read-only roles and rec
     assert.deepEqual(delayed.state.blueBans, []); assert.equal(delayed.revision, 0);
     caster.ws.send(JSON.stringify({ type: 'action', id: randomUUID(), revision: 1, action: { type: 'reset_match' } }));
     await wait(() => caster.messages.some(m => m.type === 'error'));
-    assert.ok(caster.messages.some(m => m.error === 'Read-only connection'));
+    assert.ok(caster.messages.some(m => m.error === '当前页面仅供查看，无法修改比赛'));
     overlay.ws.close(); const reconnected = await connect('test-overlay');
     assert.equal(reconnected.messages[0].revision, 1);
     control.ws.send(JSON.stringify({ type: 'action', id: randomUUID(), revision: 1, action: { type: 'delay', seconds: 0 } }));
