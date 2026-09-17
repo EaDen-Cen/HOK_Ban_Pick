@@ -23,9 +23,8 @@ del /q "artifacts\cloudflared.log" >nul 2>&1
 del /q "artifacts\current-public-url.txt" >nul 2>&1
 
 echo [1/6] Stopping old HOK server on port 3001...
-for /f "tokens=5" %%P in ('netstat -ano ^| findstr ":3001" ^| findstr "LISTENING"') do (
-  taskkill /PID %%P /F >nul 2>&1
-)
+for /f "tokens=5" %%P in ('netstat -ano ^| findstr ":3001" ^| findstr "LISTENING"') do taskkill /PID %%P /F >nul 2>&1
+
 echo [2/6] Stopping old Cloudflare tunnel...
 taskkill /IM cloudflared.exe /F >nul 2>&1
 timeout /t 1 /nobreak >nul
@@ -36,47 +35,50 @@ start "HOK Broadcast Server" /min cmd /c "cd /d ""%~dp0"" && npm run server"
 echo       Waiting for http://127.0.0.1:3001 ...
 set /a SERVER_TRIES=0
 :wait_server
-powershell -NoProfile -Command "try { $r=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:3001/control' -TimeoutSec 2; exit 0 } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -Command "try { Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:3001/control' -TimeoutSec 2 | Out-Null; exit 0 } catch { exit 1 }" >nul 2>&1
 if not errorlevel 1 goto server_ready
 set /a SERVER_TRIES+=1
-if !SERVER_TRIES! GEQ 30 (
-  echo [ERROR] Server did not become ready within 30 seconds.
-  echo         Check the "HOK Broadcast Server" window.
-  pause
-  exit /b 1
-)
+if !SERVER_TRIES! GEQ 30 goto server_failed
 timeout /t 1 /nobreak >nul
 goto wait_server
+
+:server_failed
+echo [ERROR] Server did not become ready within 30 seconds.
+echo         Check the "HOK Broadcast Server" window.
+pause
+exit /b 1
 
 :server_ready
 echo       Server is ready.
 
 echo [4/6] Starting Cloudflare Quick Tunnel...
-start "HOK Cloudflare Tunnel" /min powershell -NoProfile -ExecutionPolicy Bypass -Command "& cloudflared tunnel --url http://127.0.0.1:3001 *^>^&1 ^| Tee-Object -FilePath '%~dp0artifacts\cloudflared.log'"
+start "HOK Cloudflare Tunnel" /min cmd /c "cloudflared tunnel --url http://127.0.0.1:3001 1^>^> ""%~dp0artifacts\cloudflared.log"" 2^>^&1"
 
 echo [5/6] Waiting for public URL...
 set /a TUNNEL_TRIES=0
 :wait_tunnel
 set "PUBLIC_URL="
-for /f "usebackq delims=" %%U in (`powershell -NoProfile -Command "$p='%~dp0artifacts\cloudflared.log'; if(Test-Path $p){$m=Select-String -Path $p -Pattern 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' -AllMatches; if($m){$m.Matches.Value ^| Select-Object -Last 1}}"`) do set "PUBLIC_URL=%%U"
+for /f "delims=" %%U in ('powershell -NoProfile -Command "$p='artifacts\cloudflared.log'; if(Test-Path $p){ $text=Get-Content -Raw $p; $m=[regex]::Matches($text,'https://[a-zA-Z0-9-]+\.trycloudflare\.com'); if($m.Count -gt 0){ Write-Output $m[$m.Count-1].Value } }"') do set "PUBLIC_URL=%%U"
 if defined PUBLIC_URL goto tunnel_ready
 set /a TUNNEL_TRIES+=1
-if !TUNNEL_TRIES! GEQ 45 (
-  echo [ERROR] Could not obtain a trycloudflare.com URL within 45 seconds.
-  echo         Check the "HOK Cloudflare Tunnel" window and artifacts\cloudflared.log.
-  pause
-  exit /b 1
-)
+if !TUNNEL_TRIES! GEQ 45 goto tunnel_failed
 timeout /t 1 /nobreak >nul
 goto wait_tunnel
 
+:tunnel_failed
+echo [ERROR] Could not obtain a trycloudflare.com URL within 45 seconds.
+echo.
+echo Last Cloudflare log lines:
+powershell -NoProfile -Command "if(Test-Path 'artifacts\cloudflared.log'){Get-Content 'artifacts\cloudflared.log' -Tail 12}"
+echo.
+pause
+exit /b 1
+
 :tunnel_ready
-(
-  echo !PUBLIC_URL!
-  echo !PUBLIC_URL!/control
-  echo !PUBLIC_URL!/caster
-  echo !PUBLIC_URL!/overlay/draft
-) > "artifacts\current-public-url.txt"
+> "artifacts\current-public-url.txt" echo !PUBLIC_URL!
+>>"artifacts\current-public-url.txt" echo !PUBLIC_URL!/control
+>>"artifacts\current-public-url.txt" echo !PUBLIC_URL!/caster
+>>"artifacts\current-public-url.txt" echo !PUBLIC_URL!/overlay/draft
 
 echo [6/6] Opening local Control...
 start "" "http://127.0.0.1:3001/control"
