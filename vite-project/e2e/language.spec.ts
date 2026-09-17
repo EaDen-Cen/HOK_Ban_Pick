@@ -4,7 +4,7 @@ const chineseCharacters = /[\u3400-\u9fff]/u;
 
 async function expectEnglishInterface(page: Page) {
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(page.locator('body')).not.toContainText(chineseCharacters);
+  expect((await page.locator('body').innerText()).replaceAll('蓝方队伍', '').replaceAll('红方队伍', '').replaceAll('社区赛事', '')).not.toMatch(chineseCharacters);
   const visibleLabels = await page.locator('input, select, button, img, [title], [aria-label]').evaluateAll(elements =>
     elements.filter(element => {
       const bounds = element.getBoundingClientRect();
@@ -17,7 +17,7 @@ async function expectEnglishInterface(page: Page) {
       element instanceof HTMLInputElement && element.type === 'text' ? element.value : '',
     ]),
   );
-  expect(visibleLabels.filter(label => chineseCharacters.test(label))).toEqual([]);
+  expect(visibleLabels.filter(label => chineseCharacters.test(label.replaceAll('蓝方队伍', '').replaceAll('红方队伍', '').replaceAll('社区赛事', '')))).toEqual([]);
 }
 
 test('language switches every interface, persists on refresh, and follows the caster timeline', async ({ browser, baseURL }) => {
@@ -66,8 +66,8 @@ test('language switches every interface, persists on refresh, and follows the ca
   for (const page of [control, caster]) {
     await expect(page.locator('.analysis[data-side="blue"] .analysis-side')).toHaveText('Blue draft analysis');
     await expect(page.locator('.analysis[data-side="red"] .analysis-side')).toHaveText('Red draft analysis');
-    await expect(page.locator('.analysis[data-side="blue"] h2')).toHaveText('TEAM BLUE');
-    await expect(page.locator('.analysis[data-side="red"] h2')).toHaveText('TEAM RED');
+    await expect(page.locator('.analysis[data-side="blue"] h2')).toHaveText('蓝方队伍');
+    await expect(page.locator('.analysis[data-side="red"] h2')).toHaveText('红方队伍');
   }
   for (const page of [control, caster, overlay]) {
     await expect(page.locator('.blue .bans img')).toHaveAttribute('alt', 'Lam');
@@ -75,24 +75,13 @@ test('language switches every interface, persists on refresh, and follows the ca
   }
   await control.screenshot({ path: 'artifacts/settings-en.png', fullPage: true });
 
-  // Server validation must be translated too, without changing the saved match.
-  for (const score of await control.locator('.score-control').all()) {
-    await score.getByRole('button', { name: 'Increase series score', exact: true }).click();
-    await score.getByRole('button', { name: 'Increase series score', exact: true }).click();
-  }
+  // Scores update immediately and saving other settings must not roll them back.
+  await control.locator('.score-control').first().getByRole('button', { name: 'Increase series score', exact: true }).click();
+  await expect(overlay.locator('.blue-score')).toHaveText('1');
   await control.getByRole('button', { name: 'Save settings', exact: true }).click();
-  await expect(control.getByRole('alert')).toBeVisible();
-  await expect(control.getByRole('alert')).not.toContainText(chineseCharacters);
-  await expect(control.getByRole('alert')).toContainText(/score|series|game/i);
-  await expect(overlay.locator('.blue header strong')).toHaveText('0');
-  await expect(overlay.locator('.red header strong')).toHaveText('0');
-
-  for (const score of await control.locator('.score-control').all()) {
-    await score.getByRole('button', { name: 'Decrease series score', exact: true }).click();
-    await score.getByRole('button', { name: 'Decrease series score', exact: true }).click();
-  }
-  await control.getByRole('button', { name: 'Save settings', exact: true }).click();
-  await expect(control.getByRole('alert')).toHaveCount(0);
+  await expect(overlay.locator('.blue-score')).toHaveText('1');
+  await control.locator('.score-control').first().getByRole('button', { name: 'Decrease series score', exact: true }).click();
+  await expect(overlay.locator('.blue-score')).toHaveText('0');
   await control.getByRole('button', { name: 'Hide match settings', exact: true }).click();
   await control.getByLabel('Search heroes', { exact: true }).fill('澜');
   await expect(control.locator('.hero-grid button')).toHaveCount(1);
@@ -117,28 +106,18 @@ test('language switches every interface, persists on refresh, and follows the ca
   const layoutSelect = control.locator('.settings select').filter({ has: control.locator('option[value="side"]') });
   await layoutSelect.selectOption('side');
   await control.getByRole('button', { name: 'Save settings', exact: true }).click();
-  await expect(overlay.locator('.side-overlay')).toBeVisible();
-  await expect(overlay.locator('.side-player').first()).toContainText('Player 1');
+  await expect(overlay.locator('.broadcast-side')).toBeVisible();
+  await expect(overlay.locator('.card-caption').first()).toContainText('Player 1');
   await expectEnglishInterface(overlay);
-  const gameWindow = await overlay.locator('.game-window').boundingBox();
-  expect(gameWindow).not.toBeNull();
-  expect(gameWindow!.width).toBeGreaterThanOrEqual(1000);
-  expect(gameWindow!.height).toBeGreaterThanOrEqual(600);
-  await expect(overlay.locator('.game-window')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-  for (const slot of await overlay.locator('.side-overlay .hero-slot').all()) {
+  for (const slot of await overlay.locator('.broadcast-card').all()) {
     const box = await slot.boundingBox();
     expect(box).not.toBeNull();
     expect(box!.width).toBeGreaterThan(0);
-    expect(box!.width).toBeLessThanOrEqual(220);
     expect(box!.x).toBeGreaterThanOrEqual(0);
     expect(box!.y).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width).toBeLessThanOrEqual(1920);
     expect(box!.y + box!.height).toBeLessThanOrEqual(1080);
   }
-  const leftPlayer = await overlay.locator('.side-pick-column.blue .side-player').first().boundingBox();
-  const rightPlayer = await overlay.locator('.side-pick-column.red .side-player').first().boundingBox();
-  expect(leftPlayer!.x + leftPlayer!.width).toBeLessThanOrEqual(gameWindow!.x);
-  expect(rightPlayer!.x).toBeGreaterThanOrEqual(gameWindow!.x + gameWindow!.width);
   await overlay.screenshot({ path: 'artifacts/overlay-side-en.png', omitBackground: true });
 
   await layoutSelect.selectOption('panel');

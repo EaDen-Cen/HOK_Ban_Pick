@@ -1,6 +1,41 @@
 import type { Language } from './types';
 
 const messages = {
+  backendUpgrade: { zh: '当前连接的是旧版服务。请停止旧进程并重新启动服务器，V2 操作将在连接新版服务后启用。', eng: 'Connected to an older server. Stop it and restart the server to enable V2 controls.' },
+  draftRules: { zh: 'BP 规则', eng: 'BP rules' },
+  ruleNormal: { zh: '普通 BP', eng: 'NORMAL BP' },
+  rulePlayer: { zh: '选手 BP', eng: 'PLAYER BP' },
+  ruleGlobal: { zh: '全局 BP', eng: 'GLOBAL BP' },
+  historyTitle: { zh: '有效局历史', eng: 'COMMITTED GAMES' },
+  noHistory: { zh: '尚无已确认的有效局', eng: 'No committed games yet' },
+  historyNormal: { zh: '仅供回顾，不限制下一局英雄。', eng: 'For reference only. Previous picks remain available.' },
+  historyPlayer: { zh: '按选手 ID 限制重复英雄，队友可使用；换人时请填写新选手自己的 ID。', eng: 'Restrictions follow player IDs. Teammates may reuse heroes. Enter each substitute’s own ID.' },
+  historyGlobal: { zh: '同一队伍已使用的英雄不可再次选择；换边、换人不清空历史。', eng: 'A team cannot reuse its committed picks. History follows teams across side swaps and substitutions.' },
+  commitGame: { zh: '确认本局有效', eng: 'Commit game' },
+  nextGame: { zh: '开始下一局', eng: 'Start next game' },
+  swapSides: { zh: '交换蓝红方', eng: 'Swap sides' },
+  confirmCommit: { zh: '确认本局比赛有效、英雄归属正确？提交后将计入跨局历史；比分请单独更新。', eng: 'Confirm this game is valid and player assignments are correct? Its picks will enter history. Update the score separately.' },
+  confirmNext: { zh: '确认进入下一局？当前选禁画面将清空，已提交历史保留。', eng: 'Start the next game? Clear the current draft and retain committed history.' },
+  confirmSwap: { zh: '交换两队、选手和比分的蓝红位置？历史将继续跟随原队伍。', eng: 'Swap teams, players and scores between blue and red? History will follow each team.' },
+  gameCommitted: { zh: '本局已提交', eng: 'Game committed' },
+  lifecycleHint: { zh: '比赛结束后确认本局有效 → 更新比分 → 开始下一局。原 BP 重开无需重复提交；无效 BP 在提交前重置。', eng: 'After play: commit the valid game → update score → start the next game. Replays with the same draft need no second commit; reset invalid drafts before committing.' },
+  assignmentTitle: { zh: '英雄归属校对', eng: 'Review player assignments' },
+  assignmentHint: { zh: '每个位置对应选手 ID。选择另一位英雄会交换两名选手的英雄，服务器会重新检查资格。', eng: 'Each slot belongs to its player ID. Choosing another hero swaps assignments; the server rechecks eligibility.' },
+  pickingFor: { zh: '当前为 {player} 选择英雄（第 {slot} 位）', eng: 'Picking for {player} (slot {slot})' },
+  playerMissing: { zh: '请先填写该位置的选手 ID', eng: 'Enter this slot’s player ID first.' },
+  usedByPlayer: { zh: '该选手在此前有效局已使用此英雄', eng: 'This player used this hero in a committed game.' },
+  usedByTeam: { zh: '该队伍在此前有效局已使用此英雄', eng: 'This team used this hero in a committed game.' },
+  gameAlreadyCommitted: { zh: '本局已提交，不能重复提交或修改英雄归属', eng: 'This game is committed. It cannot be committed again or reassigned.' },
+  completeDraftFirst: { zh: '请先完成本局选禁', eng: 'Complete the current draft first.' },
+  commitBeforeNext: { zh: '请先确认本局有效', eng: 'Commit the current game first.' },
+  updateScoreBeforeNext: { zh: '请核对系列赛比分，再进入对应的下一局', eng: 'Check the series score before starting the corresponding next game.' },
+  seriesHasEnded: { zh: '系列赛已结束，请重置整场比赛开始新系列赛', eng: 'The series has ended. Reset the match to start a new series.' },
+  swapOnlyBetweenGames: { zh: '仅可在两局之间、选禁开始前交换蓝红方', eng: 'Swap sides between games, before the draft starts.' },
+  committedDraftReset: { zh: '本局已提交，请使用“开始下一局”；若提交有误，可撤销至提交前', eng: 'This draft is committed. Start the next game, or undo to before the commit if it was invalid.' },
+  rulesLocked: { zh: '选禁开始后规则锁定；存在有效局历史时需重置整场比赛才能修改规则或赛制', eng: 'Rules lock when drafting starts. Reset the match to change rules or series format after a committed game.' },
+  duplicatePlayerIds: { zh: '选手 BP 要求每位选手 ID 唯一', eng: 'Player BP requires a unique ID for every player.' },
+  rosterLocked: { zh: '选禁开始后选手及分路锁定，请在下一局开始前修改', eng: 'Players and roles lock during the draft. Change them before the next draft.' },
+  scoreImmediate: { zh: '比分直接同步；其他设置需保存。', eng: 'Score changes sync immediately. Save other settings separately.' },
   "appName": {
     "zh": "王者荣耀赛事转播系统",
     "eng": "HOK Broadcast System"
@@ -258,8 +293,8 @@ const messages = {
     "eng": "Calculated automatically"
   },
   "draftMode": {
-    "zh": "选禁模式",
-    "eng": "Draft mode"
+    "zh": "BP 形式",
+    "eng": "BP format"
   },
   "matchMode": {
     "zh": "赛事模式 · 每队禁用 4 位",
@@ -290,12 +325,12 @@ const messages = {
     "eng": "Overlay layout"
   },
   "panelLayout": {
-    "zh": "信息面板",
-    "eng": "Panel"
+    "zh": "赛事卡片",
+    "eng": "Broadcast cards"
   },
   "sideLayout": {
-    "zh": "左右侧栏",
-    "eng": "Side columns"
+    "zh": "紧凑卡片",
+    "eng": "Compact cards"
   },
   "saveSettings": {
     "zh": "保存设置",

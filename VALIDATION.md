@@ -1,5 +1,16 @@
 # 第一版本地验证
 
+## V2 验证（2026-09-17）
+
+构建及代码检查通过；服务端测试包含 Normal / Player / Global 三套独立逻辑，
+验证有效局提交、重赛重置、历史锁定、换人换位置换边、即时比分、延迟快照和旧存档迁移。
+6 组浏览器场景通过，三种规则各完成三局流程，核对实际 Hero Picker 禁用与可用状态、
+未保存队名不随比分提交、语言切换、刷新恢复、历史归属和 1920×1080 Overlay。
+
+截图：`vite-project/artifacts/v2-normal-overlay.png`、`v2-player-overlay.png`、`v2-global-overlay.png`。
+实际 OBS 内置浏览器验收仍待完成；测试实例启动未成功，不将 Chromium 验收等同 OBS 验收。
+详见 [V2-HANDOFF.md](V2-HANDOFF.md)。以下为第一阶段历史验证记录。
+
 验证环境：Windows、Node.js 24.14.1、已安装的 Google Chrome。
 
 | 检查 | 结果 |
@@ -7,7 +18,7 @@
 | `npm run build` | 通过，前端与服务器 TypeScript 检查通过，Vite 8.3.0 生产构建成功 |
 | `npm run lint` | 通过，0 错误 / 0 警告 |
 | `npm test` | 15 项通过，含新增英雄数据与全部本地头像完整性检查 |
-| `npm run test:e2e` | 3 个三端场景通过，约 1.9 分钟，含完整语言切换与刷新恢复 |
+| `npm run test:e2e` | 3 个三端场景通过，约 2 分钟，含完整语言切换与刷新恢复 |
 | 安装时 npm audit | 0 个已知漏洞（此次安装检查结果，不代表未来保证） |
 
 服务器测试覆盖两套 BP 顺序、精确延迟边界、元数据/比分/重置延迟、Undo 历史、
@@ -50,6 +61,8 @@ Chrome 测试同时打开 Control、Caster、Overlay，完成选禁、刷新、�
 完整语言场景检查了保存前后、三端英文文案、标题/悬停/输入提示、英文比分校验错误、
 中文检索英文英雄名、英文位置筛选、刷新保持、两种直播布局，以及切回中文。
 另外检查了本地登录页语言切换与无效口令的英文提示，未修改本地比赛状态。
+2026-09-17 复测通过，并补齐左右侧栏排版：确认全部英雄槽位于 1920×1080 画布内，
+中间游戏窗口透明且不被两侧选手卡片覆盖；已核对修复后的英文直播截图。
 
 - `vite-project/artifacts/settings-zh.png`
 - `vite-project/artifacts/caster-teams-zh.png`

@@ -1,4 +1,7 @@
 import type { Language } from './types';
+import { translate, type MessageKey } from './i18n';
+
+const ruleErrors = new Set<MessageKey>(['playerMissing', 'usedByPlayer', 'usedByTeam', 'gameAlreadyCommitted', 'completeDraftFirst', 'commitBeforeNext', 'updateScoreBeforeNext', 'seriesHasEnded', 'swapOnlyBetweenGames', 'committedDraftReset', 'rulesLocked', 'duplicatePlayerIds', 'rosterLocked']);
 
 const englishMessages = new Map<string, string>([
   ['暂时无法连接服务器', 'Unable to connect to the server. Please try again shortly.'],
@@ -40,6 +43,7 @@ const englishMessages = new Map<string, string>([
 
 /** Translate at render time so an existing error follows the selected language. */
 export function errorMessage(error: string, lang: Language): string {
+  if (ruleErrors.has(error as MessageKey)) return translate(lang, error as MessageKey);
   if (lang === 'zh' || !error) return error;
 
   const translated = englishMessages.get(error);

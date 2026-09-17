@@ -3,6 +3,7 @@ export type Side = 'blue' | 'red';
 export type Language = 'zh' | 'eng';
 
 export type OverlayLayout = 'panel' | 'side';
+export type DraftRuleMode = 'normal' | 'player' | 'global';
 
 export type PlayerRole =
   | 'clash'
@@ -12,10 +13,21 @@ export type PlayerRole =
   | 'roam';
 
 export interface Team {
+  id: string;
   name: string;
   logo: string;
   players: string[];
   playerRoles: PlayerRole[];
+}
+
+export interface GameDraftRecord {
+  id: string;
+  gameNumber: number;
+  committedAt: number;
+  blueTeam: Team;
+  redTeam: Team;
+  bluePicks: number[];
+  redPicks: number[];
 }
 
 export interface MatchState {
@@ -33,6 +45,10 @@ export interface MatchState {
   overlayLayout: OverlayLayout;
 
   draftMode: 'match' | 'normal';
+  draftRuleMode: DraftRuleMode;
+  draftHistory: GameDraftRecord[];
+  draftGameNumber: number | null;
+  committedGameId: string | null;
   currentPhase: number;
   draftComplete: boolean;
 
@@ -52,6 +68,7 @@ export type MatchSettings = Pick<
   | 'seriesFormat'
   | 'stage'
   | 'draftMode'
+  | 'draftRuleMode'
   | 'language'
   | 'overlayLayout'
 >;
@@ -59,6 +76,9 @@ export type MatchSettings = Pick<
 export type Action =
   | { type: 'draft_action'; team: Side; action: 'ban' | 'pick'; heroId: number }
   | { type: 'undo' | 'reset_draft' | 'reset_match' }
+  | { type: 'commit_game' | 'next_game' | 'swap_sides' }
+  | { type: 'score'; team: Side; delta: 1 | -1 }
+  | { type: 'swap_picks'; team: Side; from: number; to: number }
   | { type: 'settings'; settings: MatchSettings }
   | { type: 'delay'; seconds: number };
 
@@ -74,6 +94,7 @@ export interface Snapshot {
 
 export const initialState = (): MatchState => ({
   blueTeam: {
+    id: 'team-a',
     name: '蓝方队伍',
     logo: '',
     players: ['', '', '', '', ''],
@@ -81,6 +102,7 @@ export const initialState = (): MatchState => ({
   },
 
   redTeam: {
+    id: 'team-b',
     name: '红方队伍',
     logo: '',
     players: ['', '', '', '', ''],
@@ -98,6 +120,10 @@ export const initialState = (): MatchState => ({
   overlayLayout: 'panel',
 
   draftMode: 'match',
+  draftRuleMode: 'normal',
+  draftHistory: [],
+  draftGameNumber: null,
+  committedGameId: null,
   currentPhase: 0,
   draftComplete: false,
 

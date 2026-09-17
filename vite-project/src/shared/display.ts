@@ -3,13 +3,9 @@ import { translate, type MessageKey } from './i18n';
 
 export const sideLabel = (side: Side, lang: Language) => translate(lang, side === 'blue' ? 'blueSide' : 'redSide');
 
-// Only built-in placeholders are translated; custom names retain their spelling.
-export const teamName = (state: MatchState, side: Side, lang = state.language) => {
-  const value = state[`${side}Team`].name;
-  if (['TEAM BLUE', '蓝方队伍'].includes(value)) return translate(lang, 'blueTeam');
-  if (['TEAM RED', '红方队伍'].includes(value)) return translate(lang, 'redTeam');
-  return value;
-};
+// Team names and player IDs are user data, never translation keys.
+export const teamName = (state: MatchState, side: Side) => state[`${side}Team`].name;
+export const draftRuleName = (state: MatchState, lang = state.language) => translate(lang, ({ normal: 'ruleNormal', player: 'rulePlayer', global: 'ruleGlobal' } as const)[state.draftRuleMode]);
 
 const stages: Record<string, MessageKey> = {
   'COMMUNITY TOURNAMENT': 'stageCommunity', '社区赛事': 'stageCommunity',
@@ -23,7 +19,7 @@ export const stageName = (value: string, lang: Language) => stages[value] ? tran
 export const seriesName = (value: MatchState['seriesFormat'], lang: Language) => translate(lang, ({ BO1: 'bo1', BO3: 'bo3', BO5: 'bo5' } as const)[value]);
 export const phaseName = (state: MatchState, lang = state.language) => {
   const phase = phases(state.draftMode)[state.currentPhase];
-  return phase ? translate(lang, phase.action === 'ban' ? 'banHero' : 'pickHero', { team: teamName(state, phase.team, lang) }) : translate(lang, 'draftComplete');
+  return phase ? translate(lang, phase.action === 'ban' ? 'banHero' : 'pickHero', { team: teamName(state, phase.team) }) : translate(lang, 'draftComplete');
 };
 
 const laneKeys: Record<string, MessageKey> = {
