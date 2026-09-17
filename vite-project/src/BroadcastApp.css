@@ -93,4 +93,284 @@
 /* A compact option preserves more of the live game behind the graphics. */
 .broadcast-side .broadcast-card { height:224px; }
 .broadcast-side .broadcast-art { height:186px; }
-@media(max-width:900px) { .assignment-teams { grid-template-columns:1fr; }.draft-history:not(.compact) .history-team > strong { display:none; }.draft-history:not(.compact) .history-game { grid-template-columns:1fr 80px 1fr; gap:6px; }.draft-history:not(.compact) .history-heroes img { width:24px; height:24px; } }
+
+/* Mobile responsiveness for Control/Caster only.
+   The OBS overlay remains a fixed 1920×1080 broadcast canvas. */
+@media(max-width:900px) {
+  .workspace {
+    padding:14px 12px 22px;
+    overflow-x:hidden;
+  }
+
+  .topbar {
+    align-items:flex-start;
+    flex-direction:column;
+    margin-bottom:16px;
+  }
+
+  .topbar h1 {
+    font-size:24px;
+  }
+
+  .toolbar {
+    width:100%;
+  }
+
+  .panel {
+    padding:14px;
+    margin-top:12px;
+  }
+
+  .board {
+    overflow:visible;
+  }
+
+  .match-strip {
+    flex-direction:column;
+    gap:6px;
+    letter-spacing:0;
+    font-size:10px;
+    padding:10px 12px;
+  }
+
+  .team-grid {
+    grid-template-columns:1fr;
+    gap:8px;
+    background:transparent;
+  }
+
+  .team {
+    padding:12px;
+    border-radius:6px;
+  }
+
+  .team header {
+    height:auto;
+    margin-bottom:10px;
+  }
+
+  .team h2 {
+    font-size:17px;
+  }
+
+  .team header strong {
+    font-size:28px;
+  }
+
+  .picks {
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:4px;
+  }
+
+  .hero-slot {
+    aspect-ratio:1/1.1;
+  }
+
+  .hero-slot>span:not(.empty) {
+    font-size:8px;
+    padding:15px 2px 4px;
+  }
+
+  .bans {
+    gap:5px;
+    margin-top:10px;
+    overflow-x:auto;
+    padding-bottom:2px;
+  }
+
+  .bans .hero-slot {
+    width:38px;
+    flex:0 0 38px;
+  }
+
+  .operator-bar {
+    gap:12px;
+  }
+
+  .delay-controls {
+    gap:6px;
+  }
+
+  .delay-controls input {
+    width:72px;
+  }
+
+  .settings-grid,
+  .assignment-teams,
+  .analysis-grid {
+    grid-template-columns:1fr;
+  }
+
+  .player-setting-row {
+    grid-template-columns:minmax(0,1fr) 132px;
+  }
+
+  .assignment-team label {
+    grid-template-columns:1fr;
+    gap:6px;
+  }
+
+  .section-head {
+    align-items:stretch;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .section-head input {
+    width:100%;
+  }
+
+  .filters {
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    margin:0 -2px 14px;
+    padding:0 2px 4px;
+    scrollbar-width:thin;
+  }
+
+  .filters button {
+    flex:0 0 auto;
+    white-space:nowrap;
+  }
+
+  .hero-grid {
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:7px;
+  }
+
+  .hero-grid button {
+    min-width:0;
+  }
+
+  .hero-grid img {
+    width:100%;
+    aspect-ratio:1;
+  }
+
+  .hero-grid span {
+    min-height:26px;
+    font-size:9px;
+    line-height:1.15;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .hero-grid .eligibility-reason {
+    font-size:8px;
+    line-height:1.15;
+  }
+
+  .dual-analysis {
+    display:grid;
+    grid-template-columns:1fr;
+    gap:0;
+  }
+
+  .analysis-team-header {
+    align-items:flex-start;
+  }
+
+  .recommendation {
+    min-width:0;
+  }
+
+  .recommendation > div {
+    min-width:0;
+  }
+
+  .recommendation b,
+  .recommendation small {
+    overflow-wrap:anywhere;
+  }
+
+  .draft-history:not(.compact) .history-team > strong {
+    display:none;
+  }
+
+  .draft-history:not(.compact) .history-game {
+    grid-template-columns:minmax(0,1fr) 58px minmax(0,1fr);
+    gap:4px;
+  }
+
+  .draft-history:not(.compact) .history-team {
+    gap:4px;
+  }
+
+  .draft-history:not(.compact) .history-heroes {
+    gap:2px;
+    flex-wrap:wrap;
+  }
+
+  .draft-history:not(.compact) .history-heroes img {
+    width:22px;
+    height:22px;
+  }
+}
+
+@media(max-width:560px) {
+  .workspace {
+    padding:10px 8px 18px;
+  }
+
+  .panel {
+    padding:11px;
+  }
+
+  .topbar h1 {
+    font-size:21px;
+  }
+
+  .toolbar button {
+    padding:8px 10px;
+  }
+
+  .team {
+    padding:10px 8px;
+  }
+
+  .team header {
+    gap:8px;
+  }
+
+  .team .logo {
+    width:34px;
+    height:34px;
+  }
+
+  .picks {
+    gap:3px;
+  }
+
+  .hero-slot>span:not(.empty) {
+    font-size:7px;
+  }
+
+  .player-setting-row {
+    grid-template-columns:1fr;
+    gap:0;
+  }
+
+  .score-control {
+    gap:12px;
+  }
+
+  .hero-grid {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:6px;
+  }
+
+  .hero-grid span {
+    font-size:9px;
+  }
+
+  .recommendation img {
+    width:34px;
+    height:34px;
+  }
+
+  .analysis-logo {
+    width:36px;
+    height:36px;
+  }
+}
