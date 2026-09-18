@@ -1,5 +1,10 @@
 # HOK Broadcast System — 第一版
 
+## V2.2 更新
+
+新增顶部比分栏、底部横排/左右竖排两种 Overlay、选手形象、两种换边方式和独立 BP 先手设置。
+操作及兼容说明见 [V2.2-HANDOFF.md](V2.2-HANDOFF.md)。
+
 ## V2 更新
 
 完整操作与迁移说明见 [V2-HANDOFF.md](V2-HANDOFF.md)。现在分别选择“BP 形式”和“BP 规则”，

@@ -5,6 +5,7 @@ export const seriesWins = (state: MatchState) => (Number(state.seriesFormat.slic
 export const seriesFinished = (state: MatchState) => Math.max(state.blueScore, state.redScore) >= seriesWins(state);
 export const ruleLocked = (state: MatchState) => state.currentPhase > 0 || state.draftHistory.length > 0;
 export const currentGame = (state: MatchState) => state.draftGameNumber ?? state.gameNumber;
+export const displaySides = (state: MatchState): [Side, Side] => [state.displayLeftSide, state.displayLeftSide === 'blue' ? 'red' : 'blue'];
 
 export function historyForTeam(record: GameDraftRecord, teamId: string) {
   if (record.blueTeam.id === teamId) return { team: record.blueTeam, picks: record.bluePicks };
@@ -35,16 +36,21 @@ export function normalizeState(raw: MatchState): MatchState {
     return { ...fallback, ...team, id: team?.id || fallback.id,
       players: Array.from({ length: 5 }, (_, i) => team?.players?.[i] ?? ''),
       playerRoles: Array.from({ length: 5 }, (_, i) => team?.playerRoles?.[i] ?? fallback.playerRoles[i]),
+      playerPortraits: Array.from({ length: 5 }, (_, i) => team?.playerPortraits?.[i] ?? ''),
     };
   };
   const state = { ...defaults, ...raw,
     blueTeam: normalizeTeam(raw.blueTeam, 'blue'), redTeam: normalizeTeam(raw.redTeam, 'red'),
     draftHistory: (raw.draftHistory ?? []).map(record => ({ ...record,
+      firstPickSide: record.firstPickSide ?? 'blue',
       blueTeam: normalizeTeam(record.blueTeam, 'blue'), redTeam: normalizeTeam(record.redTeam, 'red'),
     })),
   };
   // Old archives use independent games. Upgrading must not silently impose Global BP.
   state.draftRuleMode = raw.draftRuleMode ?? 'normal';
+  state.displayLeftSide = raw.displayLeftSide ?? 'blue';
+  state.firstPickSide = raw.firstPickSide ?? 'blue';
+  state.sideSwapMode = raw.sideSwapMode ?? 'moveTeams';
   state.draftGameNumber = raw.draftGameNumber ?? (raw.currentPhase > 0 ? raw.gameNumber : null);
   return state;
 }

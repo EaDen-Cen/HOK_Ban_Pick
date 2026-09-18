@@ -35,6 +35,9 @@ async function renameTestTeams(baseURL: string | undefined, blueName: string, re
         seriesFormat: state.seriesFormat,
         stage: state.stage,
         draftMode: state.draftMode,
+        draftRuleMode: state.draftRuleMode,
+        firstPickSide: state.firstPickSide,
+        sideSwapMode: state.sideSwapMode,
         language: state.language,
         overlayLayout: state.overlayLayout,
       };

@@ -18,7 +18,7 @@ const stages: Record<string, MessageKey> = {
 export const stageName = (value: string, lang: Language) => stages[value] ? translate(lang, stages[value]) : value;
 export const seriesName = (value: MatchState['seriesFormat'], lang: Language) => translate(lang, ({ BO1: 'bo1', BO3: 'bo3', BO5: 'bo5' } as const)[value]);
 export const phaseName = (state: MatchState, lang = state.language) => {
-  const phase = phases(state.draftMode)[state.currentPhase];
+  const phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
   return phase ? translate(lang, phase.action === 'ban' ? 'banHero' : 'pickHero', { team: teamName(state, phase.team) }) : translate(lang, 'draftComplete');
 };
 

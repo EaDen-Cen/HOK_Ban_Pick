@@ -13,6 +13,17 @@ function integer(v: unknown, min: number, max: number): asserts v is number {
 function shortText(v: unknown, max: number): asserts v is string {
   if (typeof v !== 'string' || v.length > max) throw new Error(`文字格式不正确，最多可输入 ${max} 个字符`);
 }
+function portraitURL(value: unknown): asserts value is string {
+  shortText(value, 1000);
+  if (!value) return;
+  if (/\s|\\/.test(value) || [...value].some(char => char.charCodeAt(0) < 32)) throw new Error('portraitInvalid');
+  if (/^\/(?!\/)/.test(value)) return;
+  try {
+    const url = new URL(value);
+    if (url.protocol === 'https:' && url.hostname && !url.username && !url.password) return;
+  } catch { /* Reject invalid URLs below. */ }
+  throw new Error('portraitInvalid');
+}
 function clearDraft(state: MatchState) {
   Object.assign(state, { blueBans: [], redBans: [], bluePicks: [], redPicks: [], currentPhase: 0, draftComplete: false, draftGameNumber: null, committedGameId: null });
 }
@@ -80,7 +91,7 @@ export class Store {
       if (state.committedGameId) throw new Error('gameAlreadyCommitted');
       if (state.draftRuleMode === 'player' && [...state.blueTeam.players, ...state.redTeam.players].some(player => !playerIdentity(player))) throw new Error('playerMissing');
       if (state.currentPhase === 0 && (seriesFinished(state) || state.draftHistory.some(game => game.gameNumber >= state.gameNumber))) throw new Error('updateScoreBeforeNext');
-      const phase = phases(state.draftMode)[state.currentPhase];
+      const phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
       if (!phase || phase.team !== action.team || phase.action !== action.action) throw new Error('当前选禁阶段不支持此操作，请确认轮次和队伍');
       if (!heroes.some(h => h.id === action.heroId)) throw new Error('找不到该英雄');
       if ([...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks].includes(action.heroId)) throw new Error('该英雄已被选择或禁用');
@@ -92,7 +103,7 @@ export class Store {
       state.draftGameNumber ??= state.gameNumber;
       state[`${phase.team}${phase.action === 'ban' ? 'Bans' : 'Picks'}`].push(action.heroId);
       state.currentPhase++;
-      state.draftComplete = state.currentPhase === phases(state.draftMode).length;
+      state.draftComplete = state.currentPhase === phases(state.draftMode, state.firstPickSide).length;
       break;
     }
     case 'commit_game': {
@@ -100,7 +111,7 @@ export class Store {
       if (!state.draftComplete || state.bluePicks.length !== 5 || state.redPicks.length !== 5) throw new Error('completeDraftFirst');
       validatePicks(state);
       next.history.push(copy(state));
-      state.draftHistory.push({ id, gameNumber: currentGame(state), committedAt: this.clock(), blueTeam: copy(state.blueTeam), redTeam: copy(state.redTeam), bluePicks: [...state.bluePicks], redPicks: [...state.redPicks] });
+      state.draftHistory.push({ id, firstPickSide: state.firstPickSide, gameNumber: currentGame(state), committedAt: this.clock(), blueTeam: copy(state.blueTeam), redTeam: copy(state.redTeam), bluePicks: [...state.bluePicks], redPicks: [...state.redPicks] });
       state.committedGameId = id;
       break;
     }
@@ -115,6 +126,7 @@ export class Store {
       next.history.push(copy(state));
       [state.blueTeam, state.redTeam] = [state.redTeam, state.blueTeam];
       [state.blueScore, state.redScore] = [state.redScore, state.blueScore];
+      if (state.sideSwapMode === 'colorsOnly') state.displayLeftSide = state.displayLeftSide === 'blue' ? 'red' : 'blue';
       break;
     }
     case 'swap_picks': {
@@ -156,6 +168,8 @@ export class Store {
         !['BO1', 'BO3', 'BO5'].includes(s.seriesFormat) ||
         !['match', 'normal'].includes(s.draftMode) ||
         !['normal', 'player', 'global'].includes(s.draftRuleMode ?? state.draftRuleMode) ||
+        !['blue', 'red'].includes(s.firstPickSide ?? state.firstPickSide) ||
+        !['moveTeams', 'colorsOnly'].includes(s.sideSwapMode ?? state.sideSwapMode) ||
         !['zh', 'eng'].includes(s.language) ||
         !['panel', 'side'].includes(s.overlayLayout)
       ) {
@@ -166,6 +180,8 @@ export class Store {
       if (s.blueScore > wins || s.redScore > wins || (s.blueScore === wins && s.redScore === wins) || s.gameNumber > Number(s.seriesFormat.slice(2))) throw new Error('比分或局数不符合当前赛制');
       shortText(s.stage, 80);
       const draftRuleMode = s.draftRuleMode ?? state.draftRuleMode;
+      const firstPickSide = s.firstPickSide ?? state.firstPickSide;
+      if (state.currentPhase > 0 && firstPickSide !== state.firstPickSide) throw new Error('firstPickLocked');
       if (ruleLocked(state) && draftRuleMode !== state.draftRuleMode) throw new Error('rulesLocked');
       if (state.draftHistory.length && s.seriesFormat !== state.seriesFormat) throw new Error('rulesLocked');
       for (const team of [s.blueTeam, s.redTeam]) {
@@ -180,6 +196,10 @@ export class Store {
 
         if (!Array.isArray(team.playerRoles) || team.playerRoles.length !== 5) {
           throw new Error('每支队伍必须设置 5 个选手分路');
+        }
+        if (team.playerPortraits !== undefined) {
+          if (!Array.isArray(team.playerPortraits) || team.playerPortraits.length !== 5) throw new Error('portraitsInvalid');
+          team.playerPortraits.forEach(portraitURL);
         }
 
         const validRoles = ['clash', 'jungle', 'mid', 'farm', 'roam'];
@@ -223,6 +243,7 @@ export class Store {
           logo: s.blueTeam.logo,
           players: [...s.blueTeam.players],
           playerRoles: [...s.blueTeam.playerRoles],
+          playerPortraits: [...(s.blueTeam.playerPortraits ?? state.blueTeam.playerPortraits)],
         },
         redTeam: {
           id: state.redTeam.id,
@@ -230,6 +251,7 @@ export class Store {
           logo: s.redTeam.logo,
           players: [...s.redTeam.players],
           playerRoles: [...s.redTeam.playerRoles],
+          playerPortraits: [...(s.redTeam.playerPortraits ?? state.redTeam.playerPortraits)],
         },
 
         blueScore: s.blueScore,
@@ -247,6 +269,8 @@ export class Store {
 
         draftMode: s.draftMode,
         draftRuleMode,
+        firstPickSide,
+        sideSwapMode: s.sideSwapMode ?? state.sideSwapMode,
       });
       break;
     }

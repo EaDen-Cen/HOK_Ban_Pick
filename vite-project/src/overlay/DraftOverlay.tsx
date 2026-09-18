@@ -1,5 +1,7 @@
 import heroes from '../components/HeroList';
-import { currentGame } from '../shared/draftRules';
+import { HeroReveal } from './HeroReveal';
+import { PlayerPortrait } from '../shared/PlayerPortrait';
+import { currentGame, displaySides } from '../shared/draftRules';
 import { DraftHistory } from '../shared/DraftHistory';
 import { draftRuleName, phaseName, stageName } from '../shared/display';
 import { translator } from '../shared/i18n';
@@ -15,36 +17,47 @@ const rolePaths: Record<PlayerRole, string> = {
 export function PositionIcon({ role, label }: { role: PlayerRole; label: string }) {
   return <svg className="position-icon" viewBox="0 0 24 24" role="img" aria-label={label}><title>{label}</title><path d={rolePaths[role]} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
-function PickCard({ state, side, index }: { state: MatchState; side: Side; index: number }) {
+function PickCard({ state, side, index, position }: { state: MatchState; side: Side; index: number; position: 'left' | 'right' }) {
   const t = translator(state.language), team = state[`${side}Team`];
   const id = state[`${side}Picks`][index], hero = heroes.find(h => h.id === id);
   const heroName = hero ? (state.language === 'zh' ? hero.chineseName : hero.englishName) : t('emptyPick');
   const player = team.players[index] || t('playerNumber', { number: index + 1 });
   const role = team.playerRoles[index];
-  return <article className={`broadcast-card ${hero ? 'filled' : ''}`} data-slot={index}>
-    <div className="hero-slot broadcast-art" key={id || 'empty'}>{hero ? <img src={hero.imageLink} alt={heroName} /> : <span className="empty">{String(index + 1).padStart(2, '0')}</span>}</div>
-    <div className="card-caption"><strong title={heroName}>{heroName}</strong><span title={player}>{player}</span></div>
+  return <article className={`broadcast-card ${hero ? 'filled' : ''}`} data-slot={index} data-team-id={team.id}>
+    <HeroReveal heroId={id} layout={state.overlayLayout} position={position} renderArt={shownId => {
+      const shown = heroes.find(h => h.id === shownId);
+      return shown ? <img className="hero-art" src={shown.imageLink} alt={state.language === 'zh' ? shown.chineseName : shown.englishName} /> :
+        <PlayerPortrait key={team.playerPortraits[index] + team.logo} portrait={team.playerPortraits[index]} logo={team.logo} label={player} slot={index} />;
+    }} caption={<><strong title={heroName}>{heroName}</strong><span title={player}>{player}</span></>} />
     <div className="position-bar"><PositionIcon role={role} label={t(role)} /></div>
   </article>;
 }
 export function DraftOverlay({ state }: { state: MatchState }) {
-  const t = translator(state.language), phase = phases(state.draftMode)[state.currentPhase];
+  const t = translator(state.language), phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
+  const sides = displaySides(state), [left, right] = sides;
   return <section className={`broadcast-overlay broadcast-${state.overlayLayout}`}>
-    <header className="broadcast-header">
+    <div className="broadcast-top"><header className="broadcast-header">
       <div className="broadcast-brand">{t('gameTitle')}</div>
       <div className="broadcast-meta">{stageName(state.stage, state.language)} · {state.seriesFormat} · {t('gameNumber', { number: currentGame(state) })} · {draftRuleName(state)}</div>
-      <div className="broadcast-team blue">{state.blueTeam.logo && <img src={state.blueTeam.logo} alt="" />}<h2>{state.blueTeam.name}</h2></div>
-      <div className="broadcast-score" aria-label={t('seriesScore')}><strong className="blue-score">{state.blueScore}</strong><span>:</span><strong className="red-score">{state.redScore}</strong></div>
-      <div className="broadcast-team red"><h2>{state.redTeam.name}</h2>{state.redTeam.logo && <img src={state.redTeam.logo} alt="" />}</div>
-    </header>
-    <DraftHistory state={state} compact />
-    <div className="broadcast-bans">{(['blue', 'red'] as const).map(side => <div className={`ban-team ${side}`} key={side}><span>{t(side === 'blue' ? 'blueSide' : 'redSide')} · {t('ban')}</span><div className="bans">
-      {Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, index) => {
-        const hero = heroes.find(h => h.id === state[`${side}Bans`][index]);
-        const label = hero ? (state.language === 'zh' ? hero.chineseName : hero.englishName) : t('ban');
-        return <div className="hero-slot ban" key={index} title={label}>{hero ? <><img src={hero.imageLink} alt={label} /><b className="ban-mark">╱</b></> : <span className="empty">—</span>}</div>;
-      })}</div></div>)}</div>
-    <div className="broadcast-picks">{(['blue', 'red'] as const).map(side => <div key={side} className={`pick-team ${side} ${phase?.team === side ? 'acting' : ''}`}>{Array.from({ length: 5 }, (_, index) => <PickCard key={index} state={state} side={side} index={index} />)}</div>)}</div>
-    <footer className={`phase ${phase?.team || ''}`}>{state.committedGameId ? t('gameCommitted') : phaseName(state)}</footer>
+      {sides.map((side, position) => <div key={state[`${side}Team`].id} className={`broadcast-team ${side} display-${position === 0 ? 'left' : 'right'}`}>
+        {state[`${side}Team`].logo && <img src={state[`${side}Team`].logo} alt="" />}
+        <h2>{state[`${side}Team`].name}</h2><small className="color-label">{t(side === 'blue' ? 'blueSide' : 'redSide')}</small>
+      </div>)}
+      <div className="broadcast-score" aria-label={t('seriesScore')}><strong className={`${left}-score`}>{state[`${left}Score`]}</strong><span>:</span><strong className={`${right}-score`}>{state[`${right}Score`]}</strong></div>
+    </header></div>
+    <div className="broadcast-center" aria-hidden="true" />
+    <div className="broadcast-bottom">
+      <DraftHistory state={state} compact />
+      <div className="broadcast-bans">{sides.map((side, position) => <div className={`ban-team ${side} display-${position === 0 ? 'left' : 'right'}`} key={state[`${side}Team`].id}><span>{t(side === 'blue' ? 'blueSide' : 'redSide')} · {t('ban')}</span><div className="bans">
+        {Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, index) => {
+          const hero = heroes.find(h => h.id === state[`${side}Bans`][index]);
+          const label = hero ? (state.language === 'zh' ? hero.chineseName : hero.englishName) : t('ban');
+          return <div className="hero-slot ban" key={index} title={label}>{hero ? <><img src={hero.imageLink} alt={label} /><b className="ban-mark">╱</b></> : <span className="empty">—</span>}</div>;
+        })}</div></div>)}</div>
+      <div className="broadcast-picks">{sides.map((side, position) => <div key={state[`${side}Team`].id} className={`pick-team ${side} display-${position === 0 ? 'left' : 'right'} ${phase?.team === side ? 'acting' : ''}`}>
+        {Array.from({ length: 5 }, (_, index) => <PickCard key={index} state={state} side={side} index={index} position={position === 0 ? 'left' : 'right'} />)}
+      </div>)}</div>
+      <footer className={`phase ${phase?.team || ''}`}>{state.committedGameId ? t('gameCommitted') : phaseName(state)}</footer>
+    </div>
   </section>;
 }

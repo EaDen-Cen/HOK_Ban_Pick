@@ -4,6 +4,7 @@ export type Language = 'zh' | 'eng';
 
 export type OverlayLayout = 'panel' | 'side';
 export type DraftRuleMode = 'normal' | 'player' | 'global';
+export type SideSwapMode = 'moveTeams' | 'colorsOnly';
 
 export type PlayerRole =
   | 'clash'
@@ -18,9 +19,11 @@ export interface Team {
   logo: string;
   players: string[];
   playerRoles: PlayerRole[];
+  playerPortraits: string[];
 }
 
 export interface GameDraftRecord {
+  firstPickSide: Side;
   id: string;
   gameNumber: number;
   committedAt: number;
@@ -45,6 +48,9 @@ export interface MatchState {
   overlayLayout: OverlayLayout;
 
   draftMode: 'match' | 'normal';
+  displayLeftSide: Side;
+  firstPickSide: Side;
+  sideSwapMode: SideSwapMode;
   draftRuleMode: DraftRuleMode;
   draftHistory: GameDraftRecord[];
   draftGameNumber: number | null;
@@ -69,6 +75,8 @@ export type MatchSettings = Pick<
   | 'stage'
   | 'draftMode'
   | 'draftRuleMode'
+  | 'firstPickSide'
+  | 'sideSwapMode'
   | 'language'
   | 'overlayLayout'
 >;
@@ -99,6 +107,7 @@ export const initialState = (): MatchState => ({
     logo: '',
     players: ['', '', '', '', ''],
     playerRoles: ['clash', 'jungle', 'mid', 'farm', 'roam'],
+    playerPortraits: ['', '', '', '', ''],
   },
 
   redTeam: {
@@ -107,6 +116,7 @@ export const initialState = (): MatchState => ({
     logo: '',
     players: ['', '', '', '', ''],
     playerRoles: ['clash', 'jungle', 'mid', 'farm', 'roam'],
+    playerPortraits: ['', '', '', '', ''],
   },
 
   blueScore: 0,
@@ -120,6 +130,9 @@ export const initialState = (): MatchState => ({
   overlayLayout: 'panel',
 
   draftMode: 'match',
+  displayLeftSide: 'blue',
+  firstPickSide: 'blue',
+  sideSwapMode: 'moveTeams',
   draftRuleMode: 'normal',
   draftHistory: [],
   draftGameNumber: null,
@@ -133,14 +146,14 @@ export const initialState = (): MatchState => ({
   redPicks: [],
 });
 
-export function phases(mode: MatchState['draftMode']) {
+export function phases(mode: MatchState['draftMode'], firstPickSide: Side = 'blue') {
   const sequence =
     mode === 'match'
       ? 'bb rb bb rb bp rp rp bp bp rp rb bb rb bb rp bp bp rp'
       : 'bb bb rb rb bp rp rp bp bp rp rp bp bp rp';
 
   return sequence.split(' ').map(s => ({
-    team: (s[0] === 'b' ? 'blue' : 'red') as Side,
+    team: ((s[0] === 'b') === (firstPickSide === 'blue') ? 'blue' : 'red') as Side,
     action: (s[1] === 'b' ? 'ban' : 'pick') as 'ban' | 'pick',
   }));
 }

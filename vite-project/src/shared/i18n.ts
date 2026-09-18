@@ -1,6 +1,19 @@
 import type { Language } from './types';
 
 const messages = {
+  portrait: { zh: '选手形象地址', eng: 'Player portrait URL' },
+  portraitHint: { zh: 'HTTPS 图片链接或 /playerImg/ 本地路径；留空使用队徽。', eng: 'HTTPS image URL or /playerImg/ local path. Leave blank to use the team logo.' },
+  portraitInvalid: { zh: '选手形象须为 HTTPS 图片链接或单斜线开头的本地路径', eng: 'Use an HTTPS portrait URL or a local path starting with one slash.' },
+  portraitsInvalid: { zh: '每支队伍必须设置 5 个选手形象位置', eng: 'Each team must have 5 portrait slots.' },
+  firstPickSide: { zh: 'BP 先手方', eng: 'Draft starting side' },
+  firstPickLocked: { zh: '选禁开始后先手方锁定，请重置选禁或进入下一局后修改', eng: 'The starting side locks once drafting begins. Reset the draft or start the next game to change it.' },
+  sideSwapMode: { zh: '换边方式', eng: 'Side swap behavior' },
+  moveTeams: { zh: '交换队伍显示位置', eng: 'Move teams between screen sides' },
+  colorsOnly: { zh: '队伍位置不变，仅交换蓝红方', eng: 'Keep screen positions, swap colors' },
+  confirmColorsSwap: { zh: '两队显示位置保持不变，交换蓝红方归属？比分、选手和历史仍跟随原队伍，先手方不变。', eng: 'Keep team screen positions and swap blue/red sides? Scores, players and history follow each team. The starting side stays unchanged.' },
+  screenLeft: { zh: '画面左侧', eng: 'Screen left' },
+  screenRight: { zh: '画面右侧', eng: 'Screen right' },
+
   backendUpgrade: { zh: '当前连接的是旧版服务。请停止旧进程并重新启动服务器，V2 操作将在连接新版服务后启用。', eng: 'Connected to an older server. Stop it and restart the server to enable V2 controls.' },
   draftRules: { zh: 'BP 规则', eng: 'BP rules' },
   ruleNormal: { zh: '普通 BP', eng: 'NORMAL BP' },
@@ -325,12 +338,12 @@ const messages = {
     "eng": "Overlay layout"
   },
   "panelLayout": {
-    "zh": "赛事卡片",
-    "eng": "Broadcast cards"
+    "zh": "底部横排",
+    "eng": "Bottom panel"
   },
   "sideLayout": {
-    "zh": "紧凑卡片",
-    "eng": "Compact cards"
+    "zh": "左右竖排",
+    "eng": "Side columns"
   },
   "saveSettings": {
     "zh": "保存设置",

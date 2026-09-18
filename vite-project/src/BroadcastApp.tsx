@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import './broadcast.css';
 import './BroadcastApp.css';
 import heroes from './components/HeroList';
 import {
@@ -14,11 +15,11 @@ import { useMatch } from './shared/useMatch';
 import { connectionLabel, lanes, laneName, phaseName, seriesName, stageName, teamName, draftRuleName } from './shared/display';
 import { translator } from './shared/i18n';
 import { errorMessage } from './shared/errorMessages';
-import { currentGame, normalizeState, pickRestriction, ruleLocked, seriesWins } from './shared/draftRules';
+import { currentGame, displaySides, normalizeState, pickRestriction, ruleLocked, seriesWins } from './shared/draftRules';
+import { PlayerPortrait } from './shared/PlayerPortrait';
 import { DraftHistory } from './shared/DraftHistory';
 import { DraftLifecycle } from './control/DraftLifecycle';
 import { DraftOverlay } from './overlay/DraftOverlay';
-import './broadcast.css';
 const hero = (id: number) => heroes.find(h => h.id === id);
 const name = (id: number, lang: Language) => { const h = hero(id); return h ? (lang === 'zh' ? h.chineseName : h.englishName) : '—'; };
 function HeroSlot({ id, ban = false, lang }: { id?: number; ban?: boolean; lang: Language }) {
@@ -27,10 +28,10 @@ function HeroSlot({ id, ban = false, lang }: { id?: number; ban?: boolean; lang:
 }
 function Board({ state, lang }: { state: MatchState; lang: Language }) {
   const t = translator(lang);
-  const phase = phases(state.draftMode)[state.currentPhase];
+  const phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
   return <section className="board"><div className="match-strip"><span>{t('gameTitle')}</span><span>{stageName(state.stage, lang)} · {t('gameNumber', { number: currentGame(state) })} · {seriesName(state.seriesFormat, lang)} · {draftRuleName(state, lang)}</span></div>
-    <div className="team-grid">{(['blue', 'red'] as const).map(side => <section key={side} className={`team ${side} ${phase?.team === side ? 'active' : ''}`}><header>{state[`${side}Team`].logo && <img className="logo" src={state[`${side}Team`].logo} alt="" />}<h2>{teamName(state, side)}</h2><strong>{state[`${side}Score`]}</strong></header><div className="picks">{Array.from({ length: 5 }, (_, i) => <HeroSlot key={i} id={state[`${side}Picks`][i]} lang={lang} />)}</div><div className="bans"><small>{t('ban')}</small>{Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, i) => <HeroSlot key={i} id={state[`${side}Bans`][i]} ban lang={lang} />)}</div></section>)}</div>
-    <footer className={`phase ${phase?.team || ''}`} key={state.currentPhase}>{phase ? `${phaseName(state, lang)} · ${t('phaseStep', { step: state.currentPhase + 1, total: phases(state.draftMode).length })}` : t('draftComplete')}</footer></section>;
+    <div className="team-grid">{displaySides(state).map(side => <section key={side} className={`team ${side} ${phase?.team === side ? 'active' : ''}`}><header>{state[`${side}Team`].logo && <img className="logo" src={state[`${side}Team`].logo} alt="" />}<h2>{teamName(state, side)}</h2><strong>{state[`${side}Score`]}</strong></header><div className="picks">{Array.from({ length: 5 }, (_, i) => <HeroSlot key={i} id={state[`${side}Picks`][i]} lang={lang} />)}</div><div className="bans"><small>{t('ban')}</small>{Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, i) => <HeroSlot key={i} id={state[`${side}Bans`][i]} ban lang={lang} />)}</div></section>)}</div>
+    <footer className={`phase ${phase?.team || ''}`} key={state.currentPhase}>{phase ? `${phaseName(state, lang)} · ${t('phaseStep', { step: state.currentPhase + 1, total: phases(state.draftMode, state.firstPickSide).length })}` : t('draftComplete')}</footer></section>;
 }
 function TeamAnalysis({
   state,
@@ -70,17 +71,7 @@ function Analysis({
 }) {
   return (
     <section className="dual-analysis">
-      <TeamAnalysis
-        state={state}
-        lang={lang}
-        side="blue"
-      />
-
-      <TeamAnalysis
-        state={state}
-        lang={lang}
-        side="red"
-      />
+      {displaySides(state).map(side => <TeamAnalysis key={state[`${side}Team`].id} state={state} lang={lang} side={side} />)}
     </section>
   );
 }
@@ -89,7 +80,7 @@ function Settings({ state, send, disabled }: { state: MatchState; send: (a: Acti
   const [form, setForm] = useState<MatchSettings>(() => ({
     blueTeam: state.blueTeam, redTeam: state.redTeam, blueScore: state.blueScore, redScore: state.redScore,
     gameNumber: state.gameNumber, seriesFormat: state.seriesFormat, stage: state.stage,
-    draftMode: state.draftMode, draftRuleMode: state.draftRuleMode, language: state.language, overlayLayout: state.overlayLayout,
+    draftMode: state.draftMode, draftRuleMode: state.draftRuleMode, firstPickSide: state.firstPickSide, sideSwapMode: state.sideSwapMode, language: state.language, overlayLayout: state.overlayLayout,
   }));
   const maxWins = seriesWins(state);
   const rosterLocked = state.currentPhase > 0;
@@ -99,7 +90,7 @@ function Settings({ state, send, disabled }: { state: MatchState; send: (a: Acti
   }}>
     <h2>{t('matchSettings')}</h2>
     <div className="settings-grid">
-      {(['blue', 'red'] as const).map(side => {
+      {displaySides(state).map(side => {
         const teamKey = side === 'blue' ? 'blueTeam' : 'redTeam';
         const scoreKey = side === 'blue' ? 'blueScore' : 'redScore';
         const otherScore = side === 'blue' ? state.redScore : state.blueScore;
@@ -114,6 +105,10 @@ function Settings({ state, send, disabled }: { state: MatchState; send: (a: Acti
             <label>{t('lane')}<select disabled={rosterLocked} value={form[teamKey].playerRoles[index]} onChange={e => updateTeam({ playerRoles: form[teamKey].playerRoles.map((r, i) => i === index ? e.target.value as typeof r : r) })}>
               {(['clash', 'jungle', 'mid', 'farm', 'roam'] as const).map(role => <option key={role} value={role}>{t(role)}</option>)}
             </select></label>
+            <label className="portrait-setting">{t('portrait')}<div className="portrait-input">
+              <div className="portrait-preview"><PlayerPortrait key={form[teamKey].playerPortraits[index] + form[teamKey].logo} portrait={form[teamKey].playerPortraits[index]} logo={form[teamKey].logo} slot={index} label={player} /></div>
+              <input aria-label={t('portrait')} maxLength={1000} value={form[teamKey].playerPortraits[index]} onChange={e => updateTeam({ playerPortraits: form[teamKey].playerPortraits.map((p, i) => i === index ? e.target.value : p) })} />
+            </div><small>{t('portraitHint')}</small></label>
           </div>)}
           <div className="score-setting"><p>{t('seriesScore')}</p><div className="score-control">
             <button type="button" aria-label={t('decreaseScore')} disabled={disabled || state[scoreKey] <= 0} onClick={() => send({ type: 'score', team: side, delta: -1 })}>−</button>
@@ -135,6 +130,12 @@ function Settings({ state, send, disabled }: { state: MatchState; send: (a: Acti
           <option value="normal">{t('ruleNormal')}</option><option value="player">{t('rulePlayer')}</option><option value="global">{t('ruleGlobal')}</option>
         </select></label>
         {ruleLocked(state) && <p className="muted">{t('rulesLocked')}</p>}
+        <label>{t('firstPickSide')}<select aria-label={t('firstPickSide')} disabled={rosterLocked} value={form.firstPickSide} onChange={e => setForm({ ...form, firstPickSide: e.target.value as Side })}>
+          <option value="blue">{t('blueSide')}</option><option value="red">{t('redSide')}</option>
+        </select></label>
+        <label>{t('sideSwapMode')}<select aria-label={t('sideSwapMode')} value={form.sideSwapMode} onChange={e => setForm({ ...form, sideSwapMode: e.target.value as MatchSettings['sideSwapMode'] })}>
+          <option value="moveTeams">{t('moveTeams')}</option><option value="colorsOnly">{t('colorsOnly')}</option>
+        </select></label>
         <label>{t('language')}<select aria-label={t('language')} value={form.language} onChange={e => setForm({ ...form, language: e.target.value as Language })}>
           <option value="zh">{t('chinese')}</option><option value="eng">{t('english')}</option>
         </select><small>{t('languageHint')}</small></label>
@@ -162,7 +163,7 @@ export default function BroadcastApp() {
   const [lastLanguage, setLastLanguage] = useState<Language>(() => sessionStorage.getItem(`hok-language-${role}`) === 'eng' ? 'eng' : 'zh');
   const { snapshot, status, error, pending, send } = useMatch(role, token);
   const connected = status === 'Connected';
-  const compatible = !!snapshot?.state && Array.isArray(snapshot.state.draftHistory) && !!snapshot.state.draftRuleMode;
+  const compatible = !!snapshot?.state && Array.isArray(snapshot.state.draftHistory) && !!snapshot.state.draftRuleMode && !!snapshot.state.firstPickSide && !!snapshot.state.sideSwapMode && !!snapshot.state.displayLeftSide;
   const disabled = !connected || pending || !compatible;
   const state = snapshot?.state ? normalizeState(snapshot.state) : undefined;
   const lang: Language = token && !['Invalid token', 'Access rejected'].includes(status) ? state?.language ?? lastLanguage : lastLanguage;
@@ -185,7 +186,7 @@ export default function BroadcastApp() {
       </form><p>{connectionLabel(status, lang)}</p>
     </main>;
   }
-  const phase = state && phases(state.draftMode)[state.currentPhase];
+  const phase = state && phases(state.draftMode, state.firstPickSide)[state.currentPhase];
   const used = state ? [...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks] : [];
   return <main className="workspace">
     <header className="topbar">
@@ -219,7 +220,7 @@ export default function BroadcastApp() {
             <button disabled={disabled} onClick={() => send({ type: 'delay', seconds: delayInput })}>{t('setDelay')}</button>
           </div>
         </section>
-        {showSettings && <Settings key={JSON.stringify([state.blueTeam, state.redTeam, state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.language, state.overlayLayout])} state={state} send={send} disabled={disabled} />}
+        {showSettings && <Settings key={JSON.stringify([state.blueTeam, state.redTeam, state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.displayLeftSide, state.language, state.overlayLayout])} state={state} send={send} disabled={disabled} />}
         <DraftLifecycle state={state} send={send} disabled={disabled} />
         <section className="panel">
           <div className="section-head">
