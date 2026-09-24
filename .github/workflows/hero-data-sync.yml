@@ -1,6 +1,13 @@
 name: Hero data sync
 
 on:
+  pull_request:
+    paths:
+      - 'vite-project/scripts/hero-sync/**'
+      - 'vite-project/src/data/autoSyncedHeroes.ts'
+      - 'vite-project/src/data/heroSyncOverrides.ts'
+      - 'vite-project/src/components/HeroList.tsx'
+      - '.github/workflows/hero-data-sync.yml'
   workflow_dispatch:
   schedule:
     # Weekly check. The synchronizer is intentionally not part of match startup.
@@ -11,7 +18,43 @@ permissions:
   pull-requests: write
 
 jobs:
+  validate-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: vite-project/package-lock.json
+
+      - name: Install dependencies
+        working-directory: vite-project
+        run: npm ci
+
+      - name: Validate hero data
+        working-directory: vite-project
+        run: npm run hero:validate
+
+      - name: Build
+        working-directory: vite-project
+        run: npm run build
+
+      - name: Run tests
+        working-directory: vite-project
+        run: npm test
+
+      - name: Lint
+        working-directory: vite-project
+        run: npm run lint
+
   sync:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
