@@ -16,7 +16,7 @@ export function ControlHeroPicker({ state, disabled, active, send, acknowledged 
     const saved = globalThis.localStorage?.getItem('hok-hero-sort-mode') as HeroSortMode | null;
     return saved && heroSortModes.includes(saved) ? saved : (state.language === 'zh' ? 'name-zh' : 'name-en');
   });
-  const [recorded, setRecorded] = useState<Extract<Action, {type:'draft_action'}>>();
+  const [recorded, setRecorded] = useState<Action>();
   const searchInput = useRef<HTMLInputElement>(null);
   const activeRef = useRef(active); activeRef.current = active;
   const t = translator(state.language), phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
@@ -29,7 +29,7 @@ export function ControlHeroPicker({ state, disabled, active, send, acknowledged 
   const sortCoverage = heroSortCoverage(filtered, sortMode);
   const metadataSort = sortMode === 'release' || sortMode === 'pick-rate';
   useEffect(() => {
-    if (acknowledged?.action.type !== 'draft_action') { setRecorded(undefined); return; }
+    if (!acknowledged || !['draft_action','skip_ban'].includes(acknowledged.action.type)) { setRecorded(undefined); return; }
     setSearch(''); setRecorded(acknowledged.action);
     const frame = requestAnimationFrame(() => { if (activeRef.current) searchInput.current?.focus({ preventScroll: true }); });
     const timer = setTimeout(() => setRecorded(undefined), 1000);
@@ -49,7 +49,7 @@ export function ControlHeroPicker({ state, disabled, active, send, acknowledged 
     document.addEventListener('keydown', shortcut);
     return () => document.removeEventListener('keydown', shortcut);
   }, [active]);
-  const recordedHero = recorded && heroes.find(h => h.id === recorded.heroId);
+  const recordedHero = recorded?.type === 'draft_action' ? heroes.find(h => h.id === recorded.heroId) : undefined;
   return <section className="panel control-hero-picker">
     <div className={`picker-heading side-${phase?.team || 'none'}`}>
       <div className="current-phase" aria-live="polite">
@@ -63,7 +63,19 @@ export function ControlHeroPicker({ state, disabled, active, send, acknowledged 
         if (active && phase && eligible.length === 1) send({type:'draft_action',...phase,heroId:eligible[0].id});
       }} />
       <p className="quick-input-hint">{t('quickInputHint')}</p>
-      <div className="record-feedback" role="status">{recorded && recordedHero && t('recordAccepted',{side:t(recorded.team === 'blue' ? 'blueSide' : 'redSide'),action:t(recorded.action === 'ban' ? 'banAction' : 'pickAction'),hero:state.language === 'zh' ? recordedHero.chineseName : recordedHero.englishName})}</div>
+      <div className="record-feedback" role="status">
+        {recorded?.type === 'draft_action' && recordedHero && t('recordAccepted',{side:t(recorded.team === 'blue' ? 'blueSide' : 'redSide'),action:t(recorded.action === 'ban' ? 'banAction' : 'pickAction'),hero:state.language === 'zh' ? recordedHero.chineseName : recordedHero.englishName})}
+        {recorded?.type === 'skip_ban' && t('emptyBanRecorded',{side:t(recorded.team === 'blue' ? 'blueSide' : 'redSide')})}
+      </div>
+      {phase?.action === 'ban' && <div className="empty-ban-control">
+        <button
+          type="button"
+          className="empty-ban-button"
+          disabled={disabled || !!state.committedGameId}
+          onClick={() => send({type:'skip_ban',team:phase.team})}
+        >{t('emptyBanButton')}</button>
+        <small>{t('emptyBanManualHint')}</small>
+      </div>}
       <div className="picker-tools">
         <div className="filters">{lanes.map(r => <button key={r} className={filter === r ? 'selected' : ''} onClick={() => setFilter(r)}>{laneName(r,state.language)}</button>)}</div>
         <label className="hero-sort-control">{t('heroSort')}

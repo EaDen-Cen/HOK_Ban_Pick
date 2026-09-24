@@ -50,6 +50,8 @@ export interface GameDraftRecord {
   blueTeam: Team;
   redTeam: Team;
   /** Immutable draft-order history. */
+  blueBans?: Array<number | null>;
+  redBans?: Array<number | null>;
   bluePicks: number[];
   redPicks: number[];
   /** Final hero ownership by player slot after help-picks / swaps. */
@@ -87,8 +89,9 @@ export interface MatchState {
   currentPhase: number;
   draftComplete: boolean;
 
-  blueBans: number[];
-  redBans: number[];
+  /** Ban slots preserve empty bans as null so phase order/history stay exact. */
+  blueBans: Array<number | null>;
+  redBans: Array<number | null>;
   /** Pick order is immutable draft history; assignments drive player cards. */
   bluePicks: number[];
   redPicks: number[];
@@ -120,6 +123,7 @@ export type MatchSettings = Pick<
 export type Action =
   | { type: 'load_team_preset'; side: Side; presetId: string }
   | { type: 'draft_action'; team: Side; action: 'ban' | 'pick'; heroId: number }
+  | { type: 'skip_ban'; team: Side }
   | { type: 'undo' | 'reset_draft' | 'reset_match' }
   | { type: 'commit_game' | 'next_game' | 'swap_sides' }
   | { type: 'score'; team: Side; delta: 1 | -1 }

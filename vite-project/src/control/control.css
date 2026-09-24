@@ -169,3 +169,53 @@
 @media(max-width:430px) {
   .lifecycle-score-grid { grid-template-columns:1fr; }
 }
+
+
+/* Empty-ban controls and screen-recognition review */
+.empty-ban-control {
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:8px 10px;
+  align-items:center;
+  margin:8px 0 10px;
+  padding:9px 10px;
+  border:1px solid #6d5b31;
+  border-radius:7px;
+  background:#2a2315;
+}
+.empty-ban-control small { color:#cbbd95; line-height:1.35; }
+.empty-ban-button {
+  border-color:#9b7a32;
+  background:#3a2e17;
+  color:#ffe5a8;
+}
+.empty-ban-button:hover { background:#4a3a1c; }
+.screen-input-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 10px;
+  align-items:center;
+}
+.auto-watch-toggle {
+  flex-direction:row;
+  align-items:center;
+  gap:7px;
+  margin:0;
+  color:#dce8f6;
+}
+.auto-watch-toggle input {
+  width:18px;
+  height:18px;
+  margin:0;
+}
+.capture-review-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+}
+@media(max-width:600px) {
+  .empty-ban-control { grid-template-columns:1fr; }
+  .screen-input-actions { align-items:stretch; }
+  .screen-input-actions > button { flex:1 1 auto; }
+}

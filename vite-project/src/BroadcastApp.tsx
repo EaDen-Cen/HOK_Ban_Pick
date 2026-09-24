@@ -31,9 +31,13 @@ import { DraftLifecycle } from './control/DraftLifecycle';
 import { DraftOverlay } from './overlay/DraftOverlay';
 const hero = (id: number) => heroes.find(h => h.id === id);
 const name = (id: number, lang: Language) => { const h = hero(id); return h ? (lang === 'zh' ? h.chineseName : h.englishName) : '—'; };
-function HeroSlot({ id, ban = false, lang }: { id?: number; ban?: boolean; lang: Language }) {
+function HeroSlot({ id, ban = false, lang }: { id?: number | null; ban?: boolean; lang: Language }) {
   const t = translator(lang);
-  return <div className={`hero-slot ${ban ? 'ban' : ''} ${id ? 'filled' : ''}`} key={id || 'empty'}>{id ? <><img src={hero(id)?.imageLink} alt={name(id, lang)} /><span>{name(id, lang)}</span>{ban && <b className="ban-mark">╱</b>}</> : <span className="empty">{t(ban ? 'ban' : 'emptyPick')}</span>}</div>;
+  const skipped = ban && id === null;
+  return <div className={`hero-slot ${ban ? 'ban' : ''} ${id ? 'filled' : ''} ${skipped ? 'skipped-ban' : ''}`} key={id ?? (skipped ? 'skipped' : 'empty')}>
+    {id ? <><img src={hero(id)?.imageLink} alt={name(id, lang)} /><span>{name(id, lang)}</span>{ban && <b className="ban-mark">╱</b>}</>
+      : <span className={skipped ? 'empty skipped-ban-label' : 'empty'}>{skipped ? t('emptyBan') : t(ban ? 'ban' : 'emptyPick')}</span>}
+  </div>;
 }
 function Board({ state, lang, compact = false }: { state: MatchState; lang: Language; compact?: boolean }) {
   const t = translator(lang);

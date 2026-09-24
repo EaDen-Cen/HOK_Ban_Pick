@@ -147,6 +147,19 @@ export class Store {
       state.draftComplete = state.currentPhase === phases(state.draftMode, state.firstPickSide).length;
       break;
     }
+    case 'skip_ban': {
+      if (state.committedGameId) throw new Error('gameAlreadyCommitted');
+      if (state.draftRuleMode === 'player' && [...state.blueTeam.players, ...state.redTeam.players].some(player => !playerIdentity(player))) throw new Error('playerMissing');
+      if (state.currentPhase === 0 && (seriesFinished(state) || state.draftHistory.some(game => game.gameNumber >= state.gameNumber))) throw new Error('updateScoreBeforeNext');
+      const phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
+      if (!phase || phase.team !== action.team || phase.action !== 'ban') throw new Error('emptyBanOnlyDuringBan');
+      next.history.push(copy(state));
+      state.draftGameNumber ??= state.gameNumber;
+      state[`${phase.team}Bans`].push(null);
+      state.currentPhase++;
+      state.draftComplete = state.currentPhase === phases(state.draftMode, state.firstPickSide).length;
+      break;
+    }
     case 'commit_game': {
       if (state.committedGameId || state.draftHistory.some(game => game.gameNumber === currentGame(state))) throw new Error('gameAlreadyCommitted');
       if (!state.draftComplete || state.bluePicks.length !== 5 || state.redPicks.length !== 5) throw new Error('completeDraftFirst');
@@ -155,6 +168,7 @@ export class Store {
       state.draftHistory.push({
         id, firstPickSide: state.firstPickSide, gameNumber: currentGame(state), committedAt: this.clock(),
         blueTeam: copy(state.blueTeam), redTeam: copy(state.redTeam),
+        blueBans: [...state.blueBans], redBans: [...state.redBans],
         bluePicks: [...state.bluePicks], redPicks: [...state.redPicks],
         blueAssignments: [...state.blueAssignments] as number[],
         redAssignments: [...state.redAssignments] as number[],
