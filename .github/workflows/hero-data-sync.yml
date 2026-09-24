@@ -20,6 +20,7 @@ on:
       - 'vite-project/server/store.ts'
       - 'vite-project/server/store.test.ts'
       - 'vite-project/src/data/heroArtFocus.ts'
+      - 'vite-project/src/data/heroArtSourceOverrides.ts'
       - '.github/workflows/hero-data-sync.yml'
   workflow_dispatch:
   schedule:
