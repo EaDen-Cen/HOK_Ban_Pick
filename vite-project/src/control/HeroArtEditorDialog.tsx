@@ -5,14 +5,57 @@ import { defaultHeroArtCrop, heroArtCrop } from '../data/heroArtFocus';
 import { translator } from '../shared/i18n';
 import type { Action, HeroArtCrop, HeroArtLayout, HeroArtOverride, MatchState } from '../shared/types';
 
-function frameStyle(crop: HeroArtCrop, layout: HeroArtLayout): CSSProperties {
-  const baseWidth = layout === 'panel' ? 30 : 46;
-  const baseHeight = layout === 'panel' ? 46 : 29;
+const targetAspect: Record<HeroArtLayout, number> = {
+  // Matches the actual 1920x1080 broadcast card viewports.
+  panel: 0.65,
+  side: 1.90,
+};
+
+interface SourceSize { width: number; height: number }
+
+function sourceFrame(crop: HeroArtCrop, layout: HeroArtLayout, source: SourceSize) {
+  const { width, height } = source;
+  const viewportAspect = targetAspect[layout];
+  const sourceAspect = width / height;
+  const px = crop.x / 100;
+  const py = crop.y / 100;
+
+  let visibleWidth = width;
+  let visibleHeight = height;
+  let baseLeft = 0;
+  let baseTop = 0;
+
+  // This is the exact source rectangle produced by object-fit: cover before
+  // the additional director zoom is applied.
+  if (sourceAspect > viewportAspect) {
+    visibleWidth = height * viewportAspect;
+    baseLeft = (width - visibleWidth) * px;
+  } else {
+    visibleHeight = width / viewportAspect;
+    baseTop = (height - visibleHeight) * py;
+  }
+
+  const focalX = width * px;
+  const focalY = height * py;
+  const scale = Math.max(1, crop.scale);
+  const left = focalX + (baseLeft - focalX) / scale;
+  const top = focalY + (baseTop - focalY) / scale;
+
   return {
-    left: `${crop.x}%`,
-    top: `${crop.y}%`,
-    width: `${Math.max(12, baseWidth / crop.scale)}%`,
-    height: `${Math.max(12, baseHeight / crop.scale)}%`,
+    left,
+    top,
+    width: visibleWidth / scale,
+    height: visibleHeight / scale,
+  };
+}
+
+function frameStyle(crop: HeroArtCrop, layout: HeroArtLayout, source: SourceSize): CSSProperties {
+  const frame = sourceFrame(crop, layout, source);
+  return {
+    left: `${frame.left / source.width * 100}%`,
+    top: `${frame.top / source.height * 100}%`,
+    width: `${frame.width / source.width * 100}%`,
+    height: `${frame.height / source.height * 100}%`,
   };
 }
 
@@ -94,6 +137,7 @@ export function HeroArtEditorDialog({
   };
 
   const [draft, setDraft] = useState<HeroArtOverride>(() => makeDraft(initialId));
+  const [sourceSize, setSourceSize] = useState<SourceSize>({ width: 16, height: 9 });
   useEffect(() => {
     const element = dialog.current;
     if (!element) return;
@@ -184,10 +228,20 @@ export function HeroArtEditorDialog({
             <h3>{t('artReference')}</h3>
             <p className="muted">{t('artReferenceHint')}</p>
           </div>
-          <div className="art-editor-reference">
-            <img src={fullSource} alt={heroName} />
-            <div className="art-reference-frame panel-frame" style={frameStyle(panel, 'panel')}><span>{t('panelLayout')}</span></div>
-            <div className="art-reference-frame side-frame" style={frameStyle(side, 'side')}><span>{t('sideLayout')}</span></div>
+          <div
+            className="art-editor-reference"
+            style={{ aspectRatio: `${sourceSize.width} / ${sourceSize.height}` }}
+          >
+            <img
+              src={fullSource}
+              alt={heroName}
+              onLoad={event => setSourceSize({
+                width: event.currentTarget.naturalWidth || 16,
+                height: event.currentTarget.naturalHeight || 9,
+              })}
+            />
+            <div className="art-reference-frame panel-frame" style={frameStyle(panel, 'panel', sourceSize)}><span>{t('panelLayout')}</span></div>
+            <div className="art-reference-frame side-frame" style={frameStyle(side, 'side', sourceSize)}><span>{t('sideLayout')}</span></div>
           </div>
 
           <h3>{t('livePreview')}</h3>
