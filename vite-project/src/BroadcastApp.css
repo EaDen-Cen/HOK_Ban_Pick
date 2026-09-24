@@ -836,9 +836,8 @@
 }
 .art-editor-reference {
   position:relative;
-  width:100%;
+  width:min(100%, 980px);
   max-height:520px;
-  aspect-ratio:16 / 9;
   margin-top:12px;
   overflow:hidden;
   border:1px solid #344a65;
@@ -848,11 +847,10 @@
   width:100%;
   height:100%;
   display:block;
-  object-fit:contain;
+  object-fit:fill;
 }
 .art-reference-frame {
   position:absolute;
-  transform:translate(-50%,-50%);
   border:3px solid #fff;
   box-shadow:0 0 0 1px #000,0 0 14px #000b;
   pointer-events:none;
@@ -892,11 +890,11 @@
 }
 .art-editor-preview-panel {
   width:min(330px,100%);
-  aspect-ratio:.76;
+  aspect-ratio:.65;
 }
 .art-editor-preview-side {
   width:100%;
-  aspect-ratio:2.2;
+  aspect-ratio:1.9;
 }
 .art-editor-preview img {
   width:100%;
