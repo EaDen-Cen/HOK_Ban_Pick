@@ -5,10 +5,11 @@ import { detectImage } from './assets.js';
 import { makePlan, nextLocalIds } from './compare.js';
 import { mergeOverride } from './generated.js';
 import { normalizeName } from './normalize.js';
-import { extractOfficialHeroArt } from './fetchOfficial.js';
+import { extractOfficialHeroArt, extractOfficialPickRate } from './fetchOfficial.js';
 import { heroArtCrop } from '../../src/data/heroArtFocus.js';
 import type { CatalogHero, SourceSnapshot } from './types.js';
 import heroes from '../../src/components/HeroList.js';
+import { sortHeroes } from '../../src/control/heroSort.js';
 
 const local = (overrides: Partial<Hero> = {}): Hero => ({
   id: 1,
@@ -152,4 +153,32 @@ test("reviewed Ao'yin artwork override wins over auto-synced full art", () => {
     aoyin.artLink,
     'https://game.gtimg.cn/images/yxzj/coming/v2/heros//image/20250219/17399349866962.jpg',
   );
+});
+
+
+test('hero picker sorting keeps unavailable heroes last for every mode', () => {
+  const sample: Hero[] = [
+    local({ id: 10, chineseName: '赵云', englishName: 'Zilong', occupation: 'Jungling', releaseDate: '2024-06-20', officialPickRate: 8 }),
+    local({ id: 11, chineseName: '安琪拉', englishName: 'Angela', occupation: 'Mid Lane', releaseDate: '2025-03-01', officialPickRate: 22 }),
+    local({ id: 12, chineseName: '后羿', englishName: 'Hou Yi', occupation: 'Farm Lane', releaseDate: '2023-01-01', officialPickRate: 30 }),
+    local({ id: 13, chineseName: '吕布', englishName: 'Lu Bu', occupation: 'Clash Lane' }),
+    local({ id: 14, chineseName: '张飞', englishName: 'Zhang Fei', occupation: 'Roaming', releaseDate: '2022-01-01', officialPickRate: 2 }),
+  ];
+  const unavailable = new Set([11, 12]);
+  for (const mode of ['name-zh', 'name-en', 'release', 'pick-rate', 'lane'] as const) {
+    const sorted = sortHeroes(sample, mode, id => unavailable.has(id));
+    assert.deepEqual(sorted.slice(-2).map(hero => hero.id).sort(), [11, 12]);
+  }
+  assert.deepEqual(sortHeroes(sample, 'lane', () => false).map(hero => hero.occupation), [
+    'Clash Lane', 'Mid Lane', 'Farm Lane', 'Jungling', 'Roaming',
+  ]);
+  assert.equal(sortHeroes(sample, 'release', () => false).at(-1)?.id, 13);
+  assert.equal(sortHeroes(sample, 'pick-rate', () => false).at(-1)?.id, 13);
+});
+
+
+test('official ranked pick-rate parser accepts structured and visible CAMP formats', () => {
+  assert.equal(extractOfficialPickRate('<script>window.hero={pickRate:"12.34"}</script>'), 12.34);
+  assert.equal(extractOfficialPickRate('<div>Pick Rate</div><strong>0.28%</strong>'), 0.28);
+  assert.equal(extractOfficialPickRate('<div>101.2% Pick Rate</div>'), undefined);
 });

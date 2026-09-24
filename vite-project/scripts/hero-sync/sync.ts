@@ -7,7 +7,7 @@ import heroSyncOverrides from '../../src/data/heroSyncOverrides.js';
 import type { Hero } from '../../src/data/heroTypes.js';
 import { downloadHeroAsset } from './assets.js';
 import { fetchCatalog, fetchCatalogHeroDetail, CATALOG_URL } from './fetchCatalog.js';
-import { fetchOfficialHeroEvidence } from './fetchOfficial.js';
+import { fetchOfficialHeroEvidence, fetchOfficialHeroRankStats } from './fetchOfficial.js';
 import { makePlan, nextLocalIds } from './compare.js';
 import { mergeOverride, renderAutoSyncedHeroes, renderOverrides, type HeroOverride } from './generated.js';
 import { normalizeName, uniqueStrings } from './normalize.js';
@@ -43,15 +43,27 @@ function artworkBackfill(plan: ReturnType<typeof makePlan>) {
   return plan.matches.filter(match => !match.local.artLink || match.local.artLink === match.local.imageLink || match.local.campId === undefined);
 }
 
+const PICK_RATE_REFRESH_MS = 6 * 24 * 60 * 60 * 1000;
+function pickRateRefresh(plan: ReturnType<typeof makePlan>) {
+  const now = Date.now();
+  return plan.matches.filter(match => {
+    const stamp = match.local.officialPickRateUpdatedAt;
+    if (!stamp) return true;
+    const parsed = Date.parse(stamp);
+    return !Number.isFinite(parsed) || now - parsed >= PICK_RATE_REFRESH_MS;
+  });
+}
+
 function compactSummary(plan: ReturnType<typeof makePlan>) {
   const artBackfill = artworkBackfill(plan);
   return {
-    changed: plan.changed || artBackfill.length > 0,
+    changed: plan.changed || artBackfill.length > 0 || pickRateRefresh(plan).length > 0,
     checkedAt: plan.checkedAt,
     remoteCount: plan.remoteCount,
     baselineMissing: plan.baselineMissing,
     additions: plan.additions.map(hero => ({ campId: hero.campId, englishName: hero.englishName, occupation: hero.occupation })),
     artworkBackfill: artBackfill.map(match => ({ localId: match.local.id, campId: match.remote.campId, englishName: match.remote.englishName })),
+    pickRateRefresh: pickRateRefresh(plan).map(match => ({ localId: match.local.id, campId: match.remote.campId, englishName: match.remote.englishName })),
     sourceChanges: plan.sourceChanges,
     missingLocalWarnings: plan.missingLocal.map(hero => ({ id: hero.id, englishName: hero.englishName, campId: hero.campId })),
   };
@@ -181,6 +193,33 @@ async function applyUpdate(
     }
   }
 
+  // Ranked pick rate is dynamic official metadata. Refresh it at most once per
+  // weekly sync cycle, in small batches to avoid hammering HOK CAMP.
+  const statsCandidates = pickRateRefresh(plan);
+  let pickRateFailures = 0;
+  for (let start = 0; start < statsCandidates.length; start += 6) {
+    const batch = statsCandidates.slice(start, start + 6);
+    const results = await Promise.all(batch.map(async match => ({
+      match,
+      stats: await fetchOfficialHeroRankStats(match.remote.campId),
+    })));
+    for (const { match, stats } of results) {
+      if (stats.pickRate === undefined) {
+        pickRateFailures++;
+        continue;
+      }
+      const next: HeroOverride = {
+        officialPickRate: stats.pickRate,
+        officialPickRateUpdatedAt: stats.checkedAt,
+      };
+      overrides[match.local.id] = mergeOverride(overrides[match.local.id], next);
+      overrideAudit.push({ localId: match.local.id, campId: match.remote.campId, fields: next });
+    }
+  }
+  if (pickRateFailures) {
+    manualReview.push(`Official HOK CAMP pick rate could not be parsed for ${pickRateFailures} matched heroes; existing values were kept and will be retried later.`);
+  }
+
   for (const change of plan.sourceChanges) {
     if (change.field === 'added' || change.field === 'missing') continue;
     const match = plan.matches.find(item => item.remote.campId === change.campId);
@@ -280,7 +319,7 @@ async function main() {
     const summary = compactSummary(plan);
     if (json) process.stdout.write(JSON.stringify(summary));
     else {
-      console.log(`Hero sync check: ${plan.remoteCount} remote heroes, ${plan.additions.length} local additions, ${plan.sourceChanges.length} source changes, ${artworkBackfill(plan).length} artwork backfills.`);
+      console.log(`Hero sync check: ${plan.remoteCount} remote heroes, ${plan.additions.length} local additions, ${plan.sourceChanges.length} source changes, ${artworkBackfill(plan).length} artwork backfills, ${pickRateRefresh(plan).length} pick-rate refreshes.`);
       if (plan.baselineMissing) console.log('No catalog baseline exists yet; the first update will create one.');
       for (const hero of plan.additions) console.log(`+ NEW: ${hero.englishName} (camp ${hero.campId}, ${hero.occupation})`);
       for (const warning of plan.missingLocal) console.log(`! LOCAL ONLY (not deleted): #${warning.id} ${warning.englishName}`);
@@ -288,8 +327,8 @@ async function main() {
     return;
   }
 
-  if (!plan.changed && artworkBackfill(plan).length === 0) {
-    console.log('Hero roster and high-resolution artwork metadata are up to date; no files changed.');
+  if (!plan.changed && artworkBackfill(plan).length === 0 && pickRateRefresh(plan).length === 0) {
+    console.log('Hero roster, artwork and official pick-rate metadata are up to date; no files changed.');
     return;
   }
 

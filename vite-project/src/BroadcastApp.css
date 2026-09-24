@@ -997,3 +997,153 @@
   object-fit:cover;
   object-position:50% 50%;
 }
+
+
+/* V2.9 responsive director artwork editor.
+   The editor must fit inside the actual browser viewport (including laptop
+   browser chrome), not assume a full 1080px content area. */
+.hero-art-editor-dialog {
+  width:min(1640px,calc(100vw - 16px));
+  height:min(94dvh,980px);
+  max-height:calc(100dvh - 16px);
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr);
+}
+.hero-art-editor-body {
+  grid-template-columns:clamp(270px,22vw,360px) minmax(0,1fr);
+  min-height:0;
+  height:100%;
+  max-height:none;
+  overflow:hidden;
+}
+.hero-art-editor-controls,
+.hero-art-editor-stage {
+  min-height:0;
+}
+.hero-art-editor-reference {
+  max-width:100%;
+  max-height:none;
+  margin:10px auto 0;
+}
+.hero-art-editor-previews {
+  min-width:0;
+}
+.art-editor-preview-panel,
+.art-editor-preview-side {
+  max-width:100%;
+}
+
+/* On a short desktop/laptop viewport, move the two live previews beside the
+   full-art reference instead of forcing them below it. */
+@media (max-height:900px) and (min-width:901px) {
+  .hero-art-editor-dialog {
+    height:calc(100dvh - 12px);
+    max-height:calc(100dvh - 12px);
+  }
+  .hero-art-editor-header {
+    padding:9px 14px;
+  }
+  .hero-art-editor-body {
+    grid-template-columns:clamp(250px,20vw,320px) minmax(0,1fr);
+  }
+  .hero-art-editor-controls {
+    padding:12px;
+  }
+  .art-editor-crop-controls {
+    margin:9px 0 6px;
+    padding:9px;
+  }
+  .art-editor-crop-controls label {
+    margin:6px 0;
+  }
+  .art-editor-actions {
+    margin-top:10px;
+  }
+  .hero-art-editor-stage {
+    display:grid;
+    grid-template-columns:minmax(0,1.45fr) minmax(280px,.8fr);
+    grid-template-rows:auto minmax(0,1fr);
+    gap:8px 16px;
+    overflow:hidden;
+    padding:12px 14px;
+  }
+  .hero-art-editor-stage > div:first-child {
+    grid-column:1;
+    grid-row:1;
+  }
+  .hero-art-editor-stage > h3 {
+    grid-column:2;
+    grid-row:1;
+    margin:0;
+    align-self:end;
+  }
+  .art-editor-reference {
+    grid-column:1;
+    grid-row:2;
+    align-self:start;
+    justify-self:center;
+    margin:0 auto;
+  }
+  .art-editor-previews {
+    grid-column:2;
+    grid-row:2;
+    grid-template-columns:1fr;
+    gap:10px;
+    min-height:0;
+    overflow:auto;
+    align-content:start;
+  }
+  .art-editor-preview-panel {
+    height:min(31dvh,280px);
+    width:auto;
+    max-width:100%;
+  }
+  .art-editor-preview-side {
+    height:min(24dvh,220px);
+    width:auto;
+    max-width:100%;
+  }
+}
+
+/* Tablet/narrow browser windows stack the editor but keep all scrolling inside
+   the modal, so the page behind it never becomes the thing that has to scroll. */
+@media(max-width:900px) {
+  .hero-art-editor-dialog {
+    width:calc(100vw - 8px);
+    height:calc(100dvh - 8px);
+    max-height:calc(100dvh - 8px);
+  }
+  .hero-art-editor-body {
+    grid-template-columns:1fr;
+    height:100%;
+    overflow:auto;
+  }
+  .hero-art-editor-controls {
+    overflow:visible;
+  }
+  .hero-art-editor-stage {
+    overflow:visible;
+  }
+  .art-editor-reference {
+    width:min(100%,calc(42dvh * 1.78)) !important;
+  }
+  .art-editor-previews {
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-height:650px) and (min-width:901px) {
+  .hero-art-editor-controls {
+    font-size:11px;
+  }
+  .hero-art-editor-controls label {
+    margin-bottom:7px;
+  }
+  .art-editor-crop-controls {
+    margin:6px 0 4px;
+    padding:7px;
+  }
+  .art-editor-crop-controls label {
+    margin:4px 0;
+  }
+}

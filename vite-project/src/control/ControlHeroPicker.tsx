@@ -4,6 +4,7 @@ import { draftRestriction } from '../shared/draftRules';
 import { lanes, laneName, phaseName } from '../shared/display';
 import { translator } from '../shared/i18n';
 import { phases, type Action, type MatchState } from '../shared/types';
+import { heroSortCoverage, heroSortModes, sortHeroes, type HeroSortMode } from './heroSort';
 
 export function ControlHeroPicker({ state, disabled, active, send, acknowledged }: {
   state: MatchState; disabled: boolean; active: boolean; send: (action: Action) => void;
@@ -11,15 +12,22 @@ export function ControlHeroPicker({ state, disabled, active, send, acknowledged 
 }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [sortMode, setSortMode] = useState<HeroSortMode>(() => {
+    const saved = globalThis.localStorage?.getItem('hok-hero-sort-mode') as HeroSortMode | null;
+    return saved && heroSortModes.includes(saved) ? saved : (state.language === 'zh' ? 'name-zh' : 'name-en');
+  });
   const [recorded, setRecorded] = useState<Extract<Action, {type:'draft_action'}>>();
   const searchInput = useRef<HTMLInputElement>(null);
   const activeRef = useRef(active); activeRef.current = active;
   const t = translator(state.language), phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
   const used = [...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks];
-  const visible = heroes.filter(h => (filter === 'all' || h.occupation === filter || h.altOccupation === filter)
-    && `${h.englishName} ${h.chineseName} ${(h.aliases || []).join(' ')}`.toLowerCase().includes(search.trim().toLowerCase()));
   const unavailable = (id: number) => disabled || !phase || !!state.committedGameId || used.includes(id) || !!draftRestriction(state, phase.team, phase.action, id);
+  const filtered = heroes.filter(h => (filter === 'all' || h.occupation === filter || h.altOccupation === filter)
+    && `${h.englishName} ${h.chineseName} ${(h.aliases || []).join(' ')}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const visible = sortHeroes(filtered, sortMode, unavailable);
   const eligible = visible.filter(h => !unavailable(h.id));
+  const sortCoverage = heroSortCoverage(filtered, sortMode);
+  const metadataSort = sortMode === 'release' || sortMode === 'pick-rate';
   useEffect(() => {
     if (acknowledged?.action.type !== 'draft_action') { setRecorded(undefined); return; }
     setSearch(''); setRecorded(acknowledged.action);
@@ -56,7 +64,23 @@ export function ControlHeroPicker({ state, disabled, active, send, acknowledged 
       }} />
       <p className="quick-input-hint">{t('quickInputHint')}</p>
       <div className="record-feedback" role="status">{recorded && recordedHero && t('recordAccepted',{side:t(recorded.team === 'blue' ? 'blueSide' : 'redSide'),action:t(recorded.action === 'ban' ? 'banAction' : 'pickAction'),hero:state.language === 'zh' ? recordedHero.chineseName : recordedHero.englishName})}</div>
-      <div className="filters">{lanes.map(r => <button key={r} className={filter === r ? 'selected' : ''} onClick={() => setFilter(r)}>{laneName(r,state.language)}</button>)}</div>
+      <div className="picker-tools">
+        <div className="filters">{lanes.map(r => <button key={r} className={filter === r ? 'selected' : ''} onClick={() => setFilter(r)}>{laneName(r,state.language)}</button>)}</div>
+        <label className="hero-sort-control">{t('heroSort')}
+          <select value={sortMode} onChange={event => {
+            const next = event.target.value as HeroSortMode;
+            setSortMode(next);
+            globalThis.localStorage?.setItem('hok-hero-sort-mode', next);
+          }}>
+            <option value="name-zh">{t('heroSortChinese')}</option>
+            <option value="name-en">{t('heroSortEnglish')}</option>
+            <option value="release">{t('heroSortRelease')}</option>
+            <option value="pick-rate">{t('heroSortPickRate')}</option>
+            <option value="lane">{t('heroSortLane')}</option>
+          </select>
+        </label>
+      </div>
+      {metadataSort && sortCoverage < filtered.length && <p className="sort-data-note">{t('heroSortDataCoverage',{known:sortCoverage,total:filtered.length})}</p>}
     </div>
     <div className="hero-grid-scroll"><div className="hero-grid">{visible.map(h => {
       const reason = phase && draftRestriction(state,phase.team,phase.action,h.id);

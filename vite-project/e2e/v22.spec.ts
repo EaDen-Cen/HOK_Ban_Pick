@@ -192,3 +192,41 @@ test('hidden hero names promote and auto-fit player IDs while hiding ban names',
     await context.close();
   }
 });
+
+
+test('hero picker sorting and artwork editor fit a laptop browser viewport', async ({ browser, baseURL }) => {
+  const h = await harness(baseURL);
+  const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  try {
+    await h.send({ type: 'reset_match' });
+    await h.send({ type: 'settings', settings: { ...h.state(), language: 'eng' } });
+    const control = await context.newPage();
+    await control.goto('/control#token=e2e-control');
+    await expect(control.locator('.status')).toHaveText('Connected');
+
+    const sort = control.getByLabel('Sort by', { exact: true });
+    await expect(sort).toBeVisible();
+    await sort.selectOption('lane');
+    await expect(sort).toHaveValue('lane');
+
+    await control.getByRole('button', { name: 'Hero artwork', exact: true }).click();
+    const dialog = control.locator('.hero-art-editor-dialog');
+    await expect(dialog).toBeVisible();
+    const box = await dialog.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(1366);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(768);
+
+    for (const selector of ['.art-editor-reference', '.art-editor-previews']) {
+      const child = await control.locator(selector).boundingBox();
+      expect(child).not.toBeNull();
+      expect(child!.y).toBeGreaterThanOrEqual(box!.y);
+      expect(child!.y + child!.height).toBeLessThanOrEqual(box!.y + box!.height + 1);
+    }
+  } finally {
+    h.close();
+    await context.close();
+  }
+});
