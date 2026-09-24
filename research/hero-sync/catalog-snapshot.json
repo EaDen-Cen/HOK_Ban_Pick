@@ -1,0 +1,950 @@
+{
+  "checkedAt": "2026-09-24T18:45:49.654Z",
+  "source": "https://wiki.bittopup.com/hok",
+  "heroes": [
+    {
+      "campId": 105,
+      "englishName": "Lian Po",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/csLOp1dL.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/105",
+      "source": "bittopup"
+    },
+    {
+      "campId": 106,
+      "englishName": "Xiao Qiao",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/paTVVlNq.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/106",
+      "source": "bittopup"
+    },
+    {
+      "campId": 107,
+      "englishName": "Zilong",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/9xqbsAQC.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/107",
+      "source": "bittopup"
+    },
+    {
+      "campId": 108,
+      "englishName": "Mozi",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/Za4OlJ6t.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/108",
+      "source": "bittopup"
+    },
+    {
+      "campId": 109,
+      "englishName": "Daji",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/dYxuS6IA.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/109",
+      "source": "bittopup"
+    },
+    {
+      "campId": 110,
+      "englishName": "Garuda",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/default/h6UHy1TN.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/110",
+      "source": "bittopup"
+    },
+    {
+      "campId": 111,
+      "englishName": "Lady Sun",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/BmY46Zgb.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/111",
+      "source": "bittopup"
+    },
+    {
+      "campId": 112,
+      "englishName": "Luban No.7",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/0VBMiUN5.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/112",
+      "source": "bittopup"
+    },
+    {
+      "campId": 113,
+      "englishName": "Zhuangzi",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/UZC54GWu.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/113",
+      "source": "bittopup"
+    },
+    {
+      "campId": 114,
+      "englishName": "Liu Shan",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/i8WMjP6d.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/114",
+      "source": "bittopup"
+    },
+    {
+      "campId": 115,
+      "englishName": "Gao",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/QWFCuWNn.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/115",
+      "source": "bittopup"
+    },
+    {
+      "campId": 116,
+      "englishName": "Arke",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/IUMPYUy4.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/116",
+      "source": "bittopup"
+    },
+    {
+      "campId": 117,
+      "englishName": "Wuyan",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/D1f9UN1O.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/117",
+      "source": "bittopup"
+    },
+    {
+      "campId": 118,
+      "englishName": "Sun Bin",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/1zkBQ1l1.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/118",
+      "source": "bittopup"
+    },
+    {
+      "campId": 119,
+      "englishName": "Dr Bian",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/YmpeG9H2.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/119",
+      "source": "bittopup"
+    },
+    {
+      "campId": 120,
+      "englishName": "Bai Qi",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/uY7c38Tt.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/120",
+      "source": "bittopup"
+    },
+    {
+      "campId": 121,
+      "englishName": "Mi Yue",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/eHvcCJb0.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/121",
+      "source": "bittopup"
+    },
+    {
+      "campId": 123,
+      "englishName": "Lu Bu",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/dXLF2kE7.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/123",
+      "source": "bittopup"
+    },
+    {
+      "campId": 124,
+      "englishName": "Zhou Yu",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/kqkpA18w.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/124",
+      "source": "bittopup"
+    },
+    {
+      "campId": 125,
+      "englishName": "Yango",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/en5o11rK.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/125",
+      "source": "bittopup"
+    },
+    {
+      "campId": 126,
+      "englishName": "Dun",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/23rrkYYy.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/126",
+      "source": "bittopup"
+    },
+    {
+      "campId": 127,
+      "englishName": "Lady Zhen",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/gqPEOybC.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/127",
+      "source": "bittopup"
+    },
+    {
+      "campId": 128,
+      "englishName": "Fatih",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/default/6IY77h7c.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/128",
+      "source": "bittopup"
+    },
+    {
+      "campId": 129,
+      "englishName": "Dian Wei",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/y6IMFSlI.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/129",
+      "source": "bittopup"
+    },
+    {
+      "campId": 130,
+      "englishName": "Musashi",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/jgvSlz3u.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/130",
+      "source": "bittopup"
+    },
+    {
+      "campId": 131,
+      "englishName": "Li Bai",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/k3w1wjDA.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/131",
+      "source": "bittopup"
+    },
+    {
+      "campId": 132,
+      "englishName": "Marco Polo",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/48d8GxkP.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/132",
+      "source": "bittopup"
+    },
+    {
+      "campId": 133,
+      "englishName": "Di Renjie",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/XTSDAJkR.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/133",
+      "source": "bittopup"
+    },
+    {
+      "campId": 134,
+      "englishName": "Dharma",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/9u997w0x.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/134",
+      "source": "bittopup"
+    },
+    {
+      "campId": 135,
+      "englishName": "Xiang Yu",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/FLyy9J46.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/135",
+      "source": "bittopup"
+    },
+    {
+      "campId": 137,
+      "englishName": "Sima Yi",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/sU3BsR6P.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/137",
+      "source": "bittopup"
+    },
+    {
+      "campId": 139,
+      "englishName": "Fuzi",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/UhQkVUBi.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/139",
+      "source": "bittopup"
+    },
+    {
+      "campId": 140,
+      "englishName": "Guan Yu",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/V5e2k18Z.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/140",
+      "source": "bittopup"
+    },
+    {
+      "campId": 141,
+      "englishName": "Diaochan",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/qFBebEbk.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/141",
+      "source": "bittopup"
+    },
+    {
+      "campId": 142,
+      "englishName": "Angela",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/wjaExUFU.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/142",
+      "source": "bittopup"
+    },
+    {
+      "campId": 146,
+      "englishName": "Luna",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/hz3BqNue.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/146",
+      "source": "bittopup"
+    },
+    {
+      "campId": 148,
+      "englishName": "Ziya",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/km2HzQ71.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/148",
+      "source": "bittopup"
+    },
+    {
+      "campId": 149,
+      "englishName": "Liu Bang",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/bVHGeH45.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/149",
+      "source": "bittopup"
+    },
+    {
+      "campId": 150,
+      "englishName": "Han Xin",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/QTcSGEgM.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/150",
+      "source": "bittopup"
+    },
+    {
+      "campId": 152,
+      "englishName": "Wang Zhaojun",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/lhZtGJlg.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/152",
+      "source": "bittopup"
+    },
+    {
+      "campId": 153,
+      "englishName": "Gao Changgong",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/hwk1ad6d.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/153",
+      "source": "bittopup"
+    },
+    {
+      "campId": 154,
+      "englishName": "Mulan",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/p4dfuWXS.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/154",
+      "source": "bittopup"
+    },
+    {
+      "campId": 155,
+      "englishName": "Erin",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/joVNQWhw.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/155",
+      "source": "bittopup"
+    },
+    {
+      "campId": 156,
+      "englishName": "Liang",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/cNugkXGO.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/156",
+      "source": "bittopup"
+    },
+    {
+      "campId": 157,
+      "englishName": "Mai Shiranui",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/4jaM0F19.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/157",
+      "source": "bittopup"
+    },
+    {
+      "campId": 159,
+      "englishName": "Dolia",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/tfvb3IJf.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/159",
+      "source": "bittopup"
+    },
+    {
+      "campId": 162,
+      "englishName": "Nakoruru",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/H9WAmWdN.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/162",
+      "source": "bittopup"
+    },
+    {
+      "campId": 163,
+      "englishName": "Ukyo Tachibana",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/8e9WRFgL.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/163",
+      "source": "bittopup"
+    },
+    {
+      "campId": 166,
+      "englishName": "Arthur",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/YTBrsBIg.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/166",
+      "source": "bittopup"
+    },
+    {
+      "campId": 167,
+      "englishName": "Wukong",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/Go3mMeu4.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/167",
+      "source": "bittopup"
+    },
+    {
+      "campId": 168,
+      "englishName": "Lapulapu",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/default/AuWJ7G0J.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/168",
+      "source": "bittopup"
+    },
+    {
+      "campId": 169,
+      "englishName": "Hou Yi",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/S5isJokI.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/169",
+      "source": "bittopup"
+    },
+    {
+      "campId": 170,
+      "englishName": "Liu Bei",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/argPlTxR.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/170",
+      "source": "bittopup"
+    },
+    {
+      "campId": 171,
+      "englishName": "Zhang Fei",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/w0QS7N1L.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/171",
+      "source": "bittopup"
+    },
+    {
+      "campId": 172,
+      "englishName": "Chicha",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/lkU98jAV.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/172",
+      "source": "bittopup"
+    },
+    {
+      "campId": 173,
+      "englishName": "Fang",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/6dGNjKTe.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/173",
+      "source": "bittopup"
+    },
+    {
+      "campId": 174,
+      "englishName": "Consort Yu",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/Ku5RzFmQ.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/174",
+      "source": "bittopup"
+    },
+    {
+      "campId": 175,
+      "englishName": "Kui",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/wRGzV266.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/175",
+      "source": "bittopup"
+    },
+    {
+      "campId": 176,
+      "englishName": "Yuhuan",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/r97AVgaV.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/176",
+      "source": "bittopup"
+    },
+    {
+      "campId": 177,
+      "englishName": "Chano",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/default/sJURXorM.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/177",
+      "source": "bittopup"
+    },
+    {
+      "campId": 178,
+      "englishName": "Yang Jian",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/LntokS4z.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/178",
+      "source": "bittopup"
+    },
+    {
+      "campId": 179,
+      "englishName": "Nuwa",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/E39kxNsD.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/179",
+      "source": "bittopup"
+    },
+    {
+      "campId": 180,
+      "englishName": "Nezha",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/WDh84DWg.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/180",
+      "source": "bittopup"
+    },
+    {
+      "campId": 182,
+      "englishName": "Gan & Mo",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/ui5UKQex.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/182",
+      "source": "bittopup"
+    },
+    {
+      "campId": 183,
+      "englishName": "Athena",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/BEh6QC3Q.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/183",
+      "source": "bittopup"
+    },
+    {
+      "campId": 184,
+      "englishName": "Cai Yan",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/kQXkW7ab.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/184",
+      "source": "bittopup"
+    },
+    {
+      "campId": 187,
+      "englishName": "Donghuang",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/PRcq49iS.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/187",
+      "source": "bittopup"
+    },
+    {
+      "campId": 189,
+      "englishName": "Guiguzi",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/AXjJlMvi.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/189",
+      "source": "bittopup"
+    },
+    {
+      "campId": 190,
+      "englishName": "Kongming",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/XDnXeq3x.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/190",
+      "source": "bittopup"
+    },
+    {
+      "campId": 191,
+      "englishName": "Da Qiao",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/IEPtzR5z.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/191",
+      "source": "bittopup"
+    },
+    {
+      "campId": 192,
+      "englishName": "Huang Zhong",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/LNECT7PW.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/192",
+      "source": "bittopup"
+    },
+    {
+      "campId": 193,
+      "englishName": "Kaizer",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/xUdtJiLO.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/193",
+      "source": "bittopup"
+    },
+    {
+      "campId": 195,
+      "englishName": "Xuance",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/keW8Hfo0.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/195",
+      "source": "bittopup"
+    },
+    {
+      "campId": 196,
+      "englishName": "Shouyue",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/4bUKKH66.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/196",
+      "source": "bittopup"
+    },
+    {
+      "campId": 197,
+      "englishName": "Yixing",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/RLA5jvBk.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/197",
+      "source": "bittopup"
+    },
+    {
+      "campId": 198,
+      "englishName": "Menki",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/Ym7KcrIW.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/198",
+      "source": "bittopup"
+    },
+    {
+      "campId": 199,
+      "englishName": "Arli",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/hF8AFVqh.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/199",
+      "source": "bittopup"
+    },
+    {
+      "campId": 501,
+      "englishName": "Ming",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/ubeT1R84.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/501",
+      "source": "bittopup"
+    },
+    {
+      "campId": 502,
+      "englishName": "Pei",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/XlRczGYM.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/502",
+      "source": "bittopup"
+    },
+    {
+      "campId": 503,
+      "englishName": "Biron",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/F3A0JkoT.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/503",
+      "source": "bittopup"
+    },
+    {
+      "campId": 504,
+      "englishName": "Milady",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/orlOit3f.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/504",
+      "source": "bittopup"
+    },
+    {
+      "campId": 505,
+      "englishName": "Yaria",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/uHnzeJbu.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/505",
+      "source": "bittopup"
+    },
+    {
+      "campId": 506,
+      "englishName": "Cirrus",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/bwygx1aS.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/506",
+      "source": "bittopup"
+    },
+    {
+      "campId": 507,
+      "englishName": "Li Xin",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/mWSBbpVr.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/507",
+      "source": "bittopup"
+    },
+    {
+      "campId": 508,
+      "englishName": "Garo",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/g0jHNDf6.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/508",
+      "source": "bittopup"
+    },
+    {
+      "campId": 510,
+      "englishName": "Sun Ce",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/Te1nmDGP.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/510",
+      "source": "bittopup"
+    },
+    {
+      "campId": 513,
+      "englishName": "Shangguan",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/zyA68GFr.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/513",
+      "source": "bittopup"
+    },
+    {
+      "campId": 514,
+      "englishName": "Allain",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/Ek9OHopQ.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/514",
+      "source": "bittopup"
+    },
+    {
+      "campId": 517,
+      "englishName": "Augran",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/ue6KY05b.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/517",
+      "source": "bittopup"
+    },
+    {
+      "campId": 519,
+      "englishName": "Ao'yin",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/OzH2TSZN.jpg",
+      "detailUrl": "https://wiki.bittopup.com/hok/519",
+      "source": "bittopup"
+    },
+    {
+      "campId": 521,
+      "englishName": "Haya",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/iIdXNhQ5.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/521",
+      "source": "bittopup"
+    },
+    {
+      "campId": 522,
+      "englishName": "Yao",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/xw0HrvxD.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/522",
+      "source": "bittopup"
+    },
+    {
+      "campId": 523,
+      "englishName": "Shi",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/MjBadKpJ.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/523",
+      "source": "bittopup"
+    },
+    {
+      "campId": 524,
+      "englishName": "Meng Ya",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/vhBTA9jh.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/524",
+      "source": "bittopup"
+    },
+    {
+      "campId": 528,
+      "englishName": "Lam",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/02i6M2YK.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/528",
+      "source": "bittopup"
+    },
+    {
+      "campId": 531,
+      "englishName": "Jing",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/HVRw4cpB.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/531",
+      "source": "bittopup"
+    },
+    {
+      "campId": 533,
+      "englishName": "Agudo",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/TYN9rh81.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/533",
+      "source": "bittopup"
+    },
+    {
+      "campId": 534,
+      "englishName": "Sakeer",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/ionwVFtV.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/534",
+      "source": "bittopup"
+    },
+    {
+      "campId": 536,
+      "englishName": "Charlotte",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/iIwO0Kwk.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/536",
+      "source": "bittopup"
+    },
+    {
+      "campId": 537,
+      "englishName": "Devara",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/default/MagzAk8i.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/537",
+      "source": "bittopup"
+    },
+    {
+      "campId": 538,
+      "englishName": "Ying",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/diRuUQDV.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/538",
+      "source": "bittopup"
+    },
+    {
+      "campId": 542,
+      "englishName": "Feyd",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/m8aOqFQE.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/542",
+      "source": "bittopup"
+    },
+    {
+      "campId": 545,
+      "englishName": "Alessio",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/nnafEHV0.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/545",
+      "source": "bittopup"
+    },
+    {
+      "campId": 547,
+      "englishName": "Luara",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/znRnu3kt.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/547",
+      "source": "bittopup"
+    },
+    {
+      "campId": 556,
+      "englishName": "Ata",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/eafz1moy.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/556",
+      "source": "bittopup"
+    },
+    {
+      "campId": 558,
+      "englishName": "Umbrosa",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/ioDVAbAf.jpg",
+      "detailUrl": "https://wiki.bittopup.com/hok/558",
+      "source": "bittopup"
+    },
+    {
+      "campId": 563,
+      "englishName": "Heino",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/YO6iwLAg.jpg",
+      "detailUrl": "https://wiki.bittopup.com/hok/563",
+      "source": "bittopup"
+    },
+    {
+      "campId": 564,
+      "englishName": "Mayene",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/FsGXCnH1.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/564",
+      "source": "bittopup"
+    },
+    {
+      "campId": 577,
+      "englishName": "Dyadia",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/Qdvu6qgO.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/577",
+      "source": "bittopup"
+    },
+    {
+      "campId": 581,
+      "englishName": "Flowborn (Tank)",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/jbrX5mQc.jpeg",
+      "detailUrl": "https://wiki.bittopup.com/hok/581",
+      "source": "bittopup"
+    },
+    {
+      "campId": 582,
+      "englishName": "Flowborn (Mage)",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/66xErXNs.jpeg",
+      "detailUrl": "https://wiki.bittopup.com/hok/582",
+      "source": "bittopup"
+    },
+    {
+      "campId": 583,
+      "englishName": "Flowborn (Assassin)",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/default/rlKkeGUd.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/583",
+      "source": "bittopup"
+    },
+    {
+      "campId": 584,
+      "englishName": "Flowborn (Marksman)",
+      "occupation": "Farm Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/WuG07My1.jpeg",
+      "detailUrl": "https://wiki.bittopup.com/hok/584",
+      "source": "bittopup"
+    },
+    {
+      "campId": 585,
+      "englishName": "Flowborn (Roamer)",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/default/umejTpUh.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/585",
+      "source": "bittopup"
+    },
+    {
+      "campId": 631,
+      "englishName": "Florentino",
+      "occupation": "Clash Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/skJXGWLF.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/631",
+      "source": "bittopup"
+    },
+    {
+      "campId": 635,
+      "englishName": "Lorion",
+      "occupation": "Mid Lane",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/UDiFFfId.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/635",
+      "source": "bittopup"
+    },
+    {
+      "campId": 640,
+      "englishName": "Annette",
+      "occupation": "Roaming",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/49o0xBua.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/640",
+      "source": "bittopup"
+    },
+    {
+      "campId": 646,
+      "englishName": "Butterfly",
+      "occupation": "Jungling",
+      "imageUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/FPq2P4ew.png",
+      "detailUrl": "https://wiki.bittopup.com/hok/646",
+      "source": "bittopup"
+    }
+  ]
+}
