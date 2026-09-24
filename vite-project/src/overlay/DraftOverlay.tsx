@@ -7,6 +7,7 @@ import { DraftHistory } from '../shared/DraftHistory';
 import { draftRuleName, phaseName, stageName } from '../shared/display';
 import { translator } from '../shared/i18n';
 import { phases, type MatchState, type PlayerRole, type Side } from '../shared/types';
+import { heroArtCrop } from '../data/heroArtFocus';
 
 const rolePaths: Record<PlayerRole, string> = {
   clash: 'M7 4 20 17l-3 3L4 7V4h3Zm13 0h-3L4 17l3 3L20 7V4ZM3 21l4-4m10 0 4 4',
@@ -19,13 +20,19 @@ export function PositionIcon({ role, label }: { role: PlayerRole; label: string 
   return <svg className="position-icon" viewBox="0 0 24 24" role="img" aria-label={label}><title>{label}</title><path d={rolePaths[role]} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-function HeroArtwork({ hero, alt }: { hero: (typeof heroes)[number]; alt: string }) {
+function HeroArtwork({ hero, alt, layout }: { hero: (typeof heroes)[number]; alt: string; layout: MatchState['overlayLayout'] }) {
   const primary = hero.artLink || hero.imageLink;
+  const crop = heroArtCrop(hero.id, layout);
+  const position = hero.artPosition || `${crop.x}% ${crop.y}%`;
   return <img
     className={`hero-art ${hero.artLink ? 'hero-art-full' : 'hero-art-icon'}`}
     src={primary}
     alt={alt}
-    style={{ objectPosition: hero.artPosition || '50% 30%' }}
+    style={{
+      objectPosition: position,
+      transform: hero.artLink ? `scale(${crop.scale})` : undefined,
+      transformOrigin: position,
+    }}
     onError={event => {
       // Full official art is intentionally remote to avoid shipping hundreds of
       // megabytes in the repo. If the CDN is unavailable during a match, fall
@@ -35,6 +42,8 @@ function HeroArtwork({ hero, alt }: { hero: (typeof heroes)[number]; alt: string
       event.currentTarget.classList.remove('hero-art-full');
       event.currentTarget.classList.add('hero-art-icon');
       event.currentTarget.style.objectPosition = '50% 50%';
+      event.currentTarget.style.transform = 'none';
+      event.currentTarget.style.transformOrigin = '50% 50%';
     }}
   />;
 }
@@ -47,7 +56,7 @@ function PickCard({ state, side, index, position }: { state: MatchState; side: S
   return <article className={`broadcast-card ${hero ? 'filled' : ''}`} data-slot={index} data-team-id={team.id}>
     <HeroReveal heroId={id} layout={state.overlayLayout} position={position} renderArt={shownId => {
       const shown = heroes.find(h => h.id === shownId);
-      return shown ? <HeroArtwork hero={shown} alt={state.language === 'zh' ? shown.chineseName : shown.englishName} /> :
+      return shown ? <HeroArtwork hero={shown} alt={state.language === 'zh' ? shown.chineseName : shown.englishName} layout={state.overlayLayout} /> :
         <PlayerPortrait key={team.playerPortraits[index] + team.logo} portrait={team.playerPortraits[index]} logo={team.logo} label={player} slot={index} />;
     }} caption={<><strong title={heroName}>{heroName}</strong><span title={player}>{player}</span></>} />
     <div className="position-bar"><PositionIcon role={role} label={t(role)} /></div>
@@ -68,7 +77,7 @@ export function DraftOverlay({ state }: { state: MatchState }) {
     </header></div>
     <div className="broadcast-center" aria-hidden="true" />
     <div className="broadcast-bottom">
-      <DraftHistory state={state} compact />
+      {state.draftHistory.length > 0 && <DraftHistory state={state} compact />}
       <div className="broadcast-bans">{sides.map((side, position) => <div className={`ban-team ${side} display-${position === 0 ? 'left' : 'right'}`} key={state[`${side}Team`].id}><span>{t(side === 'blue' ? 'blueSide' : 'redSide')} · {t('ban')}</span><div className="bans">
         {Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, index) => {
           const hero = heroes.find(h => h.id === state[`${side}Bans`][index]);
