@@ -36,7 +36,11 @@
 - \`counter\`、\`combo\`、\`beCountered\` 从不自动抓取或覆盖。
 - 新英雄关系字段保持空数组并标记 \`relationshipStatus: "unverified"\`。
 - 第三方目录的分路变化只进入人工复核，不自动改生产数据。
-- 英雄图下载后检查真实 PNG/JPEG/WebP 文件头、大小并记录 SHA-256。
+- 小尺寸 Hero Icon 下载到本地后检查真实 PNG/JPEG/WebP 文件头、大小并记录 SHA-256。
+- Broadcast Pick Card 另外使用官方英雄详情页识别出的高分辨率 Character / Key Art，记录在 \`Hero.artLink\`。
+- Full Art 不预裁成固定正方形；Overlay 根据卡片实际尺寸用 \`object-fit: cover\` 实时裁切，未来横卡/竖卡/方卡共用同一素材。
+- 默认视觉焦点为 \`50% 28%\`；个别构图可以通过 \`Hero.artPosition\` 单独微调。
+- 官方 Full Art CDN 加载失败时自动退回本地 \`imageLink\` Icon，避免比赛画面出现空卡。
 - 自动任务只开 PR，不自动合并到 \`main\`。
 
 ## 本地命令
@@ -107,6 +111,31 @@ Merge
 \`\`\`
 
 第一次运行如果还没有 \`catalog-snapshot.json\`，会把建立来源基线本身视为一次变化并创建 PR。合并该基线后，后续任务才能准确识别目录中的改名、分路和图片变化。
+
+## Icon 与 Full Art 的分工
+
+英雄视觉资源拆成两层：
+
+\`\`\`text
+imageLink
+→ 小尺寸本地 Icon
+→ Hero Picker / Ban / Draft History / Full Art fallback
+
+artLink
+→ 官方高分辨率 Character / Key Art
+→ Broadcast Pick Card
+\`\`\`
+
+Overlay 不再假设“正方形头像就是最终素材”。卡片只负责定义自己的尺寸，浏览器自动按容器比例裁切完整角色封面：
+
+\`\`\`css
+width: 100%;
+height: 100%;
+object-fit: cover;
+object-position: 50% 28%;
+\`\`\`
+
+因此以后 Side、Panel 或新的赛事 UI 改成长横卡、窄竖卡或方卡时，不需要重新抓取对应比例的英雄头像。同步器会优先从官方英雄详情页中、皮肤展示区域之前的 Hero / Cover / Character / Key Visual 候选寻找主角色图，并排除 skin、skill、icon、logo、QR code、avatar 等小图。
 
 ## 生成文件的职责
 
