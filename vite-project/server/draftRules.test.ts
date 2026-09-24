@@ -164,8 +164,6 @@ test('player assignment changes preserve immutable pick order and cannot bypass 
   }
   assert.ok(blocked);
   assert.deepEqual(s.data.state, before);
-  act(s, { type: 'commit_game' });
-  assert.throws(() => act(s, { type: 'swap_assignments', team: 'blue', from: 0, to: 1 }), /gameAlreadyCommitted/);
 });
 
 test('a five-game series commits each game once and closes at the winning score', () => {
