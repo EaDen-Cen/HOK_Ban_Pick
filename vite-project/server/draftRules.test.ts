@@ -251,7 +251,7 @@ test('opponent-ban protection only uses committed picks in Global BP, not bans o
     const s=setup(mode); fill(s); const first=structuredClone(s.data.state);
     assert.equal(banRestriction(s.data.state,'blue',first.redPicks[0]),undefined);
     advance(s);
-    assert.equal(banRestriction(s.data.state,'blue',first.redBans[0]),undefined);
+    assert.equal(banRestriction(s.data.state,'blue',first.redBans[0]!),undefined);
     if(mode==='global') assert.equal(banRestriction(s.data.state,'blue',first.redPicks[0]),'opponentAlreadyUsed');
     else {
       act(s,{type:'draft_action',team:'blue',action:'ban',heroId:first.redPicks[0]});
