@@ -100,7 +100,6 @@ export function HeroArtEditorDialog({
     element.showModal();
     return () => { if (element.open) element.close(); };
   }, []);
-  useEffect(() => setDraft(makeDraft(heroId)), [heroId]);
 
   const hero = useMemo(() => heroes.find(item => item.id === heroId) ?? heroes[0], [heroId]);
   if (!hero) return null;
@@ -131,7 +130,11 @@ export function HeroArtEditorDialog({
       <div className="hero-art-editor-body">
         <aside className="hero-art-editor-controls">
           <label>{t('chooseHeroToEdit')}
-            <select value={hero.id} onChange={event => setHeroId(Number(event.target.value))}>
+            <select value={hero.id} onChange={event => {
+              const nextId = Number(event.target.value);
+              setHeroId(nextId);
+              setDraft(makeDraft(nextId));
+            }}>
               {heroes.map(item => <option key={item.id} value={item.id}>{state.language === 'zh' ? item.chineseName : item.englishName}</option>)}
             </select>
           </label>
