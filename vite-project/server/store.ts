@@ -14,6 +14,13 @@ function integer(v: unknown, min: number, max: number): asserts v is number {
 function shortText(v: unknown, max: number): asserts v is string {
   if (typeof v !== 'string' || v.length > max) throw new Error(`文字格式不正确，最多可输入 ${max} 个字符`);
 }
+function validateArtCrop(crop: unknown) {
+  if (!crop || typeof crop !== 'object') throw new Error('heroArtCropInvalid');
+  const value = crop as { x?: unknown; y?: unknown; scale?: unknown };
+  if (typeof value.x !== 'number' || !Number.isFinite(value.x) || value.x < 0 || value.x > 100) throw new Error('heroArtCropInvalid');
+  if (typeof value.y !== 'number' || !Number.isFinite(value.y) || value.y < 0 || value.y > 100) throw new Error('heroArtCropInvalid');
+  if (typeof value.scale !== 'number' || !Number.isFinite(value.scale) || value.scale < 0.6 || value.scale > 3) throw new Error('heroArtCropInvalid');
+}
 function portraitURL(value: unknown): asserts value is string {
   shortText(value, 1000);
   if (!value) return;
@@ -187,7 +194,9 @@ export class Store {
         !['zh', 'eng'].includes(s.language) ||
         !['panel', 'side'].includes(s.overlayLayout) ||
         !['number', 'boxes'].includes(s.scoreDisplay ?? state.scoreDisplay ?? 'number') ||
-        !['manual', 'screen'].includes(s.bpInputMode ?? state.bpInputMode ?? 'manual')
+        !['manual', 'screen'].includes(s.bpInputMode ?? state.bpInputMode ?? 'manual') ||
+        typeof (s.showHeroName ?? state.showHeroName) !== 'boolean' ||
+        !['auto', 'legacy'].includes(s.artSourceMode ?? state.artSourceMode ?? 'auto')
       ) {
         throw new Error('比赛设置无效，请检查赛制、语言和画面布局');
       }
@@ -280,6 +289,8 @@ export class Store {
         overlayLayout: s.overlayLayout,
         scoreDisplay: s.scoreDisplay ?? state.scoreDisplay ?? 'number',
         bpInputMode: s.bpInputMode ?? state.bpInputMode ?? 'manual',
+        showHeroName: s.showHeroName ?? state.showHeroName ?? true,
+        artSourceMode: s.artSourceMode ?? state.artSourceMode ?? 'auto',
 
         draftMode: s.draftMode,
         draftRuleMode,
@@ -291,6 +302,39 @@ export class Store {
       if (state.currentPhase > 0 && !state.committedGameId) {
         if (state.draftRuleMode === 'player' && [...state.blueTeam.players, ...state.redTeam.players].some(player => !playerIdentity(player))) throw new Error('playerMissing');
         validatePicks(state);
+      }
+      break;
+    }
+    case 'hero_art_override': {
+      if (!heroes.some(hero => hero.id === action.heroId)) throw new Error('找不到该英雄');
+      const override = action.override;
+      if (!override || typeof override !== 'object') throw new Error('heroArtOverrideInvalid');
+      if (override.useLegacyImage !== undefined && typeof override.useLegacyImage !== 'boolean') throw new Error('heroArtOverrideInvalid');
+      if (override.panel !== undefined) validateArtCrop(override.panel);
+      if (override.side !== undefined) validateArtCrop(override.side);
+      next.history.push(copy(state));
+      state.heroArtOverrides = { ...(state.heroArtOverrides || {}), [String(action.heroId)]: copy(override) };
+      break;
+    }
+    case 'reset_hero_art_override': {
+      if (!heroes.some(hero => hero.id === action.heroId)) throw new Error('找不到该英雄');
+      next.history.push(copy(state));
+      const key = String(action.heroId);
+      const current = { ...(state.heroArtOverrides?.[key] || {}) };
+      if (action.layout) {
+        if (!['panel', 'side'].includes(action.layout)) throw new Error('heroArtOverrideInvalid');
+        delete current[action.layout];
+        if (current.useLegacyImage === undefined && current.panel === undefined && current.side === undefined) {
+          const map = { ...(state.heroArtOverrides || {}) };
+          delete map[key];
+          state.heroArtOverrides = map;
+        } else {
+          state.heroArtOverrides = { ...(state.heroArtOverrides || {}), [key]: current };
+        }
+      } else {
+        const map = { ...(state.heroArtOverrides || {}) };
+        delete map[key];
+        state.heroArtOverrides = map;
       }
       break;
     }
