@@ -108,8 +108,12 @@ test('V2.2 settings, portrait fallback, mobile, reduced motion and delayed first
     await control.goto('/control#token=e2e-control'); await caster.goto('/caster#token=e2e-caster');
     await overlay.setViewportSize({width:1920,height:1080}); await overlay.goto('/overlay/draft#token=e2e-overlay');
     await expect(caster.locator('.board .phase')).toHaveClass('phase blue');
+    await expect(control.locator('.lifecycle-score')).toBeVisible();
+    await expect(control.locator('.lifecycle-score .score-control')).toHaveCount(2);
     await h.send({ type: 'delay', seconds: 3600 });
     await control.getByRole('button',{name:'Match settings',exact:true}).click();
+    await expect(control.locator('.settings-dialog .score-control')).toHaveCount(0);
+    await expect(control.locator('.match-score-settings')).toHaveCount(0);
     await control.getByLabel('Draft starting side',{exact:true}).selectOption('red');
     await control.getByLabel('Side swap behavior',{exact:true}).selectOption('colorsOnly');
     await control.getByLabel('Player portrait URL',{exact:true}).first().fill('/playerImg/missing.png');
