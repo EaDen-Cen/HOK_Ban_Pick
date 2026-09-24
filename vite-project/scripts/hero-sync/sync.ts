@@ -6,7 +6,7 @@ import autoSyncedHeroes from '../../src/data/autoSyncedHeroes.js';
 import heroSyncOverrides from '../../src/data/heroSyncOverrides.js';
 import type { Hero } from '../../src/data/heroTypes.js';
 import { downloadHeroAsset } from './assets.js';
-import { fetchCatalog, CATALOG_URL } from './fetchCatalog.js';
+import { fetchCatalog, fetchCatalogHeroDetail, CATALOG_URL } from './fetchCatalog.js';
 import { fetchOfficialHeroEvidence } from './fetchOfficial.js';
 import { makePlan, nextLocalIds } from './compare.js';
 import { mergeOverride, renderAutoSyncedHeroes, renderOverrides, type HeroOverride } from './generated.js';
@@ -92,10 +92,18 @@ async function applyUpdate(
   const ids = nextLocalIds(heroes, orderedAdditions.length);
 
   for (let index = 0; index < orderedAdditions.length; index++) {
-    const remote = orderedAdditions[index];
+    let remote = orderedAdditions[index];
     const id = ids[index];
     if (!remote.imageUrl) {
-      manualReview.push(`Skipped new hero ${remote.englishName} (${remote.campId}): no official CDN image found on catalog detail page.`);
+      try {
+        remote = await fetchCatalogHeroDetail(remote.campId);
+      } catch (error) {
+        manualReview.push(`Skipped new hero ${remote.englishName} (${remote.campId}): detail fetch failed (${error instanceof Error ? error.message : 'unknown error'}).`);
+        continue;
+      }
+    }
+    if (!remote.imageUrl) {
+      manualReview.push(`Skipped new hero ${remote.englishName} (${remote.campId}): no official CDN hero image found on catalog detail page.`);
       continue;
     }
 
