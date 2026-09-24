@@ -1,15 +1,8 @@
-# HOK Broadcast System — 第一版
+> [文档索引](../README.md) · 除特别注明外，文件路径以仓库根目录为基准，npm 命令在 `vite-project/` 中执行。
 
-## V2.2 更新
+# 安装、运行与部署指南
 
-新增顶部比分栏、底部横排/左右竖排两种 Overlay、选手形象、两种换边方式和独立 BP 先手设置。
-操作及兼容说明见 [V2.2-HANDOFF.md](V2.2-HANDOFF.md)。
-
-## V2 更新
-
-完整操作与迁移说明见 [V2-HANDOFF.md](V2-HANDOFF.md)。现在分别选择“BP 形式”和“BP 规则”，
-支持普通/选手/全局三种跨局规则；比分即时同步，有效局需手动确认，随后更新比分并开始下一局。
-新版 Overlay 显示中央比分、有效历史、选手与分路图标。旧存档可直接读取，无需删除。
+当前比赛操作以 [操作指南](operator-guide.md) 为准；版本交接与旧实施计划见 [历史归档](../archive/README.md)。
 
 基于 `qiqi47/HOK_Ban_Pick`，保留原英雄 ID、名称、图片、位置与关系数据和 MIT 许可。
 源码与执行目录：`vite-project/`。原单机组件保留在仓库中，新入口为 `src/BroadcastApp.tsx`。
@@ -63,7 +56,7 @@ Synergy、Counter、Be Countered 和克制敌方推荐使用原仓库数据，�
 ### /overlay/draft
 
 OBS Browser Source 尺寸设为 **1920 × 1080**，URL 使用 Overlay token。
-画布透明，可选择底部赛事卡片或紧凑卡片布局；上方保留游戏画面区域。
+画布透明，可选择底部横排或左右竖排布局；中央保留游戏画面区域。
 选禁有短暂入场动画，当前行动方高亮。
 Overlay 不显示分析、后台错误或登录 UI。断线保留最后画面并自动重连；首次未授权保持透明。
 Logo 支持 HTTPS URL 或 `/teamLogo/xxx.png`，本地图片放 `public/teamLogo/` 后重新构建。
@@ -106,7 +99,7 @@ Production 通信不送入节目总线；最终节目声音也不要回送到解
 - 同目录临时文件写入并 fsync，然后 rename 替换；写入失败不推进内存状态。
 - 文件损坏时启动报错，不自动清空比赛。恢复上一份完整备份后重启。
 - **只运行一个后端进程**，不要用集群模式或多副本同时写同一个文件。
-- 赛前备份，赛后归档整个 JSON。历史不自动裁剪；适合社区赛事的小规模操作量。
+- 赛前备份、赛后归档整个数据目录（比赛 JSON、队伍资料库和上传照片）；自定义 `UPLOAD_DIR` 时一并备份该目录。历史不自动裁剪；适合社区赛事的小规模操作量。
 - 浏览器刷新、WS 重连会恢复；仍需部署平台提供进程重启和持久化磁盘。
 - Overlay 无连接状态角标，导播应同时打开 Control 监控连接。
 
@@ -153,6 +146,6 @@ npm run test:e2e
 默认采用每队 4 Ban / 5 Pick 的赛事模式。本轮新增 21 条英雄/形态记录及全部本地头像，
 目前共 116 条有效记录，保留旧有效 ID 与旧名搜索别名。图标显示不依赖外部网站。
 未核实的新英雄关系保持“暂无数据”；Flowborn 形态及联动英雄以实际比赛房间为准。
-顺序和原则见 [WORKFLOW.md](WORKFLOW.md)，
-同步内容与来源见 [HERO-DATA-AUDIT.md](HERO-DATA-AUDIT.md)、
-[图标来源清单](research/new-hero-assets.json)。
+顺序和原则见 [WORKFLOW.md](../archive/planning/workflow-2026-09-17.md)，
+同步内容与来源见 [HERO-DATA-AUDIT.md](../research/hero-data-audit-2026-09-16.md)、
+[图标来源清单](../../research/new-hero-assets.json)。
