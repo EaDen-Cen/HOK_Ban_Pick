@@ -24,6 +24,7 @@ npm run server
 | 比赛流程、快捷 BP、照片、队伍库及替补 | [操作指南](docs/guides/operator-guide.md) |
 | Windows 一键启动及 Cloudflare | [启动器说明](docs/guides/windows-launcher.md) |
 | 理解源码目录和状态流 | [系统结构](docs/design/architecture.md) |
+| 查看项目阶段与未来路线 | [项目里程碑](MILESTONES.md) |
 | 查看历次测试及未验收范围 | [验证记录](docs/validation/history.md) |
 | 查英雄资料来源 | [研究索引](docs/research/README.md) |
 | 查旧交接、旧计划和原项目介绍 | [历史归档](docs/archive/README.md) |
