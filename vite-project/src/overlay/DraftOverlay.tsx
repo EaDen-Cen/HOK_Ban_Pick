@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import heroes from '../components/HeroList';
 import { Score } from '../shared/Score';
 import { HeroReveal } from './HeroReveal';
@@ -18,6 +19,42 @@ const rolePaths: Record<PlayerRole, string> = {
 };
 export function PositionIcon({ role, label }: { role: PlayerRole; label: string }) {
   return <svg className="position-icon" viewBox="0 0 24 24" role="img" aria-label={label}><title>{label}</title><path d={rolePaths[role]} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function AutoFitPlayerId({ value, layout }: { value: string; layout: MatchState['overlayLayout'] }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    const container = element?.parentElement;
+    if (!element || !container) return;
+
+    const max = layout === 'side' ? 30 : 28;
+    const min = 6;
+    const fit = () => {
+      const available = Math.max(1, container.clientWidth - 12);
+      let low = min;
+      let high = max;
+      let best = min;
+      for (let i = 0; i < 12; i++) {
+        const size = (low + high) / 2;
+        element.style.fontSize = `${size}px`;
+        if (element.scrollWidth <= available) {
+          best = size;
+          low = size;
+        } else {
+          high = size;
+        }
+      }
+      element.style.fontSize = `${best.toFixed(2)}px`;
+    };
+
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [value, layout]);
+
+  return <span ref={ref} className="player-id player-id-only" title={value}>{value}</span>;
 }
 
 function HeroArtwork({ hero, alt, state }: { hero: (typeof heroes)[number]; alt: string; state: MatchState }) {
@@ -60,14 +97,21 @@ function PickCard({ state, side, index, position }: { state: MatchState; side: S
       const shown = heroes.find(h => h.id === shownId);
       return shown ? <HeroArtwork hero={shown} alt={state.language === 'zh' ? shown.chineseName : shown.englishName} state={state} /> :
         <PlayerPortrait key={team.playerPortraits[index] + team.logo} portrait={team.playerPortraits[index]} logo={team.logo} label={player} slot={index} />;
-    }} caption={<>{state.showHeroName && <strong title={heroName}>{heroName}</strong>}<span title={player}>{player}</span></>} />
+    }}
+    captionClassName={state.showHeroName ? '' : 'player-only'}
+    caption={<>
+      {state.showHeroName && <strong title={heroName}>{heroName}</strong>}
+      {state.showHeroName
+        ? <span className="player-id" title={player}>{player}</span>
+        : <AutoFitPlayerId value={player} layout={state.overlayLayout} />}
+    </>} />
     <div className="position-bar"><PositionIcon role={role} label={t(role)} /></div>
   </article>;
 }
 export function DraftOverlay({ state }: { state: MatchState }) {
   const t = translator(state.language), phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
   const sides = displaySides(state), [left, right] = sides;
-  return <section className={`broadcast-overlay broadcast-${state.overlayLayout}`}>
+  return <section className={`broadcast-overlay broadcast-${state.overlayLayout} ${state.showHeroName ? 'hero-names-visible' : 'hero-names-hidden'}`}>
     <div className="broadcast-top"><header className="broadcast-header">
       <div className="broadcast-brand">{t('gameTitle')}</div>
       <div className="broadcast-meta">{stageName(state.stage, state.language)} · {state.seriesFormat} · {t('gameNumber', { number: currentGame(state) })} · {draftRuleName(state)}</div>
@@ -84,7 +128,7 @@ export function DraftOverlay({ state }: { state: MatchState }) {
         {Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, index) => {
           const hero = heroes.find(h => h.id === state[`${side}Bans`][index]);
           const label = hero ? (state.language === 'zh' ? hero.chineseName : hero.englishName) : t('ban');
-          return <div className="hero-slot ban" key={index} title={label}>{hero ? <><img src={hero.imageLink} alt={label} /><b className="ban-mark">╱</b><span className="ban-name">{label}</span></> : <span className="empty">—</span>}</div>;
+          return <div className="hero-slot ban" key={index} title={label}>{hero ? <><img src={hero.imageLink} alt={label} /><b className="ban-mark">╱</b>{state.showHeroName && <span className="ban-name">{label}</span>}</> : <span className="empty">—</span>}</div>;
         })}</div></div>)}</div>
       <div className="broadcast-picks">{sides.map((side, position) => <div key={state[`${side}Team`].id} className={`pick-team ${side} display-${position === 0 ? 'left' : 'right'} ${phase?.team === side ? 'acting' : ''}`}>
         {Array.from({ length: 5 }, (_, index) => <PickCard key={index} state={state} side={side} index={index} position={position === 0 ? 'left' : 'right'} />)}
