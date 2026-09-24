@@ -33,18 +33,34 @@ function portraitURL(value: unknown): asserts value is string {
   throw new Error('portraitInvalid');
 }
 function clearDraft(state: MatchState) {
-  Object.assign(state, { blueBans: [], redBans: [], bluePicks: [], redPicks: [], currentPhase: 0, draftComplete: false, draftGameNumber: null, committedGameId: null });
+  Object.assign(state, {
+    blueBans: [], redBans: [], bluePicks: [], redPicks: [],
+    blueAssignments: [null, null, null, null, null],
+    redAssignments: [null, null, null, null, null],
+    currentPhase: 0, draftComplete: false, draftGameNumber: null, committedGameId: null,
+  });
 }
 function validateScores(blue: number, red: number, format: MatchState['seriesFormat']) {
   integer(blue, 0, 3); integer(red, 0, 3);
   const wins = (Number(format.slice(2)) + 1) / 2;
   if (blue > wins || red > wins || (blue === wins && red === wins)) throw new Error('比分或局数不符合当前赛制');
 }
-function validatePicks(state: MatchState) {
+function validateLineup(state: MatchState, requireComplete = state.draftComplete) {
   for (const side of ['blue', 'red'] as const) {
-    for (const [index, heroId] of state[`${side}Picks`].entries()) {
-      const reason = pickRestriction(state, side, index, heroId);
-      if (reason) throw new Error(reason);
+    const picks = state[`${side}Picks`];
+    const assignments = state[`${side}Assignments`];
+    if (!Array.isArray(assignments) || assignments.length !== 5) throw new Error('lineupInvalid');
+    const assigned = assignments.filter((heroId): heroId is number => heroId !== null);
+    if (new Set(assigned).size !== assigned.length || assigned.some(heroId => !picks.includes(heroId))) throw new Error('lineupInvalid');
+    if (requireComplete) {
+      if (picks.length !== 5 || assigned.length !== 5 || picks.some(heroId => !assigned.includes(heroId))) throw new Error('lineupIncomplete');
+      if (state.draftRuleMode === 'player') {
+        assignments.forEach((heroId, index) => {
+          if (heroId === null) throw new Error('lineupIncomplete');
+          const reason = pickRestriction(state, side, index, heroId);
+          if (reason) throw new Error(reason);
+        });
+      }
     }
   }
 }
@@ -123,6 +139,23 @@ export class Store {
       next.history.push(copy(state));
       state.draftGameNumber ??= state.gameNumber;
       state[`${phase.team}${phase.action === 'ban' ? 'Bans' : 'Picks'}`].push(action.heroId);
+      if (phase.action === 'pick') {
+        const assignmentIndex = state[`${phase.team}Picks`].length - 1;
+        state[`${phase.team}Assignments`][assignmentIndex] = action.heroId;
+      }
+      state.currentPhase++;
+      state.draftComplete = state.currentPhase === phases(state.draftMode, state.firstPickSide).length;
+      break;
+    }
+    case 'skip_ban': {
+      if (state.committedGameId) throw new Error('gameAlreadyCommitted');
+      if (state.draftRuleMode === 'player' && [...state.blueTeam.players, ...state.redTeam.players].some(player => !playerIdentity(player))) throw new Error('playerMissing');
+      if (state.currentPhase === 0 && (seriesFinished(state) || state.draftHistory.some(game => game.gameNumber >= state.gameNumber))) throw new Error('updateScoreBeforeNext');
+      const phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
+      if (!phase || phase.team !== action.team || phase.action !== 'ban') throw new Error('emptyBanOnlyDuringBan');
+      next.history.push(copy(state));
+      state.draftGameNumber ??= state.gameNumber;
+      state[`${phase.team}Bans`].push(null);
       state.currentPhase++;
       state.draftComplete = state.currentPhase === phases(state.draftMode, state.firstPickSide).length;
       break;
@@ -130,9 +163,16 @@ export class Store {
     case 'commit_game': {
       if (state.committedGameId || state.draftHistory.some(game => game.gameNumber === currentGame(state))) throw new Error('gameAlreadyCommitted');
       if (!state.draftComplete || state.bluePicks.length !== 5 || state.redPicks.length !== 5) throw new Error('completeDraftFirst');
-      validatePicks(state);
+      validateLineup(state, true);
       next.history.push(copy(state));
-      state.draftHistory.push({ id, firstPickSide: state.firstPickSide, gameNumber: currentGame(state), committedAt: this.clock(), blueTeam: copy(state.blueTeam), redTeam: copy(state.redTeam), bluePicks: [...state.bluePicks], redPicks: [...state.redPicks] });
+      state.draftHistory.push({
+        id, firstPickSide: state.firstPickSide, gameNumber: currentGame(state), committedAt: this.clock(),
+        blueTeam: copy(state.blueTeam), redTeam: copy(state.redTeam),
+        blueBans: [...state.blueBans], redBans: [...state.redBans],
+        bluePicks: [...state.bluePicks], redPicks: [...state.redPicks],
+        blueAssignments: [...state.blueAssignments] as number[],
+        redAssignments: [...state.redAssignments] as number[],
+      });
       state.committedGameId = id;
       break;
     }
@@ -150,15 +190,28 @@ export class Store {
       if (state.sideSwapMode === 'colorsOnly') state.displayLeftSide = state.displayLeftSide === 'blue' ? 'red' : 'blue';
       break;
     }
-    case 'swap_picks': {
+    case 'swap_picks':
+    case 'swap_assignments': {
       if (state.committedGameId) throw new Error('gameAlreadyCommitted');
       if (!state.draftComplete) throw new Error('completeDraftFirst');
       if (!['blue', 'red'].includes(action.team)) throw new Error('操作无效');
       integer(action.from, 0, 4); integer(action.to, 0, 4);
       next.history.push(copy(state));
-      const picks = state[`${action.team}Picks`];
-      [picks[action.from], picks[action.to]] = [picks[action.to], picks[action.from]];
-      validatePicks(state);
+      const assignments = state[`${action.team}Assignments`];
+      [assignments[action.from], assignments[action.to]] = [assignments[action.to], assignments[action.from]];
+      validateLineup(state, true);
+      break;
+    }
+    case 'set_lineup_assignments': {
+      if (state.committedGameId) throw new Error('gameAlreadyCommitted');
+      if (!state.draftComplete) throw new Error('completeDraftFirst');
+      for (const lineup of [action.blue, action.red]) {
+        if (!Array.isArray(lineup) || lineup.length !== 5 || lineup.some(heroId => !Number.isInteger(heroId))) throw new Error('lineupInvalid');
+      }
+      next.history.push(copy(state));
+      state.blueAssignments = [...action.blue];
+      state.redAssignments = [...action.red];
+      validateLineup(state, true);
       break;
     }
     case 'score': {
@@ -308,7 +361,7 @@ export class Store {
       // Committed records remain immutable snapshots of the game already played.
       if (state.currentPhase > 0 && !state.committedGameId) {
         if (state.draftRuleMode === 'player' && [...state.blueTeam.players, ...state.redTeam.players].some(player => !playerIdentity(player))) throw new Error('playerMissing');
-        validatePicks(state);
+        if (state.draftComplete) validateLineup(state, true);
       }
       break;
     }

@@ -13,7 +13,7 @@ export function DraftHistory({ state, compact = false }: { state: MatchState; co
         const entry = historyForTeam(record, state[`${side}Team`].id);
         return <div key={side} className={`history-team ${side} display-${position === 0 ? 'left' : 'right'}`}>
           {!compact && <strong>{entry?.team.name}</strong>}
-          <div className="history-heroes">{entry?.picks.map((id, index) => {
+          <div className="history-heroes">{entry?.assignments.map((id, index) => {
             const hero = heroes.find(h => h.id === id);
             const name = state.language === 'zh' ? hero?.chineseName : hero?.englishName;
             return <img key={index} src={hero?.imageLink} alt={name} title={`${name} · ${entry.team.players[index] || t('playerNumber', { number: index + 1 })}`} />;

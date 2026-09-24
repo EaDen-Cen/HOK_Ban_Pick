@@ -108,8 +108,12 @@ test('V2.2 settings, portrait fallback, mobile, reduced motion and delayed first
     await control.goto('/control#token=e2e-control'); await caster.goto('/caster#token=e2e-caster');
     await overlay.setViewportSize({width:1920,height:1080}); await overlay.goto('/overlay/draft#token=e2e-overlay');
     await expect(caster.locator('.board .phase')).toHaveClass('phase blue');
+    await expect(control.locator('.lifecycle-score')).toBeVisible();
+    await expect(control.locator('.lifecycle-score .score-control')).toHaveCount(2);
     await h.send({ type: 'delay', seconds: 3600 });
     await control.getByRole('button',{name:'Match settings',exact:true}).click();
+    await expect(control.locator('.settings-dialog .score-control')).toHaveCount(0);
+    await expect(control.locator('.match-score-settings')).toHaveCount(0);
     await control.getByLabel('Draft starting side',{exact:true}).selectOption('red');
     await control.getByLabel('Side swap behavior',{exact:true}).selectOption('colorsOnly');
     await control.getByLabel('Player portrait URL',{exact:true}).first().fill('/playerImg/missing.png');
@@ -225,6 +229,38 @@ test('hero picker sorting and artwork editor fit a laptop browser viewport', asy
       expect(child!.y).toBeGreaterThanOrEqual(box!.y);
       expect(child!.y + child!.height).toBeLessThanOrEqual(box!.y + box!.height + 1);
     }
+  } finally {
+    h.close();
+    await context.close();
+  }
+});
+
+
+test('empty ban advances the phase without consuming a hero and renders distinctly', async ({ browser, baseURL }) => {
+  const h = await harness(baseURL);
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  try {
+    await h.send({ type: 'reset_match' });
+    await h.send({ type: 'settings', settings: { ...h.state(), language: 'eng', bpInputMode: 'manual' } });
+    const control = await context.newPage();
+    const overlay = await context.newPage();
+    await control.goto('/control#token=e2e-control');
+    await overlay.goto('/overlay/draft#token=e2e-overlay');
+
+    const emptyBan = control.getByRole('button', { name: 'Empty ban / Skip this ban', exact: true });
+    await expect(emptyBan).toBeVisible();
+    await emptyBan.click();
+
+    await expect.poll(() => h.state().currentPhase).toBe(1);
+    expect(h.state().blueBans).toEqual([null]);
+    expect(h.state().bluePicks).toEqual([]);
+    await expect(overlay.locator('.ban-team.blue .skipped-ban')).toHaveCount(1);
+    await expect(overlay.locator('.ban-team.blue .skipped-ban-label')).toHaveText('Empty ban');
+
+    await h.send({ type: 'undo' });
+    await expect.poll(() => h.state().currentPhase).toBe(0);
+    expect(h.state().blueBans).toEqual([]);
+    await expect(overlay.locator('.ban-team.blue .skipped-ban')).toHaveCount(0);
   } finally {
     h.close();
     await context.close();

@@ -68,7 +68,16 @@ test('global and personal histories survive colors-only swaps and are enforced f
     act(s, { type: 'commit_game' }); act(s, { type: 'score', team: 'blue', delta: 1 }); act(s, { type: 'next_game' });
     act(s, { type: 'swap_sides' }); act(s, { type: 'settings', settings: { ...s.data.state, firstPickSide: 'red' } });
     for (let i = 0; i < 4; i++) act(s, { type: 'draft_action', ...phases('match', 'red')[i], heroId: heroes[80 + i].id });
-    assert.throws(() => act(s, { type: 'draft_action', team: 'red', action: 'pick', heroId: forbidden }), /usedBy/);
+    if (draftRuleMode === 'global') {
+      assert.throws(() => act(s, { type: 'draft_action', team: 'red', action: 'pick', heroId: forbidden }), /usedByTeam/);
+    } else {
+      // Player BP permits a teammate to help-pick the hero; final ownership is checked at commit.
+      act(s, { type: 'draft_action', team: 'red', action: 'pick', heroId: forbidden });
+      fill(s);
+      assert.throws(() => act(s, { type: 'commit_game' }), /usedByPlayer/);
+      act(s, { type: 'swap_assignments', team: 'red', from: 0, to: 1 });
+      act(s, { type: 'commit_game' });
+    }
     assert.equal(pickRestriction(s.data.state, 'blue', 0, forbidden), undefined);
     assert.equal(s.data.state.displayLeftSide, 'red');
   }

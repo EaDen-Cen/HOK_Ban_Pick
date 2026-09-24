@@ -49,8 +49,14 @@ export interface GameDraftRecord {
   committedAt: number;
   blueTeam: Team;
   redTeam: Team;
+  /** Immutable draft-order history. */
+  blueBans?: Array<number | null>;
+  redBans?: Array<number | null>;
   bluePicks: number[];
   redPicks: number[];
+  /** Final hero ownership by player slot after help-picks / swaps. */
+  blueAssignments: number[];
+  redAssignments: number[];
 }
 
 export interface MatchState {
@@ -83,10 +89,14 @@ export interface MatchState {
   currentPhase: number;
   draftComplete: boolean;
 
-  blueBans: number[];
-  redBans: number[];
+  /** Ban slots preserve empty bans as null so phase order/history stay exact. */
+  blueBans: Array<number | null>;
+  redBans: Array<number | null>;
+  /** Pick order is immutable draft history; assignments drive player cards. */
   bluePicks: number[];
   redPicks: number[];
+  blueAssignments: Array<number | null>;
+  redAssignments: Array<number | null>;
 }
 
 export type MatchSettings = Pick<
@@ -113,10 +123,13 @@ export type MatchSettings = Pick<
 export type Action =
   | { type: 'load_team_preset'; side: Side; presetId: string }
   | { type: 'draft_action'; team: Side; action: 'ban' | 'pick'; heroId: number }
+  | { type: 'skip_ban'; team: Side }
   | { type: 'undo' | 'reset_draft' | 'reset_match' }
   | { type: 'commit_game' | 'next_game' | 'swap_sides' }
   | { type: 'score'; team: Side; delta: 1 | -1 }
-  | { type: 'swap_picks'; team: Side; from: number; to: number }
+  | { type: 'swap_picks'; team: Side; from: number; to: number } // legacy alias: swaps assignments, never pick order
+  | { type: 'swap_assignments'; team: Side; from: number; to: number }
+  | { type: 'set_lineup_assignments'; blue: number[]; red: number[] }
   | { type: 'settings'; settings: MatchSettings }
   | { type: 'hero_art_override'; heroId: number; override: HeroArtOverride }
   | { type: 'reset_hero_art_override'; heroId: number; layout?: HeroArtLayout }
@@ -181,6 +194,8 @@ export const initialState = (): MatchState => ({
   redBans: [],
   bluePicks: [],
   redPicks: [],
+  blueAssignments: [null, null, null, null, null],
+  redAssignments: [null, null, null, null, null],
 });
 
 export function phases(mode: MatchState['draftMode'], firstPickSide: Side = 'blue') {

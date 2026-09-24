@@ -24,6 +24,21 @@
 .control-monitor .delay-controls button { padding:5px 7px; }
 .control-monitor .side-summary { gap:6px 14px; font-size:11px; margin-bottom:10px; }
 .control-monitor .lifecycle > .muted { line-height:1.5; font-size:11px; }
+.lifecycle-operation-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,.9fr); gap:14px; align-items:stretch; }
+.lifecycle-primary-actions { min-width:0; display:flex; flex-direction:column; justify-content:center; }
+.lifecycle-primary-actions > .muted { margin-top:10px; line-height:1.45; font-size:11px; }
+.lifecycle-score { min-width:0; border:1px solid #2a3b52; border-radius:8px; padding:10px 12px; background:#0b1625; }
+.lifecycle-score-heading { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.lifecycle-score-heading strong { font-size:12px; color:#dbe7f5; }
+.lifecycle-score-heading .muted { font-size:10px; text-align:right; }
+.lifecycle-score-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.lifecycle-score .score-setting { min-width:0; padding:7px 8px; border:1px solid #26384e; border-radius:6px; background:#0f1c2d; }
+.lifecycle-score .score-setting > p { margin:0 0 4px; font-weight:700; color:#dbe7f5; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lifecycle-score .score-setting.blue > p { color:#77caff; }
+.lifecycle-score .score-setting.red > p { color:#ff7b92; }
+.lifecycle-score .score-control { justify-content:center; gap:8px; margin:0; }
+.lifecycle-score .score-control button { padding:5px 8px; min-width:30px; }
+.lifecycle-score .score-control strong { font-size:22px; min-width:24px; }
 .control-monitor .assignment-teams { gap:12px; }
 .control-monitor .assignment-team label { grid-template-columns:1fr; }
 .control-hero-picker.panel { margin:0; padding:16px; min-width:0; position:sticky; top:12px; height:calc(100dvh - 130px); min-height:460px; display:flex; flex-direction:column; }
@@ -104,4 +119,103 @@
 @media(max-width:760px) {
   .picker-tools { grid-template-columns:1fr; }
   .hero-sort-control { max-width:none; }
+}
+
+
+/* Final lineup ownership / help-pick reconciliation */
+.lineup-sync { display:grid; gap:14px; }
+.lineup-sync-head { display:flex; justify-content:space-between; gap:14px; align-items:flex-start; }
+.lineup-sync-head > div { min-width:0; }
+.lineup-sync-head .muted { margin-top:6px; line-height:1.45; }
+.lineup-team-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.lineup-team { border:1px solid #31445e; border-top:3px solid #55baff; border-radius:8px; padding:12px; background:#0b1625; }
+.lineup-team.red { border-top-color:#ff657c; }
+.lineup-team h3 { margin:0 0 10px; }
+.lineup-player-row { display:grid; grid-template-columns:minmax(90px,.8fr) minmax(150px,1.2fr) minmax(100px,.8fr); gap:8px; align-items:center; padding:7px 0; border-top:1px solid #ffffff0b; }
+.lineup-player-row:first-of-type { border-top:0; }
+.lineup-player-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:650; }
+.lineup-player-row select { width:100%; min-width:0; }
+.lineup-detected { color:#8fb4d7; font-size:11px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lineup-auto { border-top:1px solid #2b3c52; padding-top:12px; }
+.lineup-auto-toolbar { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; }
+.lineup-auto-toolbar label { flex-direction:row; align-items:center; gap:8px; margin:0; color:#d7e5f6; }
+.lineup-auto-toolbar input[type="checkbox"] { width:18px; height:18px; margin:0; }
+.lineup-status { margin:8px 0 0; color:#9db3cd; font-size:12px; }
+.lineup-regions { margin-top:10px; border:1px solid #31445e; border-radius:8px; padding:9px 11px; background:#091321; }
+.lineup-regions summary { cursor:pointer; font-weight:700; }
+.lineup-region-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; margin-top:10px; }
+.lineup-region-grid fieldset { min-width:0; margin:0; padding:8px; border:1px solid #30445e; border-radius:6px; }
+.lineup-region-grid legend { padding:0 4px; font-size:11px; color:#dbe9f8; }
+.lineup-region-grid label { margin:4px 0; gap:3px; font-size:10px; }
+.lineup-region-grid input { width:100%; min-width:0; padding:5px 6px; }
+
+@media(max-width:1100px) {
+  .lineup-region-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:760px) {
+  .lineup-sync-head { flex-direction:column; }
+  .lineup-team-grid { grid-template-columns:1fr; }
+  .lineup-player-row { grid-template-columns:minmax(82px,.8fr) minmax(0,1.2fr); }
+  .lineup-detected { grid-column:1 / -1; text-align:left; }
+  .lineup-region-grid { grid-template-columns:1fr; }
+}
+
+@media(max-width:760px) {
+  .lifecycle-operation-grid { grid-template-columns:1fr; }
+  .lifecycle-score-grid { grid-template-columns:1fr 1fr; }
+  .lifecycle-score-heading { align-items:flex-start; flex-direction:column; gap:3px; }
+  .lifecycle-score-heading .muted { text-align:left; }
+}
+@media(max-width:430px) {
+  .lifecycle-score-grid { grid-template-columns:1fr; }
+}
+
+
+/* Empty-ban controls and screen-recognition review */
+.empty-ban-control {
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:8px 10px;
+  align-items:center;
+  margin:8px 0 10px;
+  padding:9px 10px;
+  border:1px solid #6d5b31;
+  border-radius:7px;
+  background:#2a2315;
+}
+.empty-ban-control small { color:#cbbd95; line-height:1.35; }
+.empty-ban-button {
+  border-color:#9b7a32;
+  background:#3a2e17;
+  color:#ffe5a8;
+}
+.empty-ban-button:hover { background:#4a3a1c; }
+.screen-input-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 10px;
+  align-items:center;
+}
+.auto-watch-toggle {
+  flex-direction:row;
+  align-items:center;
+  gap:7px;
+  margin:0;
+  color:#dce8f6;
+}
+.auto-watch-toggle input {
+  width:18px;
+  height:18px;
+  margin:0;
+}
+.capture-review-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+}
+@media(max-width:600px) {
+  .empty-ban-control { grid-template-columns:1fr; }
+  .screen-input-actions { align-items:stretch; }
+  .screen-input-actions > button { flex:1 1 auto; }
 }

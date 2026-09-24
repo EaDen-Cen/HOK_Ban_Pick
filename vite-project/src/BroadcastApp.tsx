@@ -15,7 +15,7 @@ import { useMatch } from './shared/useMatch';
 import { connectionLabel, phaseName, seriesName, stageName, teamName, draftRuleName } from './shared/display';
 import { translator } from './shared/i18n';
 import { errorMessage } from './shared/errorMessages';
-import { currentGame, displaySides, normalizeState, ruleLocked, seriesWins } from './shared/draftRules';
+import { currentGame, displaySides, normalizeState, ruleLocked } from './shared/draftRules';
 import { TeamLibrary } from './control/TeamLibrary';
 import { PortraitField } from './control/PortraitField';
 import { ControlHeroPicker } from './control/ControlHeroPicker';
@@ -24,15 +24,20 @@ import { SettingsDialog } from './control/SettingsDialog';
 import { TeamSettingsDialog } from './control/TeamSettingsDialog';
 import { ScreenInput } from './control/ScreenInput';
 import { HeroArtEditorDialog } from './control/HeroArtEditorDialog';
+import { LineupAssignments } from './control/LineupAssignments';
 import { Score } from './shared/Score';
 import { DraftHistory } from './shared/DraftHistory';
 import { DraftLifecycle } from './control/DraftLifecycle';
 import { DraftOverlay } from './overlay/DraftOverlay';
 const hero = (id: number) => heroes.find(h => h.id === id);
 const name = (id: number, lang: Language) => { const h = hero(id); return h ? (lang === 'zh' ? h.chineseName : h.englishName) : '—'; };
-function HeroSlot({ id, ban = false, lang }: { id?: number; ban?: boolean; lang: Language }) {
+function HeroSlot({ id, ban = false, lang }: { id?: number | null; ban?: boolean; lang: Language }) {
   const t = translator(lang);
-  return <div className={`hero-slot ${ban ? 'ban' : ''} ${id ? 'filled' : ''}`} key={id || 'empty'}>{id ? <><img src={hero(id)?.imageLink} alt={name(id, lang)} /><span>{name(id, lang)}</span>{ban && <b className="ban-mark">╱</b>}</> : <span className="empty">{t(ban ? 'ban' : 'emptyPick')}</span>}</div>;
+  const skipped = ban && id === null;
+  return <div className={`hero-slot ${ban ? 'ban' : ''} ${id ? 'filled' : ''} ${skipped ? 'skipped-ban' : ''}`} key={id ?? (skipped ? 'skipped' : 'empty')}>
+    {id ? <><img src={hero(id)?.imageLink} alt={name(id, lang)} /><span>{name(id, lang)}</span>{ban && <b className="ban-mark">╱</b>}</>
+      : <span className={skipped ? 'empty skipped-ban-label' : 'empty'}>{skipped ? t('emptyBan') : t(ban ? 'ban' : 'emptyPick')}</span>}
+  </div>;
 }
 function Board({ state, lang, compact = false }: { state: MatchState; lang: Language; compact?: boolean }) {
   const t = translator(lang);
@@ -106,7 +111,6 @@ const settingsFromState = (state: MatchState): MatchSettings => ({
 function MatchSettingsPanel({ state, send, disabled }: { state: MatchState; send: (a: Action) => void; disabled: boolean }) {
   const t = translator(state.language);
   const [form, setForm] = useState<MatchSettings>(() => settingsFromState(state));
-  const maxWins = seriesWins(state);
   const firstPickLocked = state.currentPhase > 0;
   return <form className="panel settings match-settings-panel" onSubmit={event => {
     event.preventDefault();
@@ -155,18 +159,7 @@ function MatchSettingsPanel({ state, send, disabled }: { state: MatchState; send
         <label className="settings-checkbox"><span>{t('showHeroName')}</span><input type="checkbox" checked={form.showHeroName} onChange={e => setForm({ ...form, showHeroName: e.target.checked })} /><small>{t('showHeroNameHint')}</small></label>
       </section>
     </div>
-    <section className="match-score-settings"><h3>{t('seriesScore')}</h3>
-      <div className="match-score-grid">{(['blue','red'] as const).map(side => {
-        const scoreKey = side === 'blue' ? 'blueScore' : 'redScore';
-        const otherScore = side === 'blue' ? state.redScore : state.blueScore;
-        return <div className={`score-setting ${side}`} key={side}><p>{teamName(state, side)}</p><div className="score-control">
-          <button type="button" aria-label={t('decreaseScore')} disabled={disabled || state[scoreKey] <= 0} onClick={() => send({ type: 'score', team: side, delta: -1 })}>−</button>
-          <Score state={state} side={side} />
-          <button type="button" aria-label={t('increaseScore')} disabled={disabled || state[scoreKey] >= maxWins || (otherScore === maxWins && state[scoreKey] + 1 === maxWins)} onClick={() => send({ type: 'score', team: side, delta: 1 })}>+</button>
-        </div></div>;
-      })}</div>
-    </section>
-    <button disabled={disabled} className="primary">{t('saveSettings')}</button><p className="muted">{t('scoreImmediate')}</p>
+    <button disabled={disabled} className="primary">{t('saveSettings')}</button>
   </form>;
 }
 
@@ -289,7 +282,8 @@ export default function BroadcastApp() {
 
           <DraftLifecycle state={state} send={send} disabled={disabled} />
           {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><MatchSettingsPanel key={JSON.stringify([state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode, state.showHeroName, state.artSourceMode])} state={state} send={send} disabled={disabled} /></SettingsDialog>}
-          {state.bpInputMode === 'screen' && <ScreenInput key={snapshot!.revision} state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />}
+          {state.bpInputMode === 'screen' && <ScreenInput state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />}
+          <LineupAssignments state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />
         </>}>
           <ControlHeroPicker state={state} disabled={disabled} active={!showSettings && !showTeamSettings && !showHeroArtEditor} send={send} acknowledged={acknowledged} />
         </ControlDraftWorkspace>
