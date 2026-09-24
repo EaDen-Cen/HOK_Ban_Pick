@@ -7,6 +7,8 @@ on:
       - 'vite-project/src/data/autoSyncedHeroes.ts'
       - 'vite-project/src/data/heroSyncOverrides.ts'
       - 'vite-project/src/components/HeroList.tsx'
+      - 'vite-project/src/data/heroTypes.ts'
+      - 'vite-project/src/overlay/DraftOverlay.tsx'
       - '.github/workflows/hero-data-sync.yml'
   workflow_dispatch:
   schedule:

@@ -535,7 +535,8 @@ https://<fixed-domain>/overlay/draft
 - 每周 GitHub Actions 检查国际服公开目录；
 - 通过 Camp ID / 名称 / Alias 保持英雄身份稳定；
 - 新英雄使用新的本地 ID，绝不覆盖既有 ID；
-- 新增头像从官方资源域名下载并校验 SHA-256；
+- 小尺寸英雄头像从官方资源域名下载并校验 SHA-256；
+- Broadcast Pick Card 使用独立的官方高分辨率 Character / Key Art，按当前卡片比例自动裁切，并保留本地 Icon fallback；
 - 远端缺失只报警，不自动删除本地英雄；
 - Counter / Combo / Be Countered 不自动抓取；
 - 候选变化先通过 Build / Tests / Lint，再自动建立 PR；

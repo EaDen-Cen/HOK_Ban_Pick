@@ -5,6 +5,7 @@ import { detectImage } from './assets.js';
 import { makePlan, nextLocalIds } from './compare.js';
 import { mergeOverride } from './generated.js';
 import { normalizeName } from './normalize.js';
+import { extractOfficialHeroArt } from './fetchOfficial.js';
 import type { CatalogHero, SourceSnapshot } from './types.js';
 
 const local = (overrides: Partial<Hero> = {}): Hero => ({
@@ -75,4 +76,41 @@ test('image magic validation supports PNG/JPEG/WebP and rejects text', () => {
   assert.equal(detectImage(Uint8Array.from([0xff,0xd8,0xff,0x00]))?.extension, 'jpg');
   assert.equal(detectImage(Uint8Array.from([0x52,0x49,0x46,0x46,0,0,0,0,0x57,0x45,0x42,0x50]))?.extension, 'webp');
   assert.equal(detectImage(new TextEncoder().encode('not an image')), undefined);
+});
+
+test('official artwork parser prefers main hero key art and ignores skins/icons', () => {
+  const html = `
+    <img class="site-logo" src="https://world.honorofkings.com/logo.png" alt="logo">
+    <img class="hero-kv character-cover" src="https://camp.honorofkings.com/art/heino-1920x1080.jpg" alt="HEINO" width="1920" height="1080">
+    <img class="hero-icon" src="https://camp.honorofkings.com/icon/heino.png" alt="HEINO icon">
+    <section>SKIN APPRECIATION</section>
+    <img src="https://camp.honorofkings.com/skins/heino-skin.jpg" alt="SKIN APPRECIATION-Temporal Agent">
+  `;
+  assert.equal(
+    extractOfficialHeroArt(html, 'https://world.honorofkings.com/zlkdatasys/ip/hero/en/563.html', 'Heino'),
+    'https://camp.honorofkings.com/art/heino-1920x1080.jpg',
+  );
+});
+
+test('official artwork parser accepts trusted relative official assets and rejects third-party images', () => {
+  const html = `
+    <img class="hero-cover" src="https://untrusted.example.com/heino.jpg" alt="HEINO">
+    <img class="hero-cover" src="/assets/hero/heino-poster.webp" alt="HEINO">
+  `;
+  assert.equal(
+    extractOfficialHeroArt(html, 'https://world.honorofkings.com/zlkdatasys/ip/hero/en/563.html', 'HEINO'),
+    'https://world.honorofkings.com/assets/hero/heino-poster.webp',
+  );
+});
+
+test('safe override merge supports artwork metadata without touching relationships', () => {
+  const result = mergeOverride(undefined, {
+    artLink: 'https://camp.honorofkings.com/art/hero.jpg',
+    artPosition: '50% 22%',
+    campId: 563,
+  });
+  assert.equal(result.artLink, 'https://camp.honorofkings.com/art/hero.jpg');
+  assert.equal(result.artPosition, '50% 22%');
+  assert.equal(result.campId, 563);
+  assert.equal('combo' in result, false);
 });

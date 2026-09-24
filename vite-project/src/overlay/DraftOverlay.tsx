@@ -17,6 +17,26 @@ const rolePaths: Record<PlayerRole, string> = {
 export function PositionIcon({ role, label }: { role: PlayerRole; label: string }) {
   return <svg className="position-icon" viewBox="0 0 24 24" role="img" aria-label={label}><title>{label}</title><path d={rolePaths[role]} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
+
+function HeroArtwork({ hero, alt }: { hero: (typeof heroes)[number]; alt: string }) {
+  const primary = hero.artLink || hero.imageLink;
+  return <img
+    className={`hero-art ${hero.artLink ? 'hero-art-full' : 'hero-art-icon'}`}
+    src={primary}
+    alt={alt}
+    style={{ objectPosition: hero.artPosition || '50% 28%' }}
+    onError={event => {
+      // Full official art is intentionally remote to avoid shipping hundreds of
+      // megabytes in the repo. If the CDN is unavailable during a match, fall
+      // back to the small local icon rather than leaving a blank card.
+      if (event.currentTarget.src.endsWith(hero.imageLink)) return;
+      event.currentTarget.src = hero.imageLink;
+      event.currentTarget.classList.remove('hero-art-full');
+      event.currentTarget.classList.add('hero-art-icon');
+      event.currentTarget.style.objectPosition = '50% 50%';
+    }}
+  />;
+}
 function PickCard({ state, side, index, position }: { state: MatchState; side: Side; index: number; position: 'left' | 'right' }) {
   const t = translator(state.language), team = state[`${side}Team`];
   const id = state[`${side}Picks`][index], hero = heroes.find(h => h.id === id);
@@ -26,7 +46,7 @@ function PickCard({ state, side, index, position }: { state: MatchState; side: S
   return <article className={`broadcast-card ${hero ? 'filled' : ''}`} data-slot={index} data-team-id={team.id}>
     <HeroReveal heroId={id} layout={state.overlayLayout} position={position} renderArt={shownId => {
       const shown = heroes.find(h => h.id === shownId);
-      return shown ? <img className="hero-art" src={shown.imageLink} alt={state.language === 'zh' ? shown.chineseName : shown.englishName} /> :
+      return shown ? <HeroArtwork hero={shown} alt={state.language === 'zh' ? shown.chineseName : shown.englishName} /> :
         <PlayerPortrait key={team.playerPortraits[index] + team.logo} portrait={team.playerPortraits[index]} logo={team.logo} label={player} slot={index} />;
     }} caption={<><strong title={heroName}>{heroName}</strong><span title={player}>{player}</span></>} />
     <div className="position-bar"><PositionIcon role={role} label={t(role)} /></div>
