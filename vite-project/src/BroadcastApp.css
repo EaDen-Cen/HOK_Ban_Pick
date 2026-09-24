@@ -628,3 +628,302 @@
 .broadcast-overlay .draft-history {
   min-height:0;
 }
+
+
+/* V2.6 director artwork controls + official-style text overlays */
+.settings-checkbox {
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  gap:8px 12px;
+}
+.settings-checkbox input[type="checkbox"] {
+  width:18px;
+  height:18px;
+  margin:0;
+}
+.settings-checkbox small {
+  grid-column:1 / -1;
+}
+
+/* Names belong to the artwork, not to a detached black footer. */
+.broadcast-panel .hero-reveal {
+  bottom:38px;
+}
+.broadcast-panel .broadcast-art {
+  inset:0;
+  width:auto;
+  height:auto;
+}
+.broadcast-panel .card-caption {
+  left:0;
+  right:0;
+  top:auto;
+  bottom:0;
+  width:auto;
+  height:86px;
+  padding:30px 10px 9px;
+  justify-content:flex-end;
+  align-items:center;
+  gap:0;
+  text-align:center;
+  background:linear-gradient(180deg, transparent 0%, #02060c5c 30%, #020711e8 100%);
+  border:0;
+  z-index:5;
+  pointer-events:none;
+  text-shadow:0 2px 5px #000;
+}
+.broadcast-panel .card-caption strong {
+  font-size:19px;
+  line-height:23px;
+  color:#fff;
+}
+.broadcast-panel .card-caption span {
+  font-size:12px;
+  line-height:16px;
+  color:#f0f6ff;
+}
+.broadcast-panel .position-bar {
+  height:38px;
+}
+
+.broadcast-side .hero-reveal {
+  overflow:hidden;
+}
+.broadcast-side .broadcast-art {
+  inset:0 !important;
+  width:auto !important;
+  height:auto !important;
+}
+.broadcast-side .card-caption {
+  left:0 !important;
+  right:0 !important;
+  top:auto !important;
+  bottom:0;
+  width:auto !important;
+  height:78px;
+  padding:30px 14px 10px;
+  justify-content:flex-end;
+  gap:0;
+  background:linear-gradient(180deg, transparent 0%, #02060c54 30%, #020711e8 100%);
+  border:0;
+  z-index:5;
+  pointer-events:none;
+  text-shadow:0 2px 5px #000;
+}
+.broadcast-side .pick-team.display-left .card-caption {
+  align-items:flex-end;
+  text-align:right;
+}
+.broadcast-side .pick-team.display-right .card-caption {
+  align-items:flex-start;
+  text-align:left;
+}
+.broadcast-side .card-caption strong {
+  font-size:17px;
+  line-height:21px;
+  color:#fff;
+}
+.broadcast-side .card-caption span {
+  font-size:12px;
+  line-height:16px;
+  color:#edf5ff;
+}
+
+/* Full art is allowed to move and zoom inside a clipped card; legacy icons stay stable. */
+.broadcast-overlay .broadcast-art {
+  overflow:hidden;
+}
+.broadcast-overlay .hero-art {
+  transition:transform .12s ease-out, object-position .12s ease-out;
+}
+.broadcast-overlay .hero-art-full {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+/* Director hero artwork editor */
+.hero-art-editor-dialog {
+  width:min(1640px,96vw);
+  max-width:none;
+  max-height:94vh;
+  overflow:hidden;
+  border:1px solid #425977;
+  border-radius:12px;
+  padding:0;
+  background:#091321;
+  color:#eff5fc;
+  box-shadow:0 30px 100px #000d;
+}
+.hero-art-editor-dialog::backdrop {
+  background:#02050bd6;
+  backdrop-filter:blur(4px);
+}
+.hero-art-editor-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+  padding:14px 18px;
+  background:#111f32;
+  border-bottom:1px solid #31445e;
+}
+.hero-art-editor-header > div {
+  display:flex;
+  align-items:baseline;
+  gap:12px;
+}
+.hero-art-editor-header small {
+  color:#91a7c3;
+}
+.hero-art-editor-body {
+  display:grid;
+  grid-template-columns:360px minmax(0,1fr);
+  min-height:680px;
+  max-height:calc(94vh - 58px);
+}
+.hero-art-editor-controls {
+  overflow:auto;
+  padding:18px;
+  border-right:1px solid #2c3f58;
+  background:#0c1727;
+}
+.art-editor-checkbox {
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:9px;
+  margin:4px 0 14px;
+}
+.art-editor-checkbox input {
+  width:18px;
+  height:18px;
+  margin:0;
+}
+.art-editor-crop-controls {
+  margin:14px 0 8px;
+  padding:12px;
+  border:1px solid #334a67;
+  border-radius:8px;
+}
+.art-editor-crop-controls legend {
+  padding:0 6px;
+  color:#eaf3ff;
+  font-weight:700;
+}
+.art-editor-crop-controls label {
+  margin:9px 0;
+}
+.art-editor-crop-controls input[type="range"] {
+  width:100%;
+  padding:0;
+  accent-color:#5bc8ff;
+}
+.art-editor-actions {
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+  margin-top:18px;
+}
+.hero-art-editor-stage {
+  overflow:auto;
+  padding:18px 22px 26px;
+  background:#070d16;
+}
+.hero-art-editor-stage > h3 {
+  margin-top:18px;
+}
+.art-editor-reference {
+  position:relative;
+  width:100%;
+  max-height:520px;
+  aspect-ratio:16 / 9;
+  margin-top:12px;
+  overflow:hidden;
+  border:1px solid #344a65;
+  background:#02050a;
+}
+.art-editor-reference > img {
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:contain;
+}
+.art-reference-frame {
+  position:absolute;
+  transform:translate(-50%,-50%);
+  border:3px solid #fff;
+  box-shadow:0 0 0 1px #000,0 0 14px #000b;
+  pointer-events:none;
+}
+.art-reference-frame.side-frame {
+  border-style:dashed;
+}
+.art-reference-frame span {
+  position:absolute;
+  left:-3px;
+  top:-28px;
+  padding:3px 7px;
+  white-space:nowrap;
+  background:#fff;
+  color:#07101c;
+  font-size:11px;
+  font-weight:800;
+  text-shadow:none;
+}
+.art-editor-previews {
+  display:grid;
+  grid-template-columns:minmax(220px, .72fr) minmax(360px, 1.28fr);
+  gap:18px;
+  align-items:end;
+}
+.art-editor-previews > div > span {
+  display:block;
+  margin-bottom:6px;
+  color:#aebed2;
+  font-size:12px;
+}
+.art-editor-preview {
+  position:relative;
+  overflow:hidden;
+  border:2px solid #eaf4ff;
+  background:#02060d;
+}
+.art-editor-preview-panel {
+  width:min(330px,100%);
+  aspect-ratio:.76;
+}
+.art-editor-preview-side {
+  width:100%;
+  aspect-ratio:2.2;
+}
+.art-editor-preview img {
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+}
+
+@media(max-width:900px) {
+  .hero-art-editor-dialog {
+    width:97vw;
+    max-height:96vh;
+  }
+  .hero-art-editor-body {
+    grid-template-columns:1fr;
+    max-height:calc(96vh - 58px);
+    overflow:auto;
+  }
+  .hero-art-editor-controls {
+    overflow:visible;
+    border-right:0;
+    border-bottom:1px solid #2c3f58;
+  }
+  .hero-art-editor-stage {
+    overflow:visible;
+  }
+  .art-editor-previews {
+    grid-template-columns:1fr;
+  }
+}
