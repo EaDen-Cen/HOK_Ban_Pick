@@ -425,7 +425,7 @@
 .broadcast-side .broadcast-picks { grid-template-columns:300px 300px; bottom:112px; }
 .broadcast-side .hero-reveal { bottom:0; right:28px; }
 .broadcast-side .broadcast-art { right:92px; width:calc(100% - 92px); }
-.broadcast-side .broadcast-art .hero-art-full { object-fit:contain; object-position:center!important; }
+.broadcast-side .broadcast-art .hero-art-full { object-fit:cover; }
 .broadcast-side .card-caption { left:auto; width:92px; top:0; padding:10px 5px; justify-content:center; background:#0c192bea; }
 .broadcast-side .card-caption strong,.broadcast-side .card-caption span { white-space:normal; overflow-wrap:anywhere; }
 .broadcast-side .position-bar { left:auto; width:28px; top:0; height:auto; }
@@ -442,3 +442,56 @@
 .capture-region input { width:100%; }
 .capture-review { border:1px solid #65d7df; padding:12px; margin-top:12px; }
 .capture-review img { width:100px; height:100px; object-fit:contain; }
+
+
+/* V2.4 settings split: match settings stay in the monitor rail; roster editing floats above the workspace. */
+.match-settings-panel { margin:0; border:0; border-radius:0 0 10px 10px; }
+.match-settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.match-settings-grid > section { min-width:0; }
+.match-score-settings { border-top:1px solid #2b3a50; margin-top:12px; padding-top:10px; }
+.match-score-settings > h3 { margin-top:0; }
+.match-score-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.match-score-grid .score-setting { border:1px solid #2a3b52; border-radius:8px; padding:10px; }
+.match-score-grid .score-setting > p { margin:0; font-weight:700; color:#dbe7f5; }
+.match-score-grid .score-control { margin-bottom:0; }
+
+.team-settings-dialog {
+  width:min(1480px,94vw);
+  max-width:none;
+  max-height:92vh;
+  overflow:auto;
+  border:1px solid #40536d;
+  border-radius:12px;
+  padding:0;
+  background:#0b1422;
+  color:#eff5fc;
+  box-shadow:0 28px 90px #000b;
+}
+.team-settings-dialog::backdrop { background:#020611c7; backdrop-filter:blur(3px); }
+.team-settings-dialog-header {
+  position:sticky;
+  top:0;
+  z-index:20;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  padding:14px 18px;
+  background:#101c2df7;
+  border-bottom:1px solid #30435d;
+}
+.team-settings-dialog .team-settings-panel {
+  margin:0;
+  border:0;
+  border-radius:0;
+  padding:18px;
+}
+.team-settings-dialog .team-settings-grid { grid-template-columns:1fr 1fr; }
+.team-settings-dialog .team-library { margin-bottom:18px; }
+
+@media(max-width:900px) {
+  .match-settings-grid,
+  .match-score-grid,
+  .team-settings-dialog .team-settings-grid { grid-template-columns:1fr; }
+  .team-settings-dialog { width:96vw; max-height:94vh; }
+}

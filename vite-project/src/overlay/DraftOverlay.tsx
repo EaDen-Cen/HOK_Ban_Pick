@@ -25,7 +25,7 @@ function HeroArtwork({ hero, alt }: { hero: (typeof heroes)[number]; alt: string
     className={`hero-art ${hero.artLink ? 'hero-art-full' : 'hero-art-icon'}`}
     src={primary}
     alt={alt}
-    style={{ objectPosition: hero.artPosition || '50% 28%' }}
+    style={{ objectPosition: hero.artPosition || '50% 30%' }}
     onError={event => {
       // Full official art is intentionally remote to avoid shipping hundreds of
       // megabytes in the repo. If the CDN is unavailable during a match, fall

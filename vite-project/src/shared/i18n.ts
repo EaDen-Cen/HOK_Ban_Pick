@@ -280,6 +280,14 @@ const messages = {
     "zh": "比赛设置",
     "eng": "Match settings"
   },
+  "teamSettings": {
+    "zh": "队伍设置",
+    "eng": "Team settings"
+  },
+  "closeTeamSettings": {
+    "zh": "关闭队伍设置",
+    "eng": "Close team settings"
+  },
   "hideSettings": {
     "zh": "收起比赛设置",
     "eng": "Hide match settings"
