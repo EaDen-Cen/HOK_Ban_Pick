@@ -13,6 +13,15 @@ where npm >nul 2>&1 || (echo [ERROR] npm was not found in PATH.& pause & exit /b
 where cloudflared >nul 2>&1 || (echo [ERROR] cloudflared was not found in PATH.& pause & exit /b 1)
 if not exist "package.json" (echo [ERROR] Launcher must stay in vite-project.& pause & exit /b 1)
 if not exist "run-cloudflare.ps1" (echo [ERROR] run-cloudflare.ps1 is missing. Run git pull again.& pause & exit /b 1)
+if not exist "run-server.ps1" (echo [ERROR] run-server.ps1 is missing. Extract the complete update package.& pause & exit /b 1)
+
+echo Preparing dependencies and web pages...
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0run-server.ps1" -PrepareOnly
+if errorlevel 1 (
+  echo [ERROR] Preparation failed. See the error above.
+  pause
+  exit /b 1
+)
 
 if not exist "artifacts" mkdir "artifacts"
 del /q "artifacts\cloudflared.log" >nul 2>&1
@@ -25,11 +34,11 @@ taskkill /IM cloudflared.exe /F >nul 2>&1
 timeout /t 1 /nobreak >nul
 
 echo [3/6] Starting HOK server...
-start "HOK Broadcast Server" /min cmd /c "cd /d ""%~dp0"" && npm run server"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0run-server.ps1" -Background
 echo       Waiting for local server...
 set /a SERVER_TRIES=0
 :wait_server
-powershell -NoProfile -Command "try { Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:3001/control' -TimeoutSec 2 | Out-Null; exit 0 } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -Command "try { $h=Invoke-RestMethod -Uri 'http://127.0.0.1:3001/api/health' -TimeoutSec 2; if(-not $h.ok){exit 1}; Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:3001/control' -TimeoutSec 2 | Out-Null; exit 0 } catch { exit 1 }" >nul 2>&1
 if not errorlevel 1 goto server_ready
 set /a SERVER_TRIES+=1
 if !SERVER_TRIES! GEQ 30 goto server_failed
@@ -38,6 +47,9 @@ goto wait_server
 
 :server_failed
 echo [ERROR] Server did not become ready within 30 seconds.
+echo Server error log:
+if exist "artifacts\server.log" type "artifacts\server.log"
+echo Full log: %~dp0artifacts\server.log
 pause
 exit /b 1
 
