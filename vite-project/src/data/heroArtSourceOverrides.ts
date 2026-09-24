@@ -12,7 +12,7 @@ const heroArtSourceOverrides: Record<number, Partial<Hero>> = {
   // The auto-synced full-art source for camp 519 is not suitable in the broadcast
   // crop editor. Use Tencent's official Ao'yin reveal artwork instead.
   54: {
-    artLink: 'https://game.gtimg.cn/images/yxzj/coming/v2/heros//image/20250219/17399349866962.jpg',
+    artLink: '/heroesArt/ao\'yin.jpg',
   },
 };
 
