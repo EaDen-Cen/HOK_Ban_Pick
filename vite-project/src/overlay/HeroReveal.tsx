@@ -4,9 +4,9 @@ import type { OverlayLayout } from '../shared/types';
 interface Transition { sequence: number; kind: 'panel' | 'left' | 'right'; fromId?: number }
 
 /** Only a changed hero ID starts a transition. Scores, language and snapshots cannot replay it. */
-export function HeroReveal({ heroId, layout, position, renderArt, caption }: {
+export function HeroReveal({ heroId, layout, position, renderArt, caption, captionClassName = '' }: {
   heroId?: number; layout: OverlayLayout; position: 'left' | 'right';
-  renderArt: (id: number | undefined) => ReactNode; caption: ReactNode;
+  renderArt: (id: number | undefined) => ReactNode; caption: ReactNode; captionClassName?: string;
 }) {
   const previous = useRef(heroId);
   const sequence = useRef(0);
@@ -33,7 +33,7 @@ export function HeroReveal({ heroId, layout, position, renderArt, caption }: {
     {transition && transition.kind !== 'panel' && <div className="hero-slot broadcast-art reveal-underlay">{renderArt(transition.fromId)}</div>}
     <div key={`art-${transition?.sequence ?? 'idle'}`} className="hero-slot broadcast-art" data-hero-id={heroId ?? ''}>{renderArt(shownHeroId)}</div>
     {transition && <div className="reveal-white" key={transition.sequence} aria-hidden="true" />}
-    <div key={`caption-${transition?.sequence ?? 'idle'}`} className="card-caption">{caption}</div>
+    <div key={`caption-${transition?.sequence ?? 'idle'}`} className={`card-caption ${captionClassName}`.trim()}>{caption}</div>
   </div>;
 }
 
