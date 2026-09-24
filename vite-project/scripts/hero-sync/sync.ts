@@ -39,13 +39,19 @@ function assertSourceHealth(previous: SourceSnapshot | undefined, remoteCount: n
   }
 }
 
+function artworkBackfill(plan: ReturnType<typeof makePlan>) {
+  return plan.matches.filter(match => !match.local.artLink || match.local.campId === undefined);
+}
+
 function compactSummary(plan: ReturnType<typeof makePlan>) {
+  const artBackfill = artworkBackfill(plan);
   return {
-    changed: plan.changed,
+    changed: plan.changed || artBackfill.length > 0,
     checkedAt: plan.checkedAt,
     remoteCount: plan.remoteCount,
     baselineMissing: plan.baselineMissing,
     additions: plan.additions.map(hero => ({ campId: hero.campId, englishName: hero.englishName, occupation: hero.occupation })),
+    artworkBackfill: artBackfill.map(match => ({ localId: match.local.id, campId: match.remote.campId, englishName: match.remote.englishName })),
     sourceChanges: plan.sourceChanges,
     missingLocalWarnings: plan.missingLocal.map(hero => ({ id: hero.id, englishName: hero.englishName, campId: hero.campId })),
   };
@@ -58,6 +64,7 @@ function newHero(args: {
   occupation: string;
   campId: number;
   imageLink: string;
+  artLink?: string;
 }): Hero {
   const hero: Hero = {
     id: args.id,
@@ -67,6 +74,7 @@ function newHero(args: {
     altOccupation: '',
     campId: args.campId,
     imageLink: args.imageLink,
+    artLink: args.artLink,
     combo: [],
     counter: [],
     beCountered: [],
@@ -134,6 +142,7 @@ async function applyUpdate(
       occupation: remote.occupation,
       campId: remote.campId,
       imageLink: asset.localPath,
+      artLink: evidence.artUrl || asset.localPath,
     });
     autoHeroes.push(created);
     additionsAudit.push({
@@ -144,6 +153,31 @@ async function applyUpdate(
       occupation: created.occupation,
       officialConfirmed: evidence.confirmed,
     });
+  }
+
+  // Backfill stable Camp IDs and high-resolution official character/key art for
+  // every existing hero matched by the international catalog. Full artwork is
+  // stored as a remote official-CDN URL; the small local icon remains the
+  // offline fallback and continues to be used by bans/history/search grids.
+  for (const match of artworkBackfill(plan)) {
+    const evidence = await fetchOfficialHeroEvidence(match.remote.campId, match.remote.englishName, { includeChinese: false });
+    const next: HeroOverride = {};
+
+    if (match.local.campId === undefined) next.campId = match.remote.campId;
+
+    if (!match.local.artLink) {
+      next.artLink = evidence.artUrl || match.local.imageLink;
+      if (!evidence.artUrl) {
+        manualReview.push(
+          `No high-resolution official key art was detected for local hero #${match.local.id} ${match.local.englishName}; overlay will keep using the local icon fallback.`,
+        );
+      }
+    }
+
+    if (Object.keys(next).length > 0) {
+      overrides[match.local.id] = mergeOverride(overrides[match.local.id], next);
+      overrideAudit.push({ localId: match.local.id, campId: match.remote.campId, fields: next });
+    }
   }
 
   for (const change of plan.sourceChanges) {
@@ -245,7 +279,7 @@ async function main() {
     const summary = compactSummary(plan);
     if (json) process.stdout.write(JSON.stringify(summary));
     else {
-      console.log(`Hero sync check: ${plan.remoteCount} remote heroes, ${plan.additions.length} local additions, ${plan.sourceChanges.length} source changes.`);
+      console.log(`Hero sync check: ${plan.remoteCount} remote heroes, ${plan.additions.length} local additions, ${plan.sourceChanges.length} source changes, ${artworkBackfill(plan).length} artwork backfills.`);
       if (plan.baselineMissing) console.log('No catalog baseline exists yet; the first update will create one.');
       for (const hero of plan.additions) console.log(`+ NEW: ${hero.englishName} (camp ${hero.campId}, ${hero.occupation})`);
       for (const warning of plan.missingLocal) console.log(`! LOCAL ONLY (not deleted): #${warning.id} ${warning.englishName}`);
@@ -253,8 +287,8 @@ async function main() {
     return;
   }
 
-  if (!plan.changed) {
-    console.log('Hero roster is up to date; no files changed.');
+  if (!plan.changed && artworkBackfill(plan).length === 0) {
+    console.log('Hero roster and high-resolution artwork metadata are up to date; no files changed.');
     return;
   }
 
