@@ -1,4 +1,4 @@
-import type { HeroArtCrop, HeroArtLayout, HeroArtOverride } from '../shared/types';
+import type { HeroArtCrop, HeroArtLayout, HeroArtOverride } from '../shared/types.js';
 
 const defaults: Record<HeroArtLayout, HeroArtCrop> = {
   panel: { x: 50, y: 31, scale: 1.12 },
