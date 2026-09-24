@@ -1,6 +1,13 @@
 import type { Language } from './types';
 
 const messages = {
+  heroSort: {zh:'排序方式',eng:'Sort by'},
+  heroSortChinese: {zh:'中文名称',eng:'Chinese name'},
+  heroSortEnglish: {zh:'英文名称',eng:'English name'},
+  heroSortRelease: {zh:'上线时间（新→旧）',eng:'Release date (newest)'},
+  heroSortPickRate: {zh:'官方选取率（高→低）',eng:'Official pick rate (highest)'},
+  heroSortLane: {zh:'分路（对抗→中路→发育→打野→游走）',eng:'Lane (Clash → Mid → Farm → Jungle → Roam)'},
+  heroSortDataCoverage: {zh:'该排序已有 {known}/{total} 位英雄的数据；缺失数据的英雄会排在已知数据之后。',eng:'This sort has data for {known}/{total} heroes; heroes with missing data are placed after known values.'},
   heroImageSettings: {zh:'英雄图片',eng:'Hero artwork'},
   closeHeroImageSettings: {zh:'关闭英雄图片设置',eng:'Close hero artwork'},
   heroImageSource: {zh:'英雄主图来源',eng:'Hero art source'},
