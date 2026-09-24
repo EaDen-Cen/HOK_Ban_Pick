@@ -101,17 +101,25 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promis
   return results;
 }
 
+export async function fetchCatalogHeroDetail(campId: number) {
+  const html = await fetchText(`${CATALOG_URL}/${campId}`);
+  return parseCatalogHero(html, campId);
+}
+
 export async function fetchCatalog(): Promise<CatalogHero[]> {
   const index = await fetchText(CATALOG_URL);
-  const ids = heroIds(index);
-  if (ids.length < 80) {
-    throw new Error(`Catalog extraction returned only ${ids.length} hero links; refusing a likely partial page`);
-  }
+  let heroes = parseIndexCards(index);
 
-  const heroes = await mapLimit(ids, 6, async campId => {
-    const html = await fetchText(`${CATALOG_URL}/${campId}`);
-    return parseCatalogHero(html, campId);
-  });
+  // Prefer the index page to keep the scheduled check polite and lightweight.
+  // If the site changes its card markup, fall back to detail pages instead of
+  // silently treating a partial extraction as a complete roster.
+  if (heroes.length < 80) {
+    const ids = heroIds(index);
+    if (ids.length < 80) {
+      throw new Error(`Catalog extraction returned only ${ids.length} hero links; refusing a likely partial page`);
+    }
+    heroes = await mapLimit(ids, 4, fetchCatalogHeroDetail);
+  }
 
   const names = new Set<string>();
   for (const hero of heroes) {
