@@ -140,10 +140,10 @@ async function optionalPage(url: string) {
   }
 }
 
-export async function fetchOfficialHeroEvidence(campId: number, expectedEnglishName: string): Promise<OfficialHeroEvidence> {
+export async function fetchOfficialHeroEvidence(campId: number, expectedEnglishName: string, options: { includeChinese?: boolean } = {}): Promise<OfficialHeroEvidence> {
   const englishUrl = `${BASE}/en/${campId}.html`;
   const chineseUrl = `${BASE}/zh-Hant/${campId}.html`;
-  const [englishHtml, chineseHtml] = await Promise.all([optionalPage(englishUrl), optionalPage(chineseUrl)]);
+  const [englishHtml, chineseHtml] = await Promise.all([optionalPage(englishUrl), options.includeChinese === false ? Promise.resolve(undefined) : optionalPage(chineseUrl)]);
   const englishName = englishHtml ? titleFromHtml(englishHtml) : undefined;
   const chineseName = chineseHtml ? titleFromHtml(chineseHtml) : undefined;
   const confirmed = Boolean(englishName && normalizeName(englishName) === normalizeName(expectedEnglishName));
