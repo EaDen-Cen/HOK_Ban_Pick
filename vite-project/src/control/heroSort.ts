@@ -29,32 +29,32 @@ function fallbackName(a: Hero, b: Hero) {
 
 export function compareHeroes(a: Hero, b: Hero, mode: HeroSortMode) {
   switch (mode) {
-    case 'name-zh':
-      return zhCollator.compare(a.chineseName, b.chineseName) || enCollator.compare(a.englishName, b.englishName);
-    case 'name-en':
-      return enCollator.compare(a.englishName, b.englishName) || zhCollator.compare(a.chineseName, b.chineseName);
-    case 'release': {
-      const av = releaseTime(a);
-      const bv = releaseTime(b);
-      if (av === undefined && bv !== undefined) return 1;
-      if (av !== undefined && bv === undefined) return -1;
-      if (av !== undefined && bv !== undefined && av !== bv) return bv - av; // newest first
-      return fallbackName(a, b);
-    }
-    case 'pick-rate': {
-      const av = a.officialPickRate;
-      const bv = b.officialPickRate;
-      if (av === undefined && bv !== undefined) return 1;
-      if (av !== undefined && bv === undefined) return -1;
-      if (av !== undefined && bv !== undefined && av !== bv) return bv - av; // highest first
-      return fallbackName(a, b);
-    }
-    case 'lane': {
-      const av = laneOrder[a.occupation] ?? 999;
-      const bv = laneOrder[b.occupation] ?? 999;
-      if (av !== bv) return av - bv;
-      return fallbackName(a, b);
-    }
+  case 'name-zh':
+    return zhCollator.compare(a.chineseName, b.chineseName) || enCollator.compare(a.englishName, b.englishName);
+  case 'name-en':
+    return enCollator.compare(a.englishName, b.englishName) || zhCollator.compare(a.chineseName, b.chineseName);
+  case 'release': {
+    const av = releaseTime(a);
+    const bv = releaseTime(b);
+    if (av === undefined && bv !== undefined) return 1;
+    if (av !== undefined && bv === undefined) return -1;
+    if (av !== undefined && bv !== undefined && av !== bv) return bv - av; // newest first
+    return fallbackName(a, b);
+  }
+  case 'pick-rate': {
+    const av = a.officialPickRate;
+    const bv = b.officialPickRate;
+    if (av === undefined && bv !== undefined) return 1;
+    if (av !== undefined && bv === undefined) return -1;
+    if (av !== undefined && bv !== undefined && av !== bv) return bv - av; // highest first
+    return fallbackName(a, b);
+  }
+  case 'lane': {
+    const av = laneOrder[a.occupation] ?? 999;
+    const bv = laneOrder[b.occupation] ?? 999;
+    if (av !== bv) return av - bv;
+    return fallbackName(a, b);
+  }
   }
 }
 
