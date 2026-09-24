@@ -17,7 +17,7 @@ interface SolvedTeam {
   minimum: number;
 }
 
-const emptyRegions = () => Array.from({length:10},()=>({x:0,y:0,width:100,height:100}));
+const emptyRegions = () => Array.from({length:10},()=>({x:0,y:0,width:0,height:0}));
 const heroById = (id:number) => heroes.find(hero => hero.id === id);
 
 function permutations(values:number[]):number[][] {
