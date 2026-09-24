@@ -21,6 +21,7 @@ import { PortraitField } from './control/PortraitField';
 import { ControlHeroPicker } from './control/ControlHeroPicker';
 import { ControlDraftWorkspace } from './control/ControlDraftWorkspace';
 import { SettingsDialog } from './control/SettingsDialog';
+import { TeamSettingsDialog } from './control/TeamSettingsDialog';
 import { ScreenInput } from './control/ScreenInput';
 import { Score } from './shared/Score';
 import { DraftHistory } from './shared/DraftHistory';
@@ -81,50 +82,41 @@ function Analysis({
     </section>
   );
 }
-function Settings({ state, send, disabled, token }: { state: MatchState; send: (a: Action) => void; disabled: boolean; token: string }) {
+const settingsFromState = (state: MatchState): MatchSettings => ({
+  blueTeam: state.blueTeam,
+  redTeam: state.redTeam,
+  blueScore: state.blueScore,
+  redScore: state.redScore,
+  gameNumber: state.gameNumber,
+  seriesFormat: state.seriesFormat,
+  stage: state.stage,
+  draftMode: state.draftMode,
+  draftRuleMode: state.draftRuleMode,
+  firstPickSide: state.firstPickSide,
+  sideSwapMode: state.sideSwapMode,
+  language: state.language,
+  overlayLayout: state.overlayLayout,
+  scoreDisplay: state.scoreDisplay,
+  bpInputMode: state.bpInputMode,
+});
+
+function MatchSettingsPanel({ state, send, disabled }: { state: MatchState; send: (a: Action) => void; disabled: boolean }) {
   const t = translator(state.language);
-  const [form, setForm] = useState<MatchSettings>(() => ({
-    blueTeam: state.blueTeam, redTeam: state.redTeam, blueScore: state.blueScore, redScore: state.redScore,
-    gameNumber: state.gameNumber, seriesFormat: state.seriesFormat, stage: state.stage,
-    draftMode: state.draftMode, draftRuleMode: state.draftRuleMode, firstPickSide: state.firstPickSide, sideSwapMode: state.sideSwapMode, language: state.language, overlayLayout: state.overlayLayout, scoreDisplay: state.scoreDisplay, bpInputMode: state.bpInputMode,
-  }));
-  const [uploads, setUploads] = useState<Set<string>>(() => new Set());
+  const [form, setForm] = useState<MatchSettings>(() => settingsFromState(state));
   const maxWins = seriesWins(state);
   const firstPickLocked = state.currentPhase > 0;
-  return <form className="panel settings" onSubmit={event => {
+  return <form className="panel settings match-settings-panel" onSubmit={event => {
     event.preventDefault();
-    if (uploads.size) return;
-    send({ type: 'settings', settings: { ...form, blueScore: state.blueScore, redScore: state.redScore, gameNumber: state.gameNumber } });
+    send({ type: 'settings', settings: {
+      ...form,
+      blueTeam: state.blueTeam,
+      redTeam: state.redTeam,
+      blueScore: state.blueScore,
+      redScore: state.redScore,
+      gameNumber: state.gameNumber,
+    } });
   }}>
-    <h2>{t('matchSettings')}</h2>
-    <TeamLibrary onRosterApply={(side,index,player) => setForm(previous => {const key = side === 'blue' ? 'blueTeam' : 'redTeam';const team=previous[key];return {...previous,[key]:{...team,players:team.players.map((p,i) => i === index ? player.name : p),playerRoles:team.playerRoles.map((r,i) => i === index ? player.role : r),playerPortraits:team.playerPortraits.map((p,i) => i === index ? player.portrait : p)}};})} state={state} form={form} token={token} disabled={disabled || uploads.size > 0} send={send} />
-    <div className="settings-grid">
-      {displaySides(state).map(side => {
-        const teamKey = side === 'blue' ? 'blueTeam' : 'redTeam';
-        const scoreKey = side === 'blue' ? 'blueScore' : 'redScore';
-        const otherScore = side === 'blue' ? state.redScore : state.blueScore;
-        const updateTeam = (patch: Partial<MatchState['blueTeam']>) => setForm(previous => ({ ...previous, [teamKey]: { ...previous[teamKey], ...patch } }));
-        return <section key={side}>
-          <h3>{t(teamKey)}</h3>
-          <label>{t('teamName')}<input required maxLength={60} value={form[teamKey].name} onChange={e => updateTeam({ name: e.target.value })} /></label>
-          <label>{t('logoAddress')}<input maxLength={1000} placeholder={t('logoPlaceholder')} value={form[teamKey].logo} onChange={e => updateTeam({ logo: e.target.value })} /></label>
-          <b>{t('players')}</b>
-          {form[teamKey].players.map((player, index) => <div className="player-setting-row" key={index}>
-            <label>{t('playerNumber', { number: index + 1 })}<input maxLength={40} disabled={disabled} value={player} onChange={e => updateTeam({ players: form[teamKey].players.map((p, i) => i === index ? e.target.value : p) })} /></label>
-            <label>{t('lane')}<select disabled={disabled} value={form[teamKey].playerRoles[index]} onChange={e => updateTeam({ playerRoles: form[teamKey].playerRoles.map((r, i) => i === index ? e.target.value as typeof r : r) })}>
-              {(['clash', 'jungle', 'mid', 'farm', 'roam'] as const).map(role => <option key={role} value={role}>{t(role)}</option>)}
-            </select></label>
-            <PortraitField value={form[teamKey].playerPortraits[index]} token={token} lang={state.language} disabled={disabled}
-              onChange={url => setForm(previous => ({...previous,[teamKey]:{...previous[teamKey],playerPortraits:previous[teamKey].playerPortraits.map((p,i) => i === index ? url : p)}}))}
-              onBusy={busy => setUploads(previous => { const next = new Set(previous); if(busy) next.add(`${side}-${index}`); else next.delete(`${side}-${index}`); return next; })} />
-          </div>)}
-          <div className="score-setting"><p>{t('seriesScore')}</p><div className="score-control">
-            <button type="button" aria-label={t('decreaseScore')} disabled={disabled || state[scoreKey] <= 0} onClick={() => send({ type: 'score', team: side, delta: -1 })}>−</button>
-            <strong>{state[scoreKey]}</strong>
-            <button type="button" aria-label={t('increaseScore')} disabled={disabled || state[scoreKey] >= maxWins || (otherScore === maxWins && state[scoreKey] + 1 === maxWins)} onClick={() => send({ type: 'score', team: side, delta: 1 })}>+</button>
-          </div></div>
-        </section>;
-      })}
+    <div className="match-settings-grid">
       <section><h3>{t('matchDisplay')}</h3>
         <label>{t('stage')}<input maxLength={80} value={form.stage} onChange={e => setForm({ ...form, stage: e.target.value })} /></label>
         <label>{t('seriesFormat')}<select disabled={state.draftHistory.length > 0} value={form.seriesFormat} onChange={e => setForm({ ...form, seriesFormat: e.target.value as MatchSettings['seriesFormat'] })}>
@@ -138,6 +130,8 @@ function Settings({ state, send, disabled, token }: { state: MatchState; send: (
           <option value="normal">{t('ruleNormal')}</option><option value="player">{t('rulePlayer')}</option><option value="global">{t('ruleGlobal')}</option>
         </select></label>
         {ruleLocked(state) && <p className="muted">{t('rulesLocked')}</p>}
+      </section>
+      <section><h3>{t('matchSettings')}</h3>
         <label>{t('firstPickSide')}<select aria-label={t('firstPickSide')} disabled={firstPickLocked} value={form.firstPickSide} onChange={e => setForm({ ...form, firstPickSide: e.target.value as Side })}>
           <option value="blue">{t('blueSide')}</option><option value="red">{t('redSide')}</option>
         </select></label>
@@ -154,7 +148,60 @@ function Settings({ state, send, disabled, token }: { state: MatchState; send: (
         </select></label>
       </section>
     </div>
-    <button disabled={disabled || uploads.size > 0} className="primary">{t('saveSettings')}</button><p className="muted">{t('scoreImmediate')}</p>
+    <section className="match-score-settings"><h3>{t('seriesScore')}</h3>
+      <div className="match-score-grid">{(['blue','red'] as const).map(side => {
+        const scoreKey = side === 'blue' ? 'blueScore' : 'redScore';
+        const otherScore = side === 'blue' ? state.redScore : state.blueScore;
+        return <div className={`score-setting ${side}`} key={side}><p>{teamName(state, side)}</p><div className="score-control">
+          <button type="button" aria-label={t('decreaseScore')} disabled={disabled || state[scoreKey] <= 0} onClick={() => send({ type: 'score', team: side, delta: -1 })}>−</button>
+          <Score state={state} side={side} />
+          <button type="button" aria-label={t('increaseScore')} disabled={disabled || state[scoreKey] >= maxWins || (otherScore === maxWins && state[scoreKey] + 1 === maxWins)} onClick={() => send({ type: 'score', team: side, delta: 1 })}>+</button>
+        </div></div>;
+      })}</div>
+    </section>
+    <button disabled={disabled} className="primary">{t('saveSettings')}</button><p className="muted">{t('scoreImmediate')}</p>
+  </form>;
+}
+
+function TeamSettingsPanel({ state, send, disabled, token }: { state: MatchState; send: (a: Action) => void; disabled: boolean; token: string }) {
+  const t = translator(state.language);
+  const [form, setForm] = useState<MatchSettings>(() => settingsFromState(state));
+  const [uploads, setUploads] = useState<Set<string>>(() => new Set());
+  return <form className="panel settings team-settings-panel" onSubmit={event => {
+    event.preventDefault();
+    if (uploads.size) return;
+    send({ type: 'settings', settings: {
+      ...settingsFromState(state),
+      blueTeam: form.blueTeam,
+      redTeam: form.redTeam,
+      blueScore: state.blueScore,
+      redScore: state.redScore,
+      gameNumber: state.gameNumber,
+    } });
+  }}>
+    <TeamLibrary onRosterApply={(side,index,player) => setForm(previous => {const key = side === 'blue' ? 'blueTeam' : 'redTeam';const team=previous[key];return {...previous,[key]:{...team,players:team.players.map((p,i) => i === index ? player.name : p),playerRoles:team.playerRoles.map((r,i) => i === index ? player.role : r),playerPortraits:team.playerPortraits.map((p,i) => i === index ? player.portrait : p)}};})} state={state} form={form} token={token} disabled={disabled || uploads.size > 0} send={send} />
+    <div className="settings-grid team-settings-grid">
+      {displaySides(state).map(side => {
+        const teamKey = side === 'blue' ? 'blueTeam' : 'redTeam';
+        const updateTeam = (patch: Partial<MatchState['blueTeam']>) => setForm(previous => ({ ...previous, [teamKey]: { ...previous[teamKey], ...patch } }));
+        return <section key={side}>
+          <h3>{t(teamKey)}</h3>
+          <label>{t('teamName')}<input required maxLength={60} value={form[teamKey].name} onChange={e => updateTeam({ name: e.target.value })} /></label>
+          <label>{t('logoAddress')}<input maxLength={1000} placeholder={t('logoPlaceholder')} value={form[teamKey].logo} onChange={e => updateTeam({ logo: e.target.value })} /></label>
+          <b>{t('players')}</b>
+          {form[teamKey].players.map((player, index) => <div className="player-setting-row" key={index}>
+            <label>{t('playerNumber', { number: index + 1 })}<input maxLength={40} disabled={disabled} value={player} onChange={e => updateTeam({ players: form[teamKey].players.map((p, i) => i === index ? e.target.value : p) })} /></label>
+            <label>{t('lane')}<select disabled={disabled} value={form[teamKey].playerRoles[index]} onChange={e => updateTeam({ playerRoles: form[teamKey].playerRoles.map((r, i) => i === index ? e.target.value as typeof r : r) })}>
+              {(['clash', 'jungle', 'mid', 'farm', 'roam'] as const).map(role => <option key={role} value={role}>{t(role)}</option>)}
+            </select></label>
+            <PortraitField value={form[teamKey].playerPortraits[index]} token={token} lang={state.language} disabled={disabled}
+              onChange={url => setForm(previous => ({...previous,[teamKey]:{...previous[teamKey],playerPortraits:previous[teamKey].playerPortraits.map((p,i) => i === index ? url : p)}}))}
+              onBusy={busy => setUploads(previous => { const next = new Set(previous); if(busy) next.add(`${side}-${index}`); else next.delete(`${side}-${index}`); return next; })} />
+          </div>)}
+        </section>;
+      })}
+    </div>
+    <button disabled={disabled || uploads.size > 0} className="primary">{t('saveSettings')}</button>
   </form>;
 }
 function initialToken(role: Role) {
@@ -167,6 +214,7 @@ export default function BroadcastApp() {
   const [token, setToken] = useState(() => initialToken(role));
   const [tokenInput, setTokenInput] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [showTeamSettings, setShowTeamSettings] = useState(false);
   const [delayInput, setDelayInput] = useState(180);
   const [lastLanguage, setLastLanguage] = useState<Language>(() => sessionStorage.getItem(`hok-language-${role}`) === 'eng' ? 'eng' : 'zh');
   const { snapshot, status, error, pending, send, acknowledged } = useMatch(role, token);
@@ -217,6 +265,7 @@ export default function BroadcastApp() {
               <button disabled={disabled} onClick={() => confirm(t('confirmResetDraft')) && send({ type: 'reset_draft' })}>{t('resetDraft')}</button>
               <button className="danger" disabled={disabled} onClick={() => confirm(t('confirmResetMatch')) && send({ type: 'reset_match' })}>{t('resetMatch')}</button>
               <button aria-expanded={showSettings} aria-controls="match-settings" onClick={() => setShowSettings(value => !value)}>{t('matchSettings')}</button>
+              <button onClick={() => setShowTeamSettings(true)}>{t('teamSettings')}</button>
             </div>
             <div className="delay-controls">
               <b>{t('casterDelay', { seconds: snapshot?.casterDelaySeconds ?? '—' })}</b>
@@ -230,12 +279,14 @@ export default function BroadcastApp() {
           </section>
 
           <DraftLifecycle state={state} send={send} disabled={disabled} />
-          {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><Settings key={JSON.stringify([state.blueTeam, state.redTeam, state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.displayLeftSide, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode])} state={state} send={send} disabled={disabled} token={token} /></SettingsDialog>}
+          {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><MatchSettingsPanel key={JSON.stringify([state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode])} state={state} send={send} disabled={disabled} /></SettingsDialog>}
           {state.bpInputMode === 'screen' && <ScreenInput key={snapshot!.revision} state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />}
         </>}>
-          <ControlHeroPicker state={state} disabled={disabled} active={!showSettings} send={send} acknowledged={acknowledged} />
+          <ControlHeroPicker state={state} disabled={disabled} active={!showSettings && !showTeamSettings} send={send} acknowledged={acknowledged} />
         </ControlDraftWorkspace>
-
+        {showTeamSettings && <TeamSettingsDialog label={t('teamSettings')} closeLabel={t('closeTeamSettings')} onClose={() => setShowTeamSettings(false)}>
+          <TeamSettingsPanel key={JSON.stringify([state.blueTeam, state.redTeam])} state={state} send={send} disabled={disabled} token={token} />
+        </TeamSettingsDialog>}
       </>}
       <DraftHistory state={state} />
       <Analysis state={state} lang={lang} />
