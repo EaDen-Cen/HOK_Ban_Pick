@@ -5,7 +5,7 @@ import { detectImage } from './assets.js';
 import { makePlan, nextLocalIds } from './compare.js';
 import { mergeOverride } from './generated.js';
 import { normalizeName } from './normalize.js';
-import { extractOfficialHeroArt } from './fetchOfficial.js';
+import { extractOfficialHeroArt, extractOfficialPickRate } from './fetchOfficial.js';
 import { heroArtCrop } from '../../src/data/heroArtFocus.js';
 import type { CatalogHero, SourceSnapshot } from './types.js';
 import heroes from '../../src/components/HeroList.js';
@@ -174,4 +174,11 @@ test('hero picker sorting keeps unavailable heroes last for every mode', () => {
   ]);
   assert.equal(sortHeroes(sample, 'release', () => false).at(-1)?.id, 13);
   assert.equal(sortHeroes(sample, 'pick-rate', () => false).at(-1)?.id, 13);
+});
+
+
+test('official ranked pick-rate parser accepts structured and visible CAMP formats', () => {
+  assert.equal(extractOfficialPickRate('<script>window.hero={pickRate:"12.34"}</script>'), 12.34);
+  assert.equal(extractOfficialPickRate('<div>Pick Rate</div><strong>0.28%</strong>'), 0.28);
+  assert.equal(extractOfficialPickRate('<div>101.2% Pick Rate</div>'), undefined);
 });
