@@ -144,3 +144,51 @@ test('V2.2 settings, portrait fallback, mobile, reduced motion and delayed first
     await expect(control.getByLabel('Side swap behavior',{exact:true})).toHaveValue('colorsOnly');
   } finally { h.close(); await context.close(); }
 });
+
+
+test('hidden hero names promote and auto-fit player IDs while hiding ban names', async ({ browser, baseURL }) => {
+  const h = await harness(baseURL);
+  const context = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+  try {
+    await h.send({ type: 'reset_match' });
+    const longBlue = ['ExtremelyLongTopLanePlayerID', 'VeryLongJunglePlayerIdentifier', 'MidPlayerWithALongTournamentTag', 'FarmLaneSuperLongPlayerName', 'RoamingPlayerIdentifierLong'];
+    const longRed = ['OpponentTopPlayerVeryLongID', 'OpponentJungleLongIdentifier', 'OpponentMidPlayerLongName', 'OpponentFarmPlayerLongName', 'OpponentRoamPlayerLongName'];
+    await h.send({
+      type: 'settings',
+      settings: {
+        ...h.state(),
+        language: 'eng',
+        overlayLayout: 'panel',
+        showHeroName: false,
+        blueTeam: { ...h.state().blueTeam, players: longBlue },
+        redTeam: { ...h.state().redTeam, players: longRed },
+      },
+    });
+    await h.fill();
+
+    const page = await context.newPage();
+    await page.goto('/overlay/draft#token=e2e-overlay');
+    await expect(page.locator('.broadcast-overlay')).toHaveClass(/hero-names-hidden/);
+    await expect(page.locator('.card-caption strong')).toHaveCount(0);
+    await expect(page.locator('.ban-name')).toHaveCount(0);
+    await expect(page.locator('.player-id-only')).toHaveCount(10);
+
+    const measurements = await page.locator('.player-id-only').evaluateAll(elements => elements.map(element => {
+      const el = element as HTMLElement;
+      const parent = el.parentElement as HTMLElement;
+      const style = getComputedStyle(el);
+      return {
+        fontSize: parseFloat(style.fontSize),
+        scrollWidth: el.scrollWidth,
+        available: parent.clientWidth - 10,
+        background: getComputedStyle(parent).backgroundImage,
+      };
+    }));
+    expect(measurements.every(item => item.fontSize >= 6 && item.fontSize <= 28)).toBeTruthy();
+    expect(measurements.every(item => item.scrollWidth <= item.available + 1)).toBeTruthy();
+    expect(measurements.every(item => item.background === 'none')).toBeTruthy();
+  } finally {
+    h.close();
+    await context.close();
+  }
+});
