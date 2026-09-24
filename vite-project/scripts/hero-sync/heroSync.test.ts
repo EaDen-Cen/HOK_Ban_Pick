@@ -6,6 +6,7 @@ import { makePlan, nextLocalIds } from './compare.js';
 import { mergeOverride } from './generated.js';
 import { normalizeName } from './normalize.js';
 import { extractOfficialHeroArt } from './fetchOfficial.js';
+import { heroArtCrop } from '../../src/data/heroArtFocus.js';
 import type { CatalogHero, SourceSnapshot } from './types.js';
 
 const local = (overrides: Partial<Hero> = {}): Hero => ({
@@ -113,4 +114,12 @@ test('safe override merge supports artwork metadata without touching relationshi
   assert.equal(result.artPosition, '50% 22%');
   assert.equal(result.campId, 563);
   assert.equal('combo' in result, false);
+});
+
+
+test('broadcast artwork uses layout-specific crop presets and per-hero overrides', () => {
+  assert.deepEqual(heroArtCrop(1, 'panel'), { x: 50, y: 31, scale: 1.12 });
+  assert.deepEqual(heroArtCrop(1, 'side'), { x: 50, y: 29, scale: 1.22 });
+  assert.deepEqual(heroArtCrop(19, 'panel'), { x: 80, y: 34, scale: 1.16 });
+  assert.deepEqual(heroArtCrop(19, 'side'), { x: 83, y: 33, scale: 1.28 });
 });

@@ -19,6 +19,7 @@ for (const layout of ['panel', 'side'] as const) {
       const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
       await page.goto('/overlay/draft#token=e2e-overlay');
       await expect(page.locator('.player-portrait')).toHaveCount(10);
+      await expect(page.locator('.draft-history')).toHaveCount(0);
       await expect(page.locator('.broadcast-team.display-left')).toHaveClass(/red/);
       await expect(page.locator('.broadcast-team.display-left h2')).toHaveText('NORTHWIND');
       await expect(page.locator('.broadcast-score strong').first()).toHaveText('1');
@@ -38,7 +39,7 @@ for (const layout of ['panel', 'side'] as const) {
           expect(boxes.every(b => b!.x === boxes[0]!.x)).toBeTruthy();
           expect(boxes[4]!.y).toBeGreaterThan(boxes[0]!.y + 500);
           expect(position === 'left' ? boxes[0]!.x < 100 : boxes[0]!.x >= 1580).toBeTruthy();
-          expect(boxes[0]!.width).toBe(300);
+          expect(boxes[0]!.width).toBe(340);
         }
       }
       expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
