@@ -126,6 +126,22 @@ export function extractOfficialHeroArt(html: string, pageUrl: string, expectedEn
   return candidates[0]?.url;
 }
 
+export function extractOfficialPickRate(html: string) {
+  const patterns = [
+    /["']?pickRate["']?\s*[:=]\s*["']?([0-9]+(?:\.[0-9]+)?)/i,
+    /["']?pick_rate["']?\s*[:=]\s*["']?([0-9]+(?:\.[0-9]+)?)/i,
+    /Pick\s*Rate[\s\S]{0,180}?([0-9]+(?:\.[0-9]+)?)\s*%/i,
+    /([0-9]+(?:\.[0-9]+)?)\s*%[\s\S]{0,100}?Pick\s*Rate/i,
+  ];
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (!match) continue;
+    const value = Number(match[1]);
+    if (Number.isFinite(value) && value >= 0 && value <= 100) return value;
+  }
+  return undefined;
+}
+
 async function optionalPage(url: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
@@ -149,4 +165,15 @@ export async function fetchOfficialHeroEvidence(campId: number, expectedEnglishN
   const confirmed = Boolean(englishName && normalizeName(englishName) === normalizeName(expectedEnglishName));
   const artUrl = englishHtml ? extractOfficialHeroArt(englishHtml, englishUrl, expectedEnglishName) : undefined;
   return { campId, englishName, chineseName, artUrl, englishUrl, chineseUrl, confirmed };
+}
+
+
+export async function fetchOfficialHeroRankStats(campId: number) {
+  const sourceUrl = `https://camp.honorofkings.com/h5/hero-detail/index.html?heroId=${campId}`;
+  const html = await optionalPage(sourceUrl);
+  return {
+    sourceUrl,
+    pickRate: html ? extractOfficialPickRate(html) : undefined,
+    checkedAt: new Date().toISOString(),
+  };
 }
