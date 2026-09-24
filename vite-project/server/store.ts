@@ -156,8 +156,8 @@ export class Store {
         id, firstPickSide: state.firstPickSide, gameNumber: currentGame(state), committedAt: this.clock(),
         blueTeam: copy(state.blueTeam), redTeam: copy(state.redTeam),
         bluePicks: [...state.bluePicks], redPicks: [...state.redPicks],
-        blueAssignments: state.blueAssignments as number[],
-        redAssignments: state.redAssignments as number[],
+        blueAssignments: [...state.blueAssignments] as number[],
+        redAssignments: [...state.redAssignments] as number[],
       });
       state.committedGameId = id;
       break;
