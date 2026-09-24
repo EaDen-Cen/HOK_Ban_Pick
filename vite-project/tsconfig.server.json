@@ -1,7 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ES2023", "lib": ["ES2023"], "module": "NodeNext", "moduleResolution": "NodeNext",
-    "strict": true, "noEmit": true, "skipLibCheck": true, "jsx": "react-jsx", "types": ["node"]
+    "target": "ES2023",
+    "lib": [
+      "ES2023"
+    ],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "types": [
+      "node"
+    ]
   },
-  "include": ["server/**/*.ts", "src/shared/types.ts", "src/components/HeroList.tsx"]
+  "include": [
+    "server/**/*.ts",
+    "scripts/hero-sync/**/*.ts",
+    "src/shared/types.ts",
+    "src/components/HeroList.tsx",
+    "src/data/**/*.ts"
+  ]
 }
