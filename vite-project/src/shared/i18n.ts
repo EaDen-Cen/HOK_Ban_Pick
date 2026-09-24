@@ -22,6 +22,8 @@ const messages = {
   resetCrop: {zh:'重置当前布局',eng:'Reset current layout'},
   resetHeroArt: {zh:'重置此英雄全部调整',eng:'Reset all hero adjustments'},
   fullArtUnavailable: {zh:'此英雄没有高清封面，将自动使用旧版图片。',eng:'No full artwork is available; the legacy image will be used.'},
+  heroArtCropInvalid: {zh:'英雄图片裁切参数无效，请重新调整。',eng:'Invalid hero artwork crop. Adjust the crop and try again.'},
+  heroArtOverrideInvalid: {zh:'英雄图片设置无效，请重新调整。',eng:'Invalid hero artwork settings. Adjust them and try again.'},
   scoreDisplay: {zh:'比分显示',eng:'Score display'},
   scoreNumber: {zh:'数字比分',eng:'Numbers'},
   scoreBoxes: {zh:'赛事格子',eng:'Win boxes'},
