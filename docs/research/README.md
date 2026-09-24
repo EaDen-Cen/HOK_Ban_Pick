@@ -2,7 +2,7 @@
 
 [文档索引](../README.md)
 
-- [2026-09-16 英雄数据核查](hero-data-audit-2026-09-16.md)：有日期的研究结论，不能视为持续更新的游戏资料。
+- [英雄数据自动同步](hero-sync.md)：每周检查国际服名单、生成审计记录并通过 PR 提交候选更新。\n- [2026-09-16 英雄数据核查](hero-data-audit-2026-09-16.md)：有日期的研究结论，不能视为持续更新的游戏资料。
 - [同步前名单差异](../../research/hero-roster-comparison.json)
 - [新增头像来源与校验值](../../research/new-hero-assets.json)
 - [头像修正记录](../../research/corrected-hero-assets.json)

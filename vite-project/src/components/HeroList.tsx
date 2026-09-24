@@ -1,4 +1,6 @@
 import additionalHeroes from '../data/additionalHeroes.js';
+import autoSyncedHeroes from '../data/autoSyncedHeroes.js';
+import heroSyncOverrides from '../data/heroSyncOverrides.js';
 import type { Hero } from '../data/heroTypes.js';
 
 const legacyHeroes: Hero[] = [
@@ -1016,7 +1018,7 @@ const updatedNames: Record<number, string> = {
 };
 
 // ID 29 was an unnamed placeholder. Do not recycle IDs: persisted drafts use them.
-const heroes: Hero[] = [
+const baseHeroes: Hero[] = [
   ...legacyHeroes.filter(h => h.englishName.trim() && h.chineseName.trim()).map(h => ({
     ...h,
     imageLink: `/heroesImg/${h.id}.png`,
@@ -1024,6 +1026,23 @@ const heroes: Hero[] = [
     aliases: updatedNames[h.id] ? [h.englishName] : [],
   })),
   ...additionalHeroes,
+  ...autoSyncedHeroes,
 ];
+
+const heroes: Hero[] = baseHeroes.map(hero => {
+  const override = heroSyncOverrides[hero.id];
+  if (!override) return hero;
+
+  // Automated sync may update safe identity/display metadata, but never overwrites
+  // manually curated relationship arrays.
+  return {
+    ...hero,
+    ...override,
+    aliases: [...new Set([...(hero.aliases || []), ...(override.aliases || [])])],
+    combo: hero.combo,
+    counter: hero.counter,
+    beCountered: hero.beCountered,
+  };
+});
 
 export default heroes;

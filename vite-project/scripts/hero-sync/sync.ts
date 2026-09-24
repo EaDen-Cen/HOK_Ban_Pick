@@ -1,0 +1,267 @@
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import heroes from '../../src/components/HeroList.js';
+import autoSyncedHeroes from '../../src/data/autoSyncedHeroes.js';
+import heroSyncOverrides from '../../src/data/heroSyncOverrides.js';
+import type { Hero } from '../../src/data/heroTypes.js';
+import { downloadHeroAsset } from './assets.js';
+import { fetchCatalog, fetchCatalogHeroDetail, CATALOG_URL } from './fetchCatalog.js';
+import { fetchOfficialHeroEvidence } from './fetchOfficial.js';
+import { makePlan, nextLocalIds } from './compare.js';
+import { mergeOverride, renderAutoSyncedHeroes, renderOverrides, type HeroOverride } from './generated.js';
+import { normalizeName, uniqueStrings } from './normalize.js';
+import type { AssetRecord, SourceSnapshot, SyncAudit } from './types.js';
+
+const projectRoot = fileURLToPath(new URL('../../', import.meta.url));
+const repoRoot = resolve(projectRoot, '..');
+const snapshotPath = resolve(repoRoot, 'research/hero-sync/catalog-snapshot.json');
+const autoHeroesPath = resolve(projectRoot, 'src/data/autoSyncedHeroes.ts');
+const overridesPath = resolve(projectRoot, 'src/data/heroSyncOverrides.ts');
+const publicDir = resolve(projectRoot, 'public');
+
+async function readSnapshot(): Promise<SourceSnapshot | undefined> {
+  try {
+    return JSON.parse(await readFile(snapshotPath, 'utf8')) as SourceSnapshot;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    throw error;
+  }
+}
+
+function assertSourceHealth(previous: SourceSnapshot | undefined, remoteCount: number) {
+  if (!previous?.heroes.length) return;
+  const floor = Math.max(80, Math.floor(previous.heroes.length * 0.9));
+  if (remoteCount < floor) {
+    throw new Error(
+      `Remote roster dropped from ${previous.heroes.length} to ${remoteCount}; refusing a likely partial source response`,
+    );
+  }
+}
+
+function compactSummary(plan: ReturnType<typeof makePlan>) {
+  return {
+    changed: plan.changed,
+    checkedAt: plan.checkedAt,
+    remoteCount: plan.remoteCount,
+    baselineMissing: plan.baselineMissing,
+    additions: plan.additions.map(hero => ({ campId: hero.campId, englishName: hero.englishName, occupation: hero.occupation })),
+    sourceChanges: plan.sourceChanges,
+    missingLocalWarnings: plan.missingLocal.map(hero => ({ id: hero.id, englishName: hero.englishName, campId: hero.campId })),
+  };
+}
+
+function newHero(args: {
+  id: number;
+  englishName: string;
+  chineseName: string;
+  occupation: string;
+  campId: number;
+  imageLink: string;
+}): Hero {
+  const hero: Hero = {
+    id: args.id,
+    englishName: args.englishName,
+    chineseName: args.chineseName,
+    occupation: args.occupation,
+    altOccupation: '',
+    campId: args.campId,
+    imageLink: args.imageLink,
+    combo: [],
+    counter: [],
+    beCountered: [],
+    relationshipStatus: 'unverified',
+  };
+  if (normalizeName(args.englishName).startsWith('flowborn')) hero.variantGroup = 'flowborn';
+  return hero;
+}
+
+async function applyUpdate(
+  remoteHeroes: Awaited<ReturnType<typeof fetchCatalog>>,
+  previous: SourceSnapshot | undefined,
+  plan: ReturnType<typeof makePlan>,
+) {
+  const autoHeroes = structuredClone(autoSyncedHeroes) as Hero[];
+  const overrides = structuredClone(heroSyncOverrides) as Record<number, HeroOverride>;
+  const assets: AssetRecord[] = [];
+  const manualReview: string[] = [];
+  const additionsAudit: SyncAudit['additions'] = [];
+  const overrideAudit: SyncAudit['metadataOverrides'] = [];
+
+  const orderedAdditions = [...plan.additions].sort((a, b) => a.campId - b.campId);
+  const ids = nextLocalIds(heroes, orderedAdditions.length);
+
+  for (let index = 0; index < orderedAdditions.length; index++) {
+    let remote = orderedAdditions[index];
+    const id = ids[index];
+    if (!remote.imageUrl) {
+      try {
+        remote = await fetchCatalogHeroDetail(remote.campId);
+      } catch (error) {
+        manualReview.push(`Skipped new hero ${remote.englishName} (${remote.campId}): detail fetch failed (${error instanceof Error ? error.message : 'unknown error'}).`);
+        continue;
+      }
+    }
+    if (!remote.imageUrl) {
+      manualReview.push(`Skipped new hero ${remote.englishName} (${remote.campId}): no official CDN hero image found on catalog detail page.`);
+      continue;
+    }
+
+    const evidence = await fetchOfficialHeroEvidence(remote.campId, remote.englishName);
+    if (!evidence.confirmed) {
+      manualReview.push(
+        `New hero ${remote.englishName} (${remote.campId}) was discovered by the catalog but could not be name-confirmed on the official IP page. The generated PR requires manual review.`,
+      );
+    }
+
+    const asset = await downloadHeroAsset({
+      heroId: id,
+      campId: remote.campId,
+      sourceUrl: remote.imageUrl,
+      publicDir,
+    });
+    assets.push(asset);
+
+    const chineseName = evidence.chineseName?.trim() || remote.englishName;
+    if (!evidence.chineseName) {
+      manualReview.push(`No official zh-Hant name was available for ${remote.englishName}; Chinese display temporarily falls back to English.`);
+    }
+
+    const created = newHero({
+      id,
+      englishName: remote.englishName,
+      chineseName,
+      occupation: remote.occupation,
+      campId: remote.campId,
+      imageLink: asset.localPath,
+    });
+    autoHeroes.push(created);
+    additionsAudit.push({
+      localId: id,
+      campId: remote.campId,
+      englishName: created.englishName,
+      chineseName: created.chineseName,
+      occupation: created.occupation,
+      officialConfirmed: evidence.confirmed,
+    });
+  }
+
+  for (const change of plan.sourceChanges) {
+    if (change.field === 'added' || change.field === 'missing') continue;
+    const match = plan.matches.find(item => item.remote.campId === change.campId);
+    if (!match) continue;
+
+    if (change.field === 'occupation') {
+      manualReview.push(
+        `Lane changed in auxiliary catalog for ${match.remote.englishName}: ${change.before} → ${change.after}. Not auto-applied because lane metadata is not sourced from an authoritative tournament feed.`,
+      );
+      continue;
+    }
+
+    if (change.field === 'englishName') {
+      const evidence = await fetchOfficialHeroEvidence(match.remote.campId, match.remote.englishName);
+      if (!evidence.confirmed) {
+        manualReview.push(
+          `Name changed in catalog for local hero #${match.local.id}: ${change.before} → ${change.after}, but the official page did not confirm it. No runtime rename was applied.`,
+        );
+        continue;
+      }
+      const next: HeroOverride = {
+        englishName: match.remote.englishName,
+        aliases: uniqueStrings([...(match.local.aliases || []), match.local.englishName, change.before || '']),
+        campId: match.remote.campId,
+      };
+      overrides[match.local.id] = mergeOverride(overrides[match.local.id], next);
+      overrideAudit.push({ localId: match.local.id, campId: match.remote.campId, fields: next });
+      continue;
+    }
+
+    if (change.field === 'imageUrl' && match.remote.imageUrl) {
+      const asset = await downloadHeroAsset({
+        heroId: match.local.id,
+        campId: match.remote.campId,
+        sourceUrl: match.remote.imageUrl,
+        publicDir,
+      });
+      assets.push(asset);
+      const next: HeroOverride = { imageLink: asset.localPath, campId: match.remote.campId };
+      overrides[match.local.id] = mergeOverride(overrides[match.local.id], next);
+      overrideAudit.push({ localId: match.local.id, campId: match.remote.campId, fields: next });
+    }
+  }
+
+  const snapshot: SourceSnapshot = {
+    checkedAt: plan.checkedAt,
+    source: CATALOG_URL,
+    heroes: remoteHeroes,
+  };
+
+  const audit: SyncAudit = {
+    checkedAt: plan.checkedAt,
+    mode: 'update',
+    sources: {
+      catalog: CATALOG_URL,
+      officialEnglishPattern: 'https://world.honorofkings.com/zlkdatasys/ip/hero/en/{campId}.html',
+      officialChinesePattern: 'https://world.honorofkings.com/zlkdatasys/ip/hero/zh-Hant/{campId}.html',
+    },
+    remoteCount: plan.remoteCount,
+    additions: additionsAudit,
+    metadataOverrides: overrideAudit,
+    manualReview,
+    missingLocalWarnings: plan.missingLocal.map(
+      hero => `Local hero #${hero.id} ${hero.englishName} was not found in the current auxiliary catalog. It was NOT deleted.`,
+    ),
+    sourceChanges: plan.sourceChanges,
+    assets,
+  };
+
+  await mkdir(resolve(repoRoot, 'research/hero-sync'), { recursive: true });
+  await Promise.all([
+    writeFile(autoHeroesPath, renderAutoSyncedHeroes(autoHeroes), 'utf8'),
+    writeFile(overridesPath, renderOverrides(overrides), 'utf8'),
+    writeFile(snapshotPath, JSON.stringify(snapshot, null, 2) + '\n', 'utf8'),
+    writeFile(
+      resolve(repoRoot, `research/hero-sync/${plan.checkedAt.slice(0, 10)}.json`),
+      JSON.stringify(audit, null, 2) + '\n',
+      'utf8',
+    ),
+  ]);
+
+  return audit;
+}
+
+async function main() {
+  const args = new Set(process.argv.slice(2));
+  const update = args.has('--update');
+  const json = args.has('--json');
+  if (update && args.has('--check')) throw new Error('Use either --check or --update, not both');
+
+  const previous = await readSnapshot();
+  const remoteHeroes = await fetchCatalog();
+  assertSourceHealth(previous, remoteHeroes.length);
+  const plan = makePlan(heroes, remoteHeroes, previous);
+
+  if (!update) {
+    const summary = compactSummary(plan);
+    if (json) process.stdout.write(JSON.stringify(summary));
+    else {
+      console.log(`Hero sync check: ${plan.remoteCount} remote heroes, ${plan.additions.length} local additions, ${plan.sourceChanges.length} source changes.`);
+      if (plan.baselineMissing) console.log('No catalog baseline exists yet; the first update will create one.');
+      for (const hero of plan.additions) console.log(`+ NEW: ${hero.englishName} (camp ${hero.campId}, ${hero.occupation})`);
+      for (const warning of plan.missingLocal) console.log(`! LOCAL ONLY (not deleted): #${warning.id} ${warning.englishName}`);
+    }
+    return;
+  }
+
+  if (!plan.changed) {
+    console.log('Hero roster is up to date; no files changed.');
+    return;
+  }
+
+  const audit = await applyUpdate(remoteHeroes, previous, plan);
+  console.log(
+    `Hero sync update prepared: ${audit.additions.length} additions, ${audit.metadataOverrides.length} safe metadata overrides, ${audit.manualReview.length} manual-review notes.`,
+  );
+}
+
+await main();
