@@ -19,7 +19,7 @@ function validateArtCrop(crop: unknown) {
   const value = crop as { x?: unknown; y?: unknown; scale?: unknown };
   if (typeof value.x !== 'number' || !Number.isFinite(value.x) || value.x < 0 || value.x > 100) throw new Error('heroArtCropInvalid');
   if (typeof value.y !== 'number' || !Number.isFinite(value.y) || value.y < 0 || value.y > 100) throw new Error('heroArtCropInvalid');
-  if (typeof value.scale !== 'number' || !Number.isFinite(value.scale) || value.scale < 0.6 || value.scale > 3) throw new Error('heroArtCropInvalid');
+  if (typeof value.scale !== 'number' || !Number.isFinite(value.scale) || value.scale < 1 || value.scale > 3) throw new Error('heroArtCropInvalid');
 }
 function portraitURL(value: unknown): asserts value is string {
   shortText(value, 1000);

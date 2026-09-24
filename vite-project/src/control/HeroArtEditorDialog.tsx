@@ -72,16 +72,30 @@ function CropPreview({
   legacy: boolean;
   alt: string;
 }) {
-  const position = `${crop.x}% ${crop.y}%`;
+  const [size, setSize] = useState<SourceSize>({ width: 16, height: 9 });
+  const frame = sourceFrame(crop, layout, size);
+
+  // Important: preview the source rectangle directly from the ORIGINAL image.
+  // Do not object-fit:cover first and then transform that already-cropped result.
+  const originalCropStyle: CSSProperties = legacy ? {} : {
+    position: 'absolute',
+    left: `${-frame.left / frame.width * 100}%`,
+    top: `${-frame.top / frame.height * 100}%`,
+    width: `${size.width / frame.width * 100}%`,
+    height: `${size.height / frame.height * 100}%`,
+    maxWidth: 'none',
+  };
+
   return <div className={`art-editor-preview art-editor-preview-${layout}`}>
     <img
       src={src}
       alt={alt}
-      style={{
-        objectPosition: legacy ? '50% 50%' : position,
-        transform: legacy ? 'none' : `scale(${crop.scale})`,
-        transformOrigin: legacy ? '50% 50%' : position,
-      }}
+      className={legacy ? 'legacy-preview-image' : 'source-crop-preview-image'}
+      style={originalCropStyle}
+      onLoad={event => setSize({
+        width: event.currentTarget.naturalWidth || 16,
+        height: event.currentTarget.naturalHeight || 9,
+      })}
     />
   </div>;
 }
@@ -105,7 +119,7 @@ function CropControls({
       <input type="range" min={0} max={100} step={1} value={crop.y} onChange={e => set('y', Number(e.target.value))} />
     </label>
     <label>Scale · {crop.scale.toFixed(2)}×
-      <input type="range" min={0.6} max={3} step={0.01} value={crop.scale} onChange={e => set('scale', Number(e.target.value))} />
+      <input type="range" min={1} max={3} step={0.01} value={crop.scale} onChange={e => set('scale', Number(e.target.value))} />
     </label>
   </fieldset>;
 }

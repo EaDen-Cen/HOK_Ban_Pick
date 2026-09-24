@@ -132,6 +132,11 @@ test('director artwork settings validate crop ranges and presentation settings',
     heroId,
     override: { side: { x: 50, y: 50, scale: 4 } },
   }));
+  assert.throws(() => apply(s, {
+    type: 'hero_art_override',
+    heroId,
+    override: { panel: { x: 50, y: 50, scale: 0.99 } },
+  }));
 
   apply(s, {
     type: 'settings',
