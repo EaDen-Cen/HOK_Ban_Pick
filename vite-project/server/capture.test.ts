@@ -1,12 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { IncomingMessage } from 'node:http';
-import { captureRegion, localCaptureRequest } from './capture.js';
+import { captureRegion, captureRegions, localCaptureRequest } from './capture.js';
 import { Store } from './store.js';
 import type { MatchSettings } from '../src/shared/types.js';
 test('capture accepts bounded negative-monitor coordinates and rejects oversized/malformed regions',()=>{
   assert.deepEqual(captureRegion({x:-1920,y:0,width:100,height:100}),{x:-1920,y:0,width:100,height:100});
   for (const value of [null,{}, {x:0,y:0,width:99999,height:32},{x:0.5,y:0,width:32,height:32}]) assert.throws(()=>captureRegion(value));
+});
+test('lineup capture requires exactly ten valid player regions',()=>{
+  const regions=Array.from({length:10},(_,index)=>({x:index*40,y:0,width:64,height:64}));
+  assert.equal(captureRegions(regions).length,10);
+  assert.throws(()=>captureRegions(regions.slice(0,9)));
+  assert.throws(()=>captureRegions([...regions.slice(0,9),{x:0,y:0,width:10,height:64}]));
 });
 test('capture rejects remote, tunnel and cross-origin requests even with loopback proxy address',()=>{
   const request=(headers:IncomingMessage['headers'], remoteAddress='127.0.0.1')=>({headers,socket:{remoteAddress}} as IncomingMessage);
