@@ -153,7 +153,7 @@ test('player assignment changes preserve immutable pick order and cannot bypass 
   assert.equal(pickRestriction(s.data.state, 'blue', 0, original[1]), 'usedByPlayer');
   assert.equal(pickRestriction(s.data.state, 'blue', 1, original[0]), 'usedByPlayer');
   fill(s);
-  const before = structuredClone(s.data);
+  const before = structuredClone(s.data.state);
   const assignments = s.data.state.blueAssignments as number[];
   let blocked = false;
   for (let i = 0; i < 5 && !blocked; i++) for (let j = i + 1; j < 5 && !blocked; j++) {
