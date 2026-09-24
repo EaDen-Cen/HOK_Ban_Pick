@@ -24,6 +24,7 @@ import { SettingsDialog } from './control/SettingsDialog';
 import { TeamSettingsDialog } from './control/TeamSettingsDialog';
 import { ScreenInput } from './control/ScreenInput';
 import { HeroArtEditorDialog } from './control/HeroArtEditorDialog';
+import { LineupAssignments } from './control/LineupAssignments';
 import { Score } from './shared/Score';
 import { DraftHistory } from './shared/DraftHistory';
 import { DraftLifecycle } from './control/DraftLifecycle';
@@ -289,7 +290,8 @@ export default function BroadcastApp() {
 
           <DraftLifecycle state={state} send={send} disabled={disabled} />
           {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><MatchSettingsPanel key={JSON.stringify([state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode, state.showHeroName, state.artSourceMode])} state={state} send={send} disabled={disabled} /></SettingsDialog>}
-          {state.bpInputMode === 'screen' && <ScreenInput key={snapshot!.revision} state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />}
+          {state.bpInputMode === 'screen' && <ScreenInput state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />}
+          <LineupAssignments state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />
         </>}>
           <ControlHeroPicker state={state} disabled={disabled} active={!showSettings && !showTeamSettings && !showHeroArtEditor} send={send} acknowledged={acknowledged} />
         </ControlDraftWorkspace>
