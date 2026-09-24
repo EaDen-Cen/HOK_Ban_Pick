@@ -1,6 +1,7 @@
 import additionalHeroes from '../data/additionalHeroes.js';
 import autoSyncedHeroes from '../data/autoSyncedHeroes.js';
 import heroSyncOverrides from '../data/heroSyncOverrides.js';
+import heroArtSourceOverrides from '../data/heroArtSourceOverrides.js';
 import type { Hero } from '../data/heroTypes.js';
 
 const legacyHeroes: Hero[] = [
@@ -1031,15 +1032,17 @@ const baseHeroes: Hero[] = [
 
 const heroes: Hero[] = baseHeroes.map(hero => {
   const override = heroSyncOverrides[hero.id];
-  if (!override) return hero;
+  const artOverride = heroArtSourceOverrides[hero.id];
+  if (!override && !artOverride) return hero;
 
   // Automated sync may update safe identity/display metadata, but never overwrites
-  // manually curated relationship arrays. Layout-specific artwork framing is
-  // applied by the broadcast overlay, not merged into the Hero schema here.
+  // manually curated relationship arrays. Reviewed artwork overrides are applied
+  // last so a future scheduled sync cannot reintroduce a known-bad broadcast image.
   return {
     ...hero,
     ...override,
-    aliases: [...new Set([...(hero.aliases || []), ...(override.aliases || [])])],
+    ...artOverride,
+    aliases: [...new Set([...(hero.aliases || []), ...(override?.aliases || [])])],
     combo: hero.combo,
     counter: hero.counter,
     beCountered: hero.beCountered,
