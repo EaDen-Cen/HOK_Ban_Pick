@@ -1,15 +1,38 @@
-/**
- * Manually curated focal points for full-width official hero art.
- *
- * Values are CSS object-position coordinates. The same focal point works across
- * portrait, square and wide cards because object-fit: cover expands the crop
- * around this anchor as the card aspect ratio changes.
- *
- * Only add overrides when the default 50% 30% misses the hero's face / upper body.
- */
-const heroArtFocus: Record<number, string> = {
-  // Dharma's official key art places the character far to the right.
-  19: '82% 32%',
+export type HeroArtLayout = 'panel' | 'side';
+
+export interface HeroArtCrop {
+  /** Horizontal focal point in percent. */
+  x: number;
+  /** Vertical focal point in percent. */
+  y: number;
+  /** Additional zoom applied after object-fit: cover. */
+  scale: number;
+}
+
+const defaults: Record<HeroArtLayout, HeroArtCrop> = {
+  // Bottom / panel cards should show head + upper body + some surrounding action.
+  panel: { x: 50, y: 31, scale: 1.12 },
+  // Side rails are shorter/wider, so push in slightly more toward face + torso.
+  side: { x: 50, y: 29, scale: 1.22 },
 };
 
-export default heroArtFocus;
+/**
+ * Per-hero broadcast framing overrides.
+ *
+ * Full character art is intentionally kept as a flexible source image. These
+ * focal points tell the overlay where the subject is, while the card aspect
+ * ratio decides how much surrounding artwork is visible.
+ */
+const overrides: Record<number, Partial<Record<HeroArtLayout, HeroArtCrop>>> = {
+  // Dharma / 达摩: subject sits far on the right side of the official key art.
+  19: {
+    panel: { x: 80, y: 34, scale: 1.16 },
+    side: { x: 83, y: 33, scale: 1.28 },
+  },
+};
+
+export function heroArtCrop(heroId: number, layout: HeroArtLayout): HeroArtCrop {
+  return overrides[heroId]?.[layout] || defaults[layout];
+}
+
+export default overrides;
