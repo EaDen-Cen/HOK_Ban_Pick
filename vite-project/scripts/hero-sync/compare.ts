@@ -2,15 +2,21 @@ import type { Hero } from '../../src/data/heroTypes.js';
 import { namesForHero, normalizeName } from './normalize.js';
 import type { CatalogHero, MatchResult, SourceChange, SourceSnapshot, SyncPlan } from './types.js';
 
-function findMatch(localHeroes: Hero[], remote: CatalogHero): MatchResult | undefined {
+function findMatch(localHeroes: Hero[], remote: CatalogHero, previous?: SourceSnapshot): MatchResult | undefined {
   const byCampId = localHeroes.find(hero => hero.campId === remote.campId);
   if (byCampId) return { local: byCampId, remote, matchedBy: 'campId' };
 
-  const remoteName = normalizeName(remote.englishName);
-  for (const hero of localHeroes) {
-    const names = namesForHero(hero);
-    const index = names.indexOf(remoteName);
-    if (index >= 0) return { local: hero, remote, matchedBy: index === 0 ? 'name' : 'alias' };
+  const candidates = [remote.englishName];
+  const previousRecord = previous?.heroes.find(hero => hero.campId === remote.campId);
+  if (previousRecord && previousRecord.englishName !== remote.englishName) candidates.push(previousRecord.englishName);
+
+  for (const candidate of candidates) {
+    const normalized = normalizeName(candidate);
+    for (const hero of localHeroes) {
+      const names = namesForHero(hero);
+      const index = names.indexOf(normalized);
+      if (index >= 0) return { local: hero, remote, matchedBy: index === 0 ? 'name' : 'alias' };
+    }
   }
   return undefined;
 }
@@ -46,7 +52,7 @@ export function makePlan(localHeroes: Hero[], remoteHeroes: CatalogHero[], previ
   const matchedIds = new Set<number>();
 
   for (const remote of remoteHeroes) {
-    const match = findMatch(validLocal, remote);
+    const match = findMatch(validLocal, remote, previous);
     if (match) {
       matches.push(match);
       matchedIds.add(match.local.id);
