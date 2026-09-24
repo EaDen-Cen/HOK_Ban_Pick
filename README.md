@@ -26,7 +26,7 @@ npm run server
 | 理解源码目录和状态流 | [系统结构](docs/design/architecture.md) |
 | 查看项目阶段与未来路线 | [项目里程碑](MILESTONES.md) |
 | 查看历次测试及未验收范围 | [验证记录](docs/validation/history.md) |
-| 查英雄资料来源 | [研究索引](docs/research/README.md) |
+| 查英雄资料来源 | [研究索引](docs/research/README.md) |\n| 自动检查英雄名单更新 | [英雄数据自动同步](docs/research/hero-sync.md) |
 | 查旧交接、旧计划和原项目介绍 | [历史归档](docs/archive/README.md) |
 | 查全部文档、旧路径去向及维护规则 | [文档总索引](docs/README.md) |
 
