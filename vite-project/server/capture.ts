@@ -10,6 +10,13 @@ async function features(source: string | Buffer) {
   const values=Array.from(pixels,n=>n-mean), norm=Math.sqrt(values.reduce((sum,n)=>sum+n*n,0));
   return values.map(n=>n/Math.max(norm,1));
 }
+export async function frameFingerprint(source: Buffer) {
+  const pixels: Buffer = await sharp(source).resize(8,8,{fit:'fill'}).greyscale().raw().toBuffer();
+  const mean = pixels.reduce((sum,n)=>sum+n,0) / pixels.length;
+  let bits = '';
+  for (const pixel of pixels) bits += pixel >= mean ? '1' : '0';
+  return Array.from({length:16},(_,index)=>parseInt(bits.slice(index*4,index*4+4),2).toString(16)).join('');
+}
 let templates: Promise<{heroId:number; values:number[]}[]> | undefined;
 export async function recognizeImage(buffer: Buffer, allowedHeroIds?: number[]) {
   templates ??= Promise.all(heroes.map(async h=>({heroId:h.id,values:await features(fileURLToPath(new URL(`../public${h.imageLink}`,import.meta.url)))}))).catch(error=>{templates=undefined;throw error;});
@@ -57,7 +64,12 @@ export async function recognizeScreen(region: ReturnType<typeof captureRegion>) 
   try {
     const frame = await captureWindows({ region });
     if (!frame.preview) throw new Error('Invalid capture result');
-    return {preview:frame.preview,candidates:await recognizeImage(Buffer.from(frame.preview.split(',')[1],'base64'))};
+    const buffer = Buffer.from(frame.preview.split(',')[1],'base64');
+    return {
+      preview: frame.preview,
+      fingerprint: await frameFingerprint(buffer),
+      candidates: await recognizeImage(buffer),
+    };
   } finally { busy = false; }
 }
 
