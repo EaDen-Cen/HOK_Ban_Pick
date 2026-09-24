@@ -425,7 +425,7 @@
 .broadcast-side .broadcast-picks { grid-template-columns:300px 300px; bottom:112px; }
 .broadcast-side .hero-reveal { bottom:0; right:28px; }
 .broadcast-side .broadcast-art { right:92px; width:calc(100% - 92px); }
-.broadcast-side .broadcast-art .hero-art-full { object-fit:contain; object-position:center!important; }
+.broadcast-side .broadcast-art .hero-art-full { object-fit:cover; }
 .broadcast-side .card-caption { left:auto; width:92px; top:0; padding:10px 5px; justify-content:center; background:#0c192bea; }
 .broadcast-side .card-caption strong,.broadcast-side .card-caption span { white-space:normal; overflow-wrap:anywhere; }
 .broadcast-side .position-bar { left:auto; width:28px; top:0; height:auto; }
