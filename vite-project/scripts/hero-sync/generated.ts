@@ -1,7 +1,7 @@
 import type { Hero } from '../../src/data/heroTypes.js';
 import { uniqueStrings } from './normalize.js';
 
-const SAFE_OVERRIDE_FIELDS = ['englishName', 'chineseName', 'imageLink', 'occupation', 'altOccupation', 'aliases', 'campId'] as const;
+const SAFE_OVERRIDE_FIELDS = ['englishName', 'chineseName', 'imageLink', 'artLink', 'artPosition', 'occupation', 'altOccupation', 'aliases', 'campId'] as const;
 
 export type HeroOverride = Pick<Partial<Hero>, typeof SAFE_OVERRIDE_FIELDS[number]>;
 
