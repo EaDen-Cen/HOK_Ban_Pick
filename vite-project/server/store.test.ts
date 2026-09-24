@@ -94,3 +94,49 @@ test('disk failure never advances authoritative state', () => {
   Object.defineProperty(s, 'file', { value: join(folder, 'unavailable\0', 'state.json') });
   assert.throws(() => pick(s, 46)); assert.deepEqual(s.data, original);
 });
+
+
+test('director hero art overrides persist, reset safely, and survive match reset', () => {
+  const s = new Store();
+  const heroId = heroes[0].id;
+  apply(s, {
+    type: 'hero_art_override',
+    heroId,
+    override: {
+      useLegacyImage: true,
+      panel: { x: 42, y: 28, scale: 1.35 },
+      side: { x: 61, y: 31, scale: 1.18 },
+    },
+  });
+  assert.equal(s.data.state.heroArtOverrides[String(heroId)].useLegacyImage, true);
+  assert.deepEqual(s.data.state.heroArtOverrides[String(heroId)].panel, { x: 42, y: 28, scale: 1.35 });
+
+  apply(s, { type: 'reset_hero_art_override', heroId, layout: 'panel' });
+  assert.equal(s.data.state.heroArtOverrides[String(heroId)].panel, undefined);
+  assert.equal(s.data.state.heroArtOverrides[String(heroId)].useLegacyImage, true);
+
+  apply(s, { type: 'reset_match' });
+  assert.equal(s.data.state.heroArtOverrides[String(heroId)].useLegacyImage, true);
+});
+
+test('director artwork settings validate crop ranges and presentation settings', () => {
+  const s = new Store();
+  const heroId = heroes[0].id;
+  assert.throws(() => apply(s, {
+    type: 'hero_art_override',
+    heroId,
+    override: { panel: { x: 101, y: 50, scale: 1 } },
+  }));
+  assert.throws(() => apply(s, {
+    type: 'hero_art_override',
+    heroId,
+    override: { side: { x: 50, y: 50, scale: 4 } },
+  }));
+
+  apply(s, {
+    type: 'settings',
+    settings: { ...initialState(), showHeroName: false, artSourceMode: 'legacy' },
+  });
+  assert.equal(s.data.state.showHeroName, false);
+  assert.equal(s.data.state.artSourceMode, 'legacy');
+});

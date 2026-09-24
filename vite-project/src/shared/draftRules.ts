@@ -52,6 +52,9 @@ export function normalizeState(raw: MatchState): MatchState {
   };
   const state = { ...defaults, ...raw,
     blueTeam: normalizeTeam(raw.blueTeam, 'blue'), redTeam: normalizeTeam(raw.redTeam, 'red'),
+    showHeroName: raw.showHeroName ?? true,
+    artSourceMode: raw.artSourceMode ?? 'auto',
+    heroArtOverrides: raw.heroArtOverrides ?? {},
     draftHistory: (raw.draftHistory ?? []).map(record => ({ ...record,
       firstPickSide: record.firstPickSide ?? 'blue',
       blueTeam: normalizeTeam(record.blueTeam, 'blue'), redTeam: normalizeTeam(record.redTeam, 'red'),

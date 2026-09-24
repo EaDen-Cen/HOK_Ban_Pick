@@ -3,6 +3,13 @@ export type Side = 'blue' | 'red';
 export type Language = 'zh' | 'eng';
 
 export type OverlayLayout = 'panel' | 'side';
+export type HeroArtLayout = OverlayLayout;
+export interface HeroArtCrop { x: number; y: number; scale: number }
+export interface HeroArtOverride {
+  useLegacyImage?: boolean;
+  panel?: HeroArtCrop;
+  side?: HeroArtCrop;
+}
 export type DraftRuleMode = 'normal' | 'player' | 'global';
 export type SideSwapMode = 'moveTeams' | 'colorsOnly';
 
@@ -61,6 +68,9 @@ export interface MatchState {
   overlayLayout: OverlayLayout;
   scoreDisplay?: 'number' | 'boxes';
   bpInputMode?: 'manual' | 'screen';
+  showHeroName: boolean;
+  artSourceMode: 'auto' | 'legacy';
+  heroArtOverrides: Record<string, HeroArtOverride>;
 
   draftMode: 'match' | 'normal';
   displayLeftSide: Side;
@@ -96,6 +106,8 @@ export type MatchSettings = Pick<
   | 'overlayLayout'
   | 'scoreDisplay'
   | 'bpInputMode'
+  | 'showHeroName'
+  | 'artSourceMode'
 >;
 
 export type Action =
@@ -106,6 +118,8 @@ export type Action =
   | { type: 'score'; team: Side; delta: 1 | -1 }
   | { type: 'swap_picks'; team: Side; from: number; to: number }
   | { type: 'settings'; settings: MatchSettings }
+  | { type: 'hero_art_override'; heroId: number; override: HeroArtOverride }
+  | { type: 'reset_hero_art_override'; heroId: number; layout?: HeroArtLayout }
   | { type: 'delay'; seconds: number };
 
 export type Role = 'control' | 'caster' | 'overlay';
@@ -148,6 +162,9 @@ export const initialState = (): MatchState => ({
   overlayLayout: 'panel',
   scoreDisplay: 'number',
   bpInputMode: 'manual',
+  showHeroName: true,
+  artSourceMode: 'auto',
+  heroArtOverrides: {},
 
   draftMode: 'match',
   displayLeftSide: 'blue',

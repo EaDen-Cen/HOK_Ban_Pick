@@ -20,25 +20,27 @@ export function PositionIcon({ role, label }: { role: PlayerRole; label: string 
   return <svg className="position-icon" viewBox="0 0 24 24" role="img" aria-label={label}><title>{label}</title><path d={rolePaths[role]} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-function HeroArtwork({ hero, alt, layout }: { hero: (typeof heroes)[number]; alt: string; layout: MatchState['overlayLayout'] }) {
-  const primary = hero.artLink || hero.imageLink;
-  const crop = heroArtCrop(hero.id, layout);
-  const position = hero.artPosition || `${crop.x}% ${crop.y}%`;
+function HeroArtwork({ hero, alt, state }: { hero: (typeof heroes)[number]; alt: string; state: MatchState }) {
+  const runtime = state.heroArtOverrides?.[String(hero.id)];
+  const useLegacy = state.artSourceMode === 'legacy' || runtime?.useLegacyImage === true || !hero.artLink;
+  const primary = useLegacy ? hero.imageLink : hero.artLink!;
+  const crop = heroArtCrop(hero.id, state.overlayLayout, runtime);
+  const hasRuntimeCrop = Boolean(runtime?.[state.overlayLayout]);
+  const position = hasRuntimeCrop ? `${crop.x}% ${crop.y}%` : (hero.artPosition || `${crop.x}% ${crop.y}%`);
   return <img
-    className={`hero-art ${hero.artLink ? 'hero-art-full' : 'hero-art-icon'}`}
+    className={`hero-art ${useLegacy ? 'hero-art-icon' : 'hero-art-full'}`}
+    data-art-source={useLegacy ? 'legacy' : 'full'}
     src={primary}
     alt={alt}
     style={{
       objectPosition: position,
-      transform: hero.artLink ? `scale(${crop.scale})` : undefined,
+      transform: useLegacy ? undefined : `scale(${crop.scale})`,
       transformOrigin: position,
     }}
     onError={event => {
-      // Full official art is intentionally remote to avoid shipping hundreds of
-      // megabytes in the repo. If the CDN is unavailable during a match, fall
-      // back to the small local icon rather than leaving a blank card.
       if (event.currentTarget.src.endsWith(hero.imageLink)) return;
       event.currentTarget.src = hero.imageLink;
+      event.currentTarget.dataset.artSource = 'legacy';
       event.currentTarget.classList.remove('hero-art-full');
       event.currentTarget.classList.add('hero-art-icon');
       event.currentTarget.style.objectPosition = '50% 50%';
@@ -56,9 +58,9 @@ function PickCard({ state, side, index, position }: { state: MatchState; side: S
   return <article className={`broadcast-card ${hero ? 'filled' : ''}`} data-slot={index} data-team-id={team.id}>
     <HeroReveal heroId={id} layout={state.overlayLayout} position={position} renderArt={shownId => {
       const shown = heroes.find(h => h.id === shownId);
-      return shown ? <HeroArtwork hero={shown} alt={state.language === 'zh' ? shown.chineseName : shown.englishName} layout={state.overlayLayout} /> :
+      return shown ? <HeroArtwork hero={shown} alt={state.language === 'zh' ? shown.chineseName : shown.englishName} state={state} /> :
         <PlayerPortrait key={team.playerPortraits[index] + team.logo} portrait={team.playerPortraits[index]} logo={team.logo} label={player} slot={index} />;
-    }} caption={<><strong title={heroName}>{heroName}</strong><span title={player}>{player}</span></>} />
+    }} caption={<>{state.showHeroName && <strong title={heroName}>{heroName}</strong>}<span title={player}>{player}</span></>} />
     <div className="position-bar"><PositionIcon role={role} label={t(role)} /></div>
   </article>;
 }

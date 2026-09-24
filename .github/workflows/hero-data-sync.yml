@@ -12,7 +12,13 @@ on:
       - 'vite-project/src/BroadcastApp.tsx'
       - 'vite-project/src/BroadcastApp.css'
       - 'vite-project/src/control/TeamSettingsDialog.tsx'
+      - 'vite-project/src/control/HeroArtEditorDialog.tsx'
       - 'vite-project/src/shared/i18n.ts'
+      - 'vite-project/src/shared/types.ts'
+      - 'vite-project/src/shared/draftRules.ts'
+      - 'vite-project/src/shared/errorMessages.ts'
+      - 'vite-project/server/store.ts'
+      - 'vite-project/server/store.test.ts'
       - 'vite-project/src/data/heroArtFocus.ts'
       - '.github/workflows/hero-data-sync.yml'
   workflow_dispatch:
