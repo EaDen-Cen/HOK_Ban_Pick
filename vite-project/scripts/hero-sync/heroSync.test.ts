@@ -8,6 +8,7 @@ import { normalizeName } from './normalize.js';
 import { extractOfficialHeroArt } from './fetchOfficial.js';
 import { heroArtCrop } from '../../src/data/heroArtFocus.js';
 import type { CatalogHero, SourceSnapshot } from './types.js';
+import heroes from '../../src/components/HeroList.js';
 
 const local = (overrides: Partial<Hero> = {}): Hero => ({
   id: 1,
@@ -139,5 +140,16 @@ test('hero art crop never shrinks an already-cover-cropped source image', () => 
   assert.deepEqual(
     heroArtCrop(1, 'panel', { panel: { x: 47, y: 0, scale: 0.6 } }),
     { x: 47, y: 0, scale: 1 },
+  );
+});
+
+
+test("reviewed Ao'yin artwork override wins over auto-synced full art", () => {
+  const aoyin = heroes.find(hero => hero.id === 54);
+  assert.ok(aoyin);
+  assert.equal(aoyin.chineseName, '敖隐');
+  assert.equal(
+    aoyin.artLink,
+    'https://game.gtimg.cn/images/yxzj/coming/v2/heros//image/20250219/17399349866962.jpg',
   );
 });
