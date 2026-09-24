@@ -1,4 +1,5 @@
 import heroes from '../components/HeroList';
+import { Score } from '../shared/Score';
 import { HeroReveal } from './HeroReveal';
 import { PlayerPortrait } from '../shared/PlayerPortrait';
 import { currentGame, displaySides } from '../shared/draftRules';
@@ -63,7 +64,7 @@ export function DraftOverlay({ state }: { state: MatchState }) {
         {state[`${side}Team`].logo && <img src={state[`${side}Team`].logo} alt="" />}
         <h2>{state[`${side}Team`].name}</h2><small className="color-label">{t(side === 'blue' ? 'blueSide' : 'redSide')}</small>
       </div>)}
-      <div className="broadcast-score" aria-label={t('seriesScore')}><strong className={`${left}-score`}>{state[`${left}Score`]}</strong><span>:</span><strong className={`${right}-score`}>{state[`${right}Score`]}</strong></div>
+      <div className="broadcast-score" aria-label={t('seriesScore')}><Score state={state} side={left} /><span>:</span><Score state={state} side={right} /></div>
     </header></div>
     <div className="broadcast-center" aria-hidden="true" />
     <div className="broadcast-bottom">
@@ -72,7 +73,7 @@ export function DraftOverlay({ state }: { state: MatchState }) {
         {Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, index) => {
           const hero = heroes.find(h => h.id === state[`${side}Bans`][index]);
           const label = hero ? (state.language === 'zh' ? hero.chineseName : hero.englishName) : t('ban');
-          return <div className="hero-slot ban" key={index} title={label}>{hero ? <><img src={hero.imageLink} alt={label} /><b className="ban-mark">╱</b></> : <span className="empty">—</span>}</div>;
+          return <div className="hero-slot ban" key={index} title={label}>{hero ? <><img src={hero.imageLink} alt={label} /><b className="ban-mark">╱</b><span className="ban-name">{label}</span></> : <span className="empty">—</span>}</div>;
         })}</div></div>)}</div>
       <div className="broadcast-picks">{sides.map((side, position) => <div key={state[`${side}Team`].id} className={`pick-team ${side} display-${position === 0 ? 'left' : 'right'} ${phase?.team === side ? 'acting' : ''}`}>
         {Array.from({ length: 5 }, (_, index) => <PickCard key={index} state={state} side={side} index={index} position={position === 0 ? 'left' : 'right'} />)}

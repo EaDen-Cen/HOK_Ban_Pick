@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { WebSocket } from 'ws';
 import type { MatchSettings, Snapshot } from '../src/shared/types';
 import additionalHeroes from '../src/data/additionalHeroes';
+import heroes from '../src/components/HeroList';
 
 async function renameTestTeams(baseURL: string | undefined, blueName: string, redName: string) {
   expect(baseURL).toBe('http://127.0.0.1:3101');
@@ -60,7 +61,7 @@ test('updated roster portraits, aliases and new heroes work across all three pag
   await caster.goto('/caster#token=e2e-caster');
   await overlay.setViewportSize({ width: 1920, height: 1080 });
   await overlay.goto('/overlay/draft#token=e2e-overlay');
-  await expect(control.locator('.hero-grid button')).toHaveCount(116);
+  await expect(control.locator('.hero-grid button')).toHaveCount(heroes.length);
   for (const entry of additionalHeroes) {
     const portrait = control.getByTitle(entry.chineseName, { exact: true }).locator('img');
     await expect(portrait).toHaveAttribute('src', entry.imageLink);
@@ -85,7 +86,8 @@ test('updated roster portraits, aliases and new heroes work across all three pag
     }
     await expect(caster.locator('.hero-slot img')).toHaveCount(index + 1);
     for (const page of [control, caster, overlay]) {
-      const portrait = page.locator(`.hero-slot img[src="${entry.imageLink}"]`);
+      // Overlay picks now load official main art, while bans/Control keep icons.
+      const portrait = page.locator(`.hero-slot img[alt="${entry.chineseName}"]`);
       await expect.poll(() => portrait.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     }
   }

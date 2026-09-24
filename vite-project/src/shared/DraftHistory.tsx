@@ -5,6 +5,7 @@ import type { MatchState } from './types';
 
 export function DraftHistory({ state, compact = false }: { state: MatchState; compact?: boolean }) {
   const t = translator(state.language);
+  if (!state.draftHistory.length) return null;
   return <section className={`draft-history ${compact ? 'compact' : 'panel'}`}>
     <header><h2>{t('historyTitle')}</h2>{!compact && <p className="muted">{t(({ normal: 'historyNormal', player: 'historyPlayer', global: 'historyGlobal' } as const)[state.draftRuleMode])}</p>}</header>
     {state.draftHistory.length ? state.draftHistory.map(record => <div key={record.id} className="history-game" data-game={record.gameNumber}>

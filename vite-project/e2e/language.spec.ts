@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import heroes from '../src/components/HeroList';
 
 const chineseCharacters = /[\u3400-\u9fff]/u;
 
@@ -94,7 +95,7 @@ test('language switches every interface, persists on refresh, and follows the ca
   await expect(control.getByTitle('Feyd', { exact: true })).toBeVisible();
   await expect(control.getByTitle('Haya', { exact: true })).toHaveCount(0);
   await control.getByRole('button', { name: 'All', exact: true }).click();
-  await expect(control.locator('.hero-grid button')).toHaveCount(116);
+  await expect(control.locator('.hero-grid button')).toHaveCount(heroes.length);
 
   for (const page of [control, caster, overlay]) await page.reload();
   for (const page of [control, caster]) await expect(page.locator('.status')).toHaveText('Connected');

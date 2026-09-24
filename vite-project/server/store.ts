@@ -185,7 +185,9 @@ export class Store {
         !['blue', 'red'].includes(s.firstPickSide ?? state.firstPickSide) ||
         !['moveTeams', 'colorsOnly'].includes(s.sideSwapMode ?? state.sideSwapMode) ||
         !['zh', 'eng'].includes(s.language) ||
-        !['panel', 'side'].includes(s.overlayLayout)
+        !['panel', 'side'].includes(s.overlayLayout) ||
+        !['number', 'boxes'].includes(s.scoreDisplay ?? state.scoreDisplay ?? 'number') ||
+        !['manual', 'screen'].includes(s.bpInputMode ?? state.bpInputMode ?? 'manual')
       ) {
         throw new Error('比赛设置无效，请检查赛制、语言和画面布局');
       }
@@ -276,6 +278,8 @@ export class Store {
 
         language: s.language,
         overlayLayout: s.overlayLayout,
+        scoreDisplay: s.scoreDisplay ?? state.scoreDisplay ?? 'number',
+        bpInputMode: s.bpInputMode ?? state.bpInputMode ?? 'manual',
 
         draftMode: s.draftMode,
         draftRuleMode,

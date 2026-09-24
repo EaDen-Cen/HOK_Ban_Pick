@@ -1,6 +1,12 @@
 import type { Language } from './types';
 
 const messages = {
+  scoreDisplay: {zh:'比分显示',eng:'Score display'},
+  scoreNumber: {zh:'数字比分',eng:'Numbers'},
+  scoreBoxes: {zh:'赛事格子',eng:'Win boxes'},
+  bpInputMode: {zh:'BP 输入模式',eng:'BP input mode'},
+  manualInput: {zh:'手动选择',eng:'Manual selection'},
+  screenInput: {zh:'屏幕识别（人工确认）',eng:'Screen recognition (review required)'},
   rosterSource: {zh:'选手资料来源',eng:'Roster source'},
   substitutes: {zh:"替补名单",eng:"Substitutes"},
   addSubstitute: {zh:"添加替补",eng:"Add substitute"},

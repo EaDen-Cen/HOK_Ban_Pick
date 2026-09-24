@@ -1,10 +1,6 @@
-import { useEffect, useRef, type ReactNode } from 'react';
-
+import type { ReactNode } from 'react';
 export function SettingsDialog({ children, label, closeLabel, onClose }: { children: ReactNode; label: string; closeLabel: string; onClose: () => void }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => { const element = dialog.current!; element.showModal(); return () => element.close(); }, []);
-  return <dialog ref={dialog} className="settings-dialog" aria-label={label} onCancel={onClose}>
-    <header><strong>{label}</strong><button type="button" onClick={onClose}>{closeLabel}</button></header>
-    {children}
-  </dialog>;
+  return <section id="match-settings" className="settings-inline" aria-label={label} onKeyDown={event => { if (event.key === 'Escape') onClose(); }}>
+    <header><strong>{label}</strong><button type="button" onClick={onClose}>{closeLabel}</button></header>{children}
+  </section>;
 }

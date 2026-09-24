@@ -37,7 +37,8 @@ for (const layout of ['panel', 'side'] as const) {
         } else {
           expect(boxes.every(b => b!.x === boxes[0]!.x)).toBeTruthy();
           expect(boxes[4]!.y).toBeGreaterThan(boxes[0]!.y + 500);
-          expect(position === 'left' ? boxes[0]!.x < 100 : boxes[0]!.x > 1600).toBeTruthy();
+          expect(position === 'left' ? boxes[0]!.x < 100 : boxes[0]!.x >= 1580).toBeTruthy();
+          expect(boxes[0]!.width).toBe(300);
         }
       }
       expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgba(0, 0, 0, 0)');

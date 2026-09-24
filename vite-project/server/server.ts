@@ -8,6 +8,7 @@ import type { Role } from '../src/shared/types.js';
 import { TeamPresetStore } from './teamPresets.js';
 import { Store } from './store.js';
 import { uploadPortrait, servePortrait } from './portraits.js';
+import { captureRegion, localCaptureRequest, recognizeScreen } from './capture.js';
 
 const production = process.env.NODE_ENV === 'production';
 const tokens: Record<Role, string> = {
@@ -37,6 +38,21 @@ const server = createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
   try {
     const url = new URL(req.url || '/', 'http://localhost');
+    if (url.pathname === '/api/capture') {
+      if (req.method !== 'POST') { json(405, {error:'POST required'}); return; }
+      if (roleFor(req.headers.authorization?.replace(/^Bearer /, '')) !== 'control' || !localCaptureRequest(req)) { json(403,{error:'Local control only'}); req.resume(); return; }
+      if (process.platform !== 'win32' || process.env.HOK_CAPTURE_ENABLED !== '1' || store.data.state.bpInputMode !== 'screen') { json(503,{error:'Windows capture is not enabled'}); req.resume(); return; }
+      try {
+        let body = ''; req.setTimeout(5000, () => req.destroy());
+        for await (const chunk of req) { body += chunk; if (body.length > 2048) { json(413,{error:'Request too large'}); return; } }
+        const input = JSON.parse(body);
+        if (input.revision !== store.data.revision) { json(409,{error:'Stale capture'}); return; }
+        const result = await recognizeScreen(captureRegion(input.region));
+        if (input.revision !== store.data.revision) { json(409,{error:'State changed during capture'}); return; }
+        json(200,result);
+      } catch { json(400,{error:'Capture failed; check region and visible desktop'}); }
+      return;
+    }
     if (url.pathname === '/api/team-presets' || url.pathname.startsWith('/api/team-presets/')) {
       const role = roleFor(req.headers.authorization?.replace(/^Bearer /, ''));
       if (role !== 'control' || (production && req.headers.origin && !allowedOrigins.includes(req.headers.origin))) { json(role ? 403 : 401, {error:'uploadUnauthorized'}); req.resume(); return; }

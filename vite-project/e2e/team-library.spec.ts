@@ -31,7 +31,7 @@ test('team library: create, edit, load, copy isolation, explicit update, delete 
     await manager.getByRole('button',{name:'Load into match · TEAM BLUE',exact:true}).click();
     await expect.poll(()=>h.state().blueTeam.id).toBe(id);
     await expect(manager).toHaveCount(0);
-    const settings=page.locator('.settings-dialog');
+    const settings=page.locator('.settings-inline');
     const quick=settings.locator('.quick-substitution').first();
     await quick.getByLabel('Choose saved player',{exact:true}).selectOption({label:'Temporary Sub · Roaming · Substitute'});
     await quick.getByRole('button',{name:'Fill player details',exact:true}).click();

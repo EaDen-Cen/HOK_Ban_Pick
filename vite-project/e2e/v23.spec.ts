@@ -34,10 +34,10 @@ for (const firstPickSide of ['blue','red'] as const) {
       await search.fill(''); await search.press('Enter'); expect(h.state().currentPhase).toBe(0);
       await search.fill('not-a-hero');await search.press('Escape');await expect(search).toHaveValue('');
       await page.getByRole('button',{name:'Match settings',exact:true}).click();
-      await expect(page.getByRole('dialog')).toBeVisible();
+      await expect(page.locator('.settings-inline')).toBeVisible();
       await page.getByLabel('Team name',{exact:true}).first().fill('Operator Team');
       await page.keyboard.press('/'); await expect(page.getByLabel('Team name',{exact:true}).first()).toHaveValue('Operator Team/');
-      await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);
+      await page.keyboard.press('Escape');await expect(page.locator('.settings-inline')).toHaveCount(0);
       await page.keyboard.press('/');await expect(search).toBeFocused();
       for (let i=0;i<18;i++) {
         const state=h.state(), phase=phases(state.draftMode,state.firstPickSide)[i];
@@ -99,7 +99,7 @@ test('V2.3 real portrait upload, PNG/JPEG/WebP, runtime serving, preview errors,
     await overlay.goto('/overlay/draft#token=e2e-overlay');await caster.goto('/caster#token=e2e-caster');
     await page.getByRole('button',{name:'Match settings',exact:true}).click();
     const input=page.getByLabel('Player portrait URL',{exact:true}).first();
-    await input.fill('https://');await expect(page.getByRole('dialog')).toBeVisible();
+    await input.fill('https://');await expect(page.locator('.settings-inline')).toBeVisible();
     await input.fill('/playerImg/missing.png');await expect(page.locator('.portrait-status').first()).toHaveText('Portrait failed to load. Check the URL or upload again.');
     await page.getByLabel('Choose image',{exact:true}).first().setInputFiles('e2e/fixtures/player-test.png');
     await expect(input).toHaveValue(/^\/uploads\/player-portraits\/[0-9a-f-]+\.png$/);

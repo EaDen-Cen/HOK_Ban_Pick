@@ -407,7 +407,6 @@ const heroSyncOverrides: Record<number, Partial<Hero>> = {
     "artLink": "https://world.honorofkings.com/zlkdatasys/ip/hero/en//image/20250729/17537556774382.jpg"
   },
   "104": {
-    "artLink": "/heroesImg/104.jpeg"
   },
   "105": {
     "artLink": "https://world.honorofkings.com/zlkdatasys/ip/hero/en//image/20251024/17613028144089.jpg"
@@ -419,7 +418,6 @@ const heroSyncOverrides: Record<number, Partial<Hero>> = {
     "artLink": "https://world.honorofkings.com/zlkdatasys/ip/hero/en//image/20241212/17339838683282.jpg"
   },
   "108": {
-    "artLink": "/heroesImg/108.png"
   },
   "109": {
     "artLink": "https://world.honorofkings.com/zlkdatasys/ip/hero/en//image/20241127/17326794149685.jpg"
@@ -440,13 +438,10 @@ const heroSyncOverrides: Record<number, Partial<Hero>> = {
     "artLink": "https://world.honorofkings.com/zlkdatasys/ip/hero/en//image/20251127/17642257844346.jpg"
   },
   "115": {
-    "artLink": "/heroesImg/115.png"
   },
   "116": {
-    "artLink": "/heroesImg/116.png"
   },
   "117": {
-    "artLink": "/heroesImg/117.jpeg"
   }
 };
 

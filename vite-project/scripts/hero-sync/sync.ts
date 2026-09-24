@@ -40,7 +40,7 @@ function assertSourceHealth(previous: SourceSnapshot | undefined, remoteCount: n
 }
 
 function artworkBackfill(plan: ReturnType<typeof makePlan>) {
-  return plan.matches.filter(match => !match.local.artLink || match.local.campId === undefined);
+  return plan.matches.filter(match => !match.local.artLink || match.local.artLink === match.local.imageLink || match.local.campId === undefined);
 }
 
 function compactSummary(plan: ReturnType<typeof makePlan>) {
@@ -142,7 +142,7 @@ async function applyUpdate(
       occupation: remote.occupation,
       campId: remote.campId,
       imageLink: asset.localPath,
-      artLink: evidence.artUrl || asset.localPath,
+      artLink: evidence.confirmed ? evidence.artUrl : undefined,
     });
     autoHeroes.push(created);
     additionsAudit.push({
@@ -165,9 +165,10 @@ async function applyUpdate(
 
     if (match.local.campId === undefined) next.campId = match.remote.campId;
 
-    if (!match.local.artLink) {
-      next.artLink = evidence.artUrl || match.local.imageLink;
-      if (!evidence.artUrl) {
+    if (!match.local.artLink || match.local.artLink === match.local.imageLink) {
+      // A thumbnail fallback is not full art, and must never stop future retries.
+      if (evidence.artUrl && evidence.confirmed) next.artLink = evidence.artUrl;
+      if (!evidence.artUrl || !evidence.confirmed) {
         manualReview.push(
           `No high-resolution official key art was detected for local hero #${match.local.id} ${match.local.englishName}; overlay will keep using the local icon fallback.`,
         );

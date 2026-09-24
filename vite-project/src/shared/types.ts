@@ -59,6 +59,8 @@ export interface MatchState {
 
   language: Language;
   overlayLayout: OverlayLayout;
+  scoreDisplay?: 'number' | 'boxes';
+  bpInputMode?: 'manual' | 'screen';
 
   draftMode: 'match' | 'normal';
   displayLeftSide: Side;
@@ -92,6 +94,8 @@ export type MatchSettings = Pick<
   | 'sideSwapMode'
   | 'language'
   | 'overlayLayout'
+  | 'scoreDisplay'
+  | 'bpInputMode'
 >;
 
 export type Action =
@@ -142,6 +146,8 @@ export const initialState = (): MatchState => ({
 
   language: 'zh',
   overlayLayout: 'panel',
+  scoreDisplay: 'number',
+  bpInputMode: 'manual',
 
   draftMode: 'match',
   displayLeftSide: 'blue',

@@ -21,6 +21,8 @@ import { PortraitField } from './control/PortraitField';
 import { ControlHeroPicker } from './control/ControlHeroPicker';
 import { ControlDraftWorkspace } from './control/ControlDraftWorkspace';
 import { SettingsDialog } from './control/SettingsDialog';
+import { ScreenInput } from './control/ScreenInput';
+import { Score } from './shared/Score';
 import { DraftHistory } from './shared/DraftHistory';
 import { DraftLifecycle } from './control/DraftLifecycle';
 import { DraftOverlay } from './overlay/DraftOverlay';
@@ -34,7 +36,7 @@ function Board({ state, lang, compact = false }: { state: MatchState; lang: Lang
   const t = translator(lang);
   const phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
   return <section className={`board ${compact ? 'compact-board' : ''}`}><div className="match-strip"><span>{t('gameTitle')}</span><span>{stageName(state.stage, lang)} · {t('gameNumber', { number: currentGame(state) })} · {seriesName(state.seriesFormat, lang)} · {draftRuleName(state, lang)}</span></div>
-    <div className="team-grid">{displaySides(state).map(side => <section key={side} className={`team ${side} ${phase?.team === side ? 'active' : ''}`}><header>{state[`${side}Team`].logo && <img className="logo" src={state[`${side}Team`].logo} alt="" />}<h2>{teamName(state, side)}</h2><strong>{state[`${side}Score`]}</strong></header><div className="picks">{Array.from({ length: 5 }, (_, i) => <HeroSlot key={i} id={state[`${side}Picks`][i]} lang={lang} />)}</div><div className="bans"><small>{t('ban')}</small>{Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, i) => <HeroSlot key={i} id={state[`${side}Bans`][i]} ban lang={lang} />)}</div></section>)}</div>
+    <div className="team-grid">{displaySides(state).map(side => <section key={side} className={`team ${side} ${phase?.team === side ? 'active' : ''}`}><header>{state[`${side}Team`].logo && <img className="logo" src={state[`${side}Team`].logo} alt="" />}<h2>{teamName(state, side)}</h2><Score state={state} side={side} /></header><div className="picks">{Array.from({ length: 5 }, (_, i) => <HeroSlot key={i} id={state[`${side}Picks`][i]} lang={lang} />)}</div><div className="bans"><small>{t('ban')}</small>{Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, i) => <HeroSlot key={i} id={state[`${side}Bans`][i]} ban lang={lang} />)}</div></section>)}</div>
     <footer className={`phase ${phase?.team || ''}`} key={state.currentPhase}>{phase ? `${phaseName(state, lang)} · ${t('phaseStep', { step: state.currentPhase + 1, total: phases(state.draftMode, state.firstPickSide).length })}` : t('draftComplete')}</footer></section>;
 }
 function TeamAnalysis({
@@ -84,7 +86,7 @@ function Settings({ state, send, disabled, token }: { state: MatchState; send: (
   const [form, setForm] = useState<MatchSettings>(() => ({
     blueTeam: state.blueTeam, redTeam: state.redTeam, blueScore: state.blueScore, redScore: state.redScore,
     gameNumber: state.gameNumber, seriesFormat: state.seriesFormat, stage: state.stage,
-    draftMode: state.draftMode, draftRuleMode: state.draftRuleMode, firstPickSide: state.firstPickSide, sideSwapMode: state.sideSwapMode, language: state.language, overlayLayout: state.overlayLayout,
+    draftMode: state.draftMode, draftRuleMode: state.draftRuleMode, firstPickSide: state.firstPickSide, sideSwapMode: state.sideSwapMode, language: state.language, overlayLayout: state.overlayLayout, scoreDisplay: state.scoreDisplay, bpInputMode: state.bpInputMode,
   }));
   const [uploads, setUploads] = useState<Set<string>>(() => new Set());
   const maxWins = seriesWins(state);
@@ -145,6 +147,8 @@ function Settings({ state, send, disabled, token }: { state: MatchState; send: (
         <label>{t('language')}<select aria-label={t('language')} value={form.language} onChange={e => setForm({ ...form, language: e.target.value as Language })}>
           <option value="zh">{t('chinese')}</option><option value="eng">{t('english')}</option>
         </select><small>{t('languageHint')}</small></label>
+        <label>{t('scoreDisplay')}<select value={form.scoreDisplay || 'number'} onChange={e => setForm({ ...form, scoreDisplay: e.target.value as MatchSettings['scoreDisplay'] })}><option value="number">{t('scoreNumber')}</option><option value="boxes">{t('scoreBoxes')}</option></select></label>
+        <label>{t('bpInputMode')}<select value={form.bpInputMode || 'manual'} onChange={e => setForm({ ...form, bpInputMode: e.target.value as MatchSettings['bpInputMode'] })}><option value="manual">{t('manualInput')}</option><option value="screen">{t('screenInput')}</option></select></label>
         <label>{t('overlayLayout')}<select value={form.overlayLayout} onChange={e => setForm({ ...form, overlayLayout: e.target.value as MatchSettings['overlayLayout'] })}>
           <option value="panel">{t('panelLayout')}</option><option value="side">{t('sideLayout')}</option>
         </select></label>
@@ -212,7 +216,7 @@ export default function BroadcastApp() {
               <button disabled={disabled || !snapshot?.canUndo} onClick={() => send({ type: 'undo' })}>{t('undo')}</button>
               <button disabled={disabled} onClick={() => confirm(t('confirmResetDraft')) && send({ type: 'reset_draft' })}>{t('resetDraft')}</button>
               <button className="danger" disabled={disabled} onClick={() => confirm(t('confirmResetMatch')) && send({ type: 'reset_match' })}>{t('resetMatch')}</button>
-              <button onClick={() => setShowSettings(true)}>{t('matchSettings')}</button>
+              <button aria-expanded={showSettings} aria-controls="match-settings" onClick={() => setShowSettings(value => !value)}>{t('matchSettings')}</button>
             </div>
             <div className="delay-controls">
               <b>{t('casterDelay', { seconds: snapshot?.casterDelaySeconds ?? '—' })}</b>
@@ -226,10 +230,12 @@ export default function BroadcastApp() {
           </section>
 
           <DraftLifecycle state={state} send={send} disabled={disabled} />
+          {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><Settings key={JSON.stringify([state.blueTeam, state.redTeam, state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.displayLeftSide, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode])} state={state} send={send} disabled={disabled} token={token} /></SettingsDialog>}
+          {state.bpInputMode === 'screen' && <ScreenInput key={snapshot!.revision} state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />}
         </>}>
           <ControlHeroPicker state={state} disabled={disabled} active={!showSettings} send={send} acknowledged={acknowledged} />
         </ControlDraftWorkspace>
-        {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><Settings key={JSON.stringify([state.blueTeam, state.redTeam, state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.displayLeftSide, state.language, state.overlayLayout])} state={state} send={send} disabled={disabled} token={token} /></SettingsDialog>}
+
       </>}
       <DraftHistory state={state} />
       <Analysis state={state} lang={lang} />

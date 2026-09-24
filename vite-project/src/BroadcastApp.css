@@ -412,3 +412,33 @@
     height:36px;
   }
 }
+
+/* Broadcast legibility: wide side cards reserve a separate caption column. */
+.score-boxes { display:flex; gap:6px; align-items:center; }
+.score-box { width:16px; height:22px; border:2px solid currentColor; opacity:.4; transform:skew(-12deg); }
+.score-box.lit { background:currentColor; opacity:1; box-shadow:0 0 8px currentColor; }
+.broadcast-score > .score-boxes.blue-score { color:#77caff; }
+.broadcast-score > .score-boxes.red-score { color:#ff7b92; }
+.broadcast-overlay .bans .hero-slot { width:72px; height:72px; flex:0 0 72px; }
+.broadcast-overlay .ban-mark { font-size:56px; }
+.broadcast-overlay .hero-slot.ban > .ban-name { display:block; position:absolute; bottom:0; left:0; right:0; background:#050b18e8; color:white; font-size:12px; text-align:center; padding:3px; }
+.broadcast-side .broadcast-picks { grid-template-columns:300px 300px; bottom:112px; }
+.broadcast-side .hero-reveal { bottom:0; right:28px; }
+.broadcast-side .broadcast-art { right:92px; width:calc(100% - 92px); }
+.broadcast-side .broadcast-art .hero-art-full { object-fit:contain; object-position:center!important; }
+.broadcast-side .card-caption { left:auto; width:92px; top:0; padding:10px 5px; justify-content:center; background:#0c192bea; }
+.broadcast-side .card-caption strong,.broadcast-side .card-caption span { white-space:normal; overflow-wrap:anywhere; }
+.broadcast-side .position-bar { left:auto; width:28px; top:0; height:auto; }
+.broadcast-side .broadcast-bans { grid-template-columns:380px 380px; }
+.broadcast-side .broadcast-bans .ban-team { gap:10px; padding:8px; }
+.broadcast-side .broadcast-bans .ban-team > span { width:38px; letter-spacing:0; }
+.broadcast-side .draft-history { left:330px; right:330px; bottom:104px; }
+.broadcast-side .broadcast-bottom > .phase { left:400px; right:400px; }
+.settings-inline { margin-top:12px; border:1px solid #34435a; border-radius:10px; background:#101a29; }
+.settings-inline > header { display:flex; justify-content:space-between; align-items:center; padding:12px; }
+.settings-inline .settings-grid,.settings-inline .library-sides { grid-template-columns:1fr; }
+.control-monitor .compact-board .bans .hero-slot { width:46px; flex:0 0 46px; }
+.capture-region { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.capture-region input { width:100%; }
+.capture-review { border:1px solid #65d7df; padding:12px; margin-top:12px; }
+.capture-review img { width:100px; height:100px; object-fit:contain; }
