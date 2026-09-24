@@ -50,8 +50,8 @@ export interface GameDraftRecord {
   blueTeam: Team;
   redTeam: Team;
   /** Immutable draft-order history. */
-  blueBans: Array<number | null>;
-  redBans: Array<number | null>;
+  blueBans?: Array<number | null>;
+  redBans?: Array<number | null>;
   bluePicks: number[];
   redPicks: number[];
   /** Final hero ownership by player slot after help-picks / swaps. */
