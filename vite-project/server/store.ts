@@ -180,8 +180,15 @@ export class Store {
       next.history.push(copy(state));
       clearDraft(state);
       break;
-    case 'reset_match':
-      next.history.push(copy(state)); next.state = initialState(); break;
+    case 'reset_match': {
+      next.history.push(copy(state));
+      const reset = initialState();
+      reset.heroArtOverrides = copy(state.heroArtOverrides || {});
+      reset.showHeroName = state.showHeroName ?? true;
+      reset.artSourceMode = state.artSourceMode ?? 'auto';
+      next.state = reset;
+      break;
+    }
     case 'settings': {
       const s = action.settings;
       if (
