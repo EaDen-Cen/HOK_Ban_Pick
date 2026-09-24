@@ -145,3 +145,41 @@ test('director artwork settings validate crop ranges and presentation settings',
   assert.equal(s.data.state.showHeroName, false);
   assert.equal(s.data.state.artSourceMode, 'legacy');
 });
+
+
+test('empty ban advances only a ban phase, preserves the slot and supports undo/delay', () => {
+  let now = 1000000;
+  const s = new Store(undefined, () => now);
+  apply(s, { type: 'skip_ban', team: 'blue' });
+  assert.equal(s.data.state.currentPhase, 1);
+  assert.deepEqual(s.data.state.blueBans, [null]);
+  assert.equal(s.data.state.bluePicks.length, 0);
+  assert.equal(s.snapshot('caster').state.blueBans.length, 0);
+
+  assert.throws(() => apply(s, { type: 'skip_ban', team: 'blue' }), /emptyBanOnlyDuringBan|当前选禁阶段/);
+  apply(s, { type: 'skip_ban', team: 'red' });
+  assert.deepEqual(s.data.state.redBans, [null]);
+
+  now += 180000;
+  assert.deepEqual(s.snapshot('caster').state.blueBans, [null]);
+  apply(s, { type: 'undo' });
+  assert.deepEqual(s.data.state.redBans, []);
+  assert.equal(s.data.state.currentPhase, 1);
+});
+
+test('empty bans do not consume heroes and are persisted in committed history', () => {
+  const s = new Store();
+  apply(s, { type: 'skip_ban', team: 'blue' });
+  const firstHero = heroes[0].id;
+  // Red can still ban the same real hero because blue's null slot consumed no hero.
+  apply(s, { type: 'draft_action', team: 'red', action: 'ban', heroId: firstHero });
+  while (!s.data.state.draftComplete) {
+    const phase = phases(s.data.state.draftMode)[s.data.state.currentPhase];
+    const used = [...s.data.state.blueBans, ...s.data.state.redBans, ...s.data.state.bluePicks, ...s.data.state.redPicks];
+    const hero = heroes.find(candidate => !used.includes(candidate.id))!;
+    apply(s, { type: 'draft_action', ...phase, heroId: hero.id });
+  }
+  apply(s, { type: 'commit_game' });
+  assert.equal(s.data.state.draftHistory[0].blueBans?.[0], null);
+  assert.equal(s.data.state.draftHistory[0].redBans?.[0], firstHero);
+});
