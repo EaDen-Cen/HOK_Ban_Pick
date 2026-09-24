@@ -49,8 +49,12 @@ export interface GameDraftRecord {
   committedAt: number;
   blueTeam: Team;
   redTeam: Team;
+  /** Immutable draft-order history. */
   bluePicks: number[];
   redPicks: number[];
+  /** Final hero ownership by player slot after help-picks / swaps. */
+  blueAssignments: number[];
+  redAssignments: number[];
 }
 
 export interface MatchState {
@@ -85,8 +89,11 @@ export interface MatchState {
 
   blueBans: number[];
   redBans: number[];
+  /** Pick order is immutable draft history; assignments drive player cards. */
   bluePicks: number[];
   redPicks: number[];
+  blueAssignments: Array<number | null>;
+  redAssignments: Array<number | null>;
 }
 
 export type MatchSettings = Pick<
@@ -116,7 +123,9 @@ export type Action =
   | { type: 'undo' | 'reset_draft' | 'reset_match' }
   | { type: 'commit_game' | 'next_game' | 'swap_sides' }
   | { type: 'score'; team: Side; delta: 1 | -1 }
-  | { type: 'swap_picks'; team: Side; from: number; to: number }
+  | { type: 'swap_picks'; team: Side; from: number; to: number } // legacy alias: swaps assignments, never pick order
+  | { type: 'swap_assignments'; team: Side; from: number; to: number }
+  | { type: 'set_lineup_assignments'; blue: number[]; red: number[] }
   | { type: 'settings'; settings: MatchSettings }
   | { type: 'hero_art_override'; heroId: number; override: HeroArtOverride }
   | { type: 'reset_hero_art_override'; heroId: number; layout?: HeroArtLayout }
@@ -181,6 +190,8 @@ export const initialState = (): MatchState => ({
   redBans: [],
   bluePicks: [],
   redPicks: [],
+  blueAssignments: [null, null, null, null, null],
+  redAssignments: [null, null, null, null, null],
 });
 
 export function phases(mode: MatchState['draftMode'], firstPickSide: Side = 'blue') {
