@@ -7,10 +7,13 @@
     "dev": "vite",
     "build": "tsc -b && tsc -p tsconfig.server.json && vite build",
     "server": "tsx --env-file-if-exists=.env server/server.ts",
-    "test": "tsx --test server/*.test.ts",
+    "test": "tsx --test server/*.test.ts scripts/hero-sync/*.test.ts",
     "test:e2e": "playwright test",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "hero:check": "tsx scripts/hero-sync/sync.ts --check",
+    "hero:sync": "tsx scripts/hero-sync/sync.ts --update",
+    "hero:validate": "tsx scripts/hero-sync/validate.ts"
   },
   "dependencies": {
     "react": "^18.3.1",
