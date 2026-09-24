@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { Store } from './store.js';
 import heroes from '../src/components/HeroList.js';
 import { phases, type Action, type DraftRuleMode, type MatchState } from '../src/shared/types.js';
-import { pickRestriction, banRestriction } from '../src/shared/draftRules.js';
+import { pickRestriction, banRestriction, draftRestriction } from '../src/shared/draftRules.js';
 
 const act = (s: Store, action: Action) => s.apply(randomUUID(), s.data.revision, action);
 function setup(mode: DraftRuleMode, s = new Store()) {
@@ -21,7 +21,7 @@ function fill(s: Store) {
   while (!s.data.state.draftComplete) {
     const st = s.data.state, phase = phases(st.draftMode)[st.currentPhase];
     const used = [...st.blueBans, ...st.redBans, ...st.bluePicks, ...st.redPicks];
-    const hero = heroes.find(h => !used.includes(h.id) && (phase.action === 'ban' ? !banRestriction(st, phase.team, h.id) : !pickRestriction(st, phase.team, st[`${phase.team}Picks`].length, h.id)))!;
+    const hero = heroes.find(h => !used.includes(h.id) && !draftRestriction(st, phase.team, phase.action, h.id))!;
     act(s, { type: 'draft_action', ...phase, heroId: hero.id });
   }
 }
@@ -65,15 +65,24 @@ test('Player BP follows player identity across slots, substitutes and side chang
   assert.equal(pickRestriction(s.data.state, 'red', 1, first.bluePicks[0]), 'usedByPlayer');
   assert.throws(() => act(s, { type: 'settings', settings: { ...s.data.state, redTeam: { ...s.data.state.redTeam, players: ['A1', ' a1 ', 'A3', 'A4', 'A5'] } } }), /duplicatePlayerIds/);
 });
-test('server rejects history-ineligible picks, while own history does not forbid bans', () => {
-  for (const mode of ['global', 'player'] as const) {
-    const s = setup(mode); fill(s); const previous = s.data.state.bluePicks[0]; advance(s);
-    for (let i = 0; i < 4; i++) act(s, { type: 'draft_action', ...phases('match')[i], heroId: heroes[70 + i].id });
-    assert.throws(() => act(s, { type: 'draft_action', team: 'blue', action: 'pick', heroId: previous }), /usedBy/);
-    act(s, { type: 'reset_draft' });
-    act(s, { type: 'draft_action', team: 'blue', action: 'ban', heroId: previous });
-    assert.equal(s.data.state.blueBans[0], previous);
-  }
+test('Global BP rejects team-history picks, while own history does not forbid bans', () => {
+  const s = setup('global'); fill(s); const previous = s.data.state.bluePicks[0]; advance(s);
+  for (let i = 0; i < 4; i++) act(s, { type: 'draft_action', ...phases('match')[i], heroId: heroes[70 + i].id });
+  assert.throws(() => act(s, { type: 'draft_action', team: 'blue', action: 'pick', heroId: previous }), /usedByTeam/);
+  act(s, { type: 'reset_draft' });
+  act(s, { type: 'draft_action', team: 'blue', action: 'ban', heroId: previous });
+  assert.equal(s.data.state.blueBans[0], previous);
+});
+test('Player BP allows help-picks but validates the final owner before commit', () => {
+  const s = setup('player'); fill(s); const previous = s.data.state.blueAssignments[0] as number; advance(s);
+  for (let i = 0; i < 4; i++) act(s, { type: 'draft_action', ...phases('match')[i], heroId: heroes[70 + i].id });
+  // A teammate may secure A1's old hero during the draft; draft order is not ownership.
+  act(s, { type: 'draft_action', team: 'blue', action: 'pick', heroId: previous });
+  fill(s);
+  assert.throws(() => act(s, { type: 'commit_game' }), /usedByPlayer/);
+  act(s, { type: 'swap_assignments', team: 'blue', from: 0, to: 1 });
+  act(s, { type: 'commit_game' });
+  assert.equal(s.data.state.draftHistory.at(-1)?.blueAssignments[1], previous);
 });
 test('commit is explicit, durable and idempotent; redo/reset does not create or delete history', () => {
   const file = join(mkdtempSync(join(tmpdir(), 'hok-v2-')), 'match.json');
@@ -121,7 +130,7 @@ test('legacy migration covers active state, old delayed snapshots and undo recor
   const s = new Store(); fill(s);
   const legacy = JSON.parse(JSON.stringify(s.data));
   for (const st of [legacy.state, ...legacy.history, ...legacy.events.map((e: {resultingState: MatchState}) => e.resultingState)]) {
-    for (const key of ['draftRuleMode', 'draftHistory', 'draftGameNumber', 'committedGameId']) delete st[key];
+    for (const key of ['draftRuleMode', 'draftHistory', 'draftGameNumber', 'committedGameId', 'blueAssignments', 'redAssignments']) delete st[key];
     for (const side of ['blue', 'red']) { delete st[`${side}Team`].playerRoles; delete st[`${side}Team`].players; delete st[`${side}Team`].id; }
   }
   const file = join(mkdtempSync(join(tmpdir(), 'hok-legacy-')), 'match.json'); writeFileSync(file, JSON.stringify(legacy));
@@ -131,21 +140,30 @@ test('legacy migration covers active state, old delayed snapshots and undo recor
     assert.equal(st.blueTeam.playerRoles.length, 5); assert.equal(st.redTeam.players.length, 5);
   }
   assert.deepEqual(restored.data.state.bluePicks, s.data.state.bluePicks);
+  assert.deepEqual(restored.data.state.blueAssignments, [...s.data.state.bluePicks, ...Array(5 - s.data.state.bluePicks.length).fill(null)]);
   act(restored, { type: 'undo' }); assert.equal(restored.data.state.currentPhase, 17);
 });
-test('player assignment changes preserve the picked set and cannot bypass personal restrictions', () => {
+test('player assignment changes preserve immutable pick order and cannot bypass personal restrictions', () => {
   const s = setup('player'); fill(s); const original = [...s.data.state.bluePicks];
-  act(s, { type: 'swap_picks', team: 'blue', from: 0, to: 1 });
-  assert.equal(s.data.state.bluePicks[0], original[1]);
-  advance(s); fill(s);
-  const picks = s.data.state.bluePicks;
-  for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) {
-    if (pickRestriction(s.data.state, 'blue', i, picks[j]) || pickRestriction(s.data.state, 'blue', j, picks[i])) {
-      assert.throws(() => act(s, { type: 'swap_picks', team: 'blue', from: i, to: j }), /usedByPlayer/);
+  act(s, { type: 'swap_assignments', team: 'blue', from: 0, to: 1 });
+  assert.deepEqual(s.data.state.bluePicks, original);
+  assert.equal(s.data.state.blueAssignments[0], original[1]);
+  assert.equal(s.data.state.blueAssignments[1], original[0]);
+  advance(s);
+  assert.equal(pickRestriction(s.data.state, 'blue', 0, original[1]), 'usedByPlayer');
+  assert.equal(pickRestriction(s.data.state, 'blue', 1, original[0]), 'usedByPlayer');
+  fill(s);
+  const before = structuredClone(s.data.state);
+  const assignments = s.data.state.blueAssignments as number[];
+  let blocked = false;
+  for (let i = 0; i < 5 && !blocked; i++) for (let j = i + 1; j < 5 && !blocked; j++) {
+    if (pickRestriction(s.data.state, 'blue', i, assignments[j]) || pickRestriction(s.data.state, 'blue', j, assignments[i])) {
+      assert.throws(() => act(s, { type: 'swap_assignments', team: 'blue', from: i, to: j }), /usedByPlayer/);
+      blocked = true;
     }
   }
-  act(s, { type: 'commit_game' });
-  assert.throws(() => act(s, { type: 'swap_picks', team: 'blue', from: 0, to: 1 }), /gameAlreadyCommitted/);
+  assert.ok(blocked);
+  assert.deepEqual(s.data.state, before);
 });
 
 test('a five-game series commits each game once and closes at the winning score', () => {
@@ -193,6 +211,7 @@ test('live player ID changes revalidate selected heroes atomically against perso
   act(s, { type: 'settings', settings: { ...s.data.state, blueTeam: { ...s.data.state.blueTeam, players: ['Sub','A2','A3','A4','A5'] } } });
   for (let i=0;i<4;i++) act(s,{type:'draft_action',...phases('match')[i],heroId:heroes[80+i].id});
   act(s,{type:'draft_action',team:'blue',action:'pick',heroId:used});
+  fill(s);
   const before = structuredClone(s.data);
   assert.throws(() => act(s,{type:'settings',settings:{...s.data.state,blueTeam:{...s.data.state.blueTeam,players:['A1','A2','A3','A4','A5']}}}), /usedByPlayer/);
   assert.deepEqual(s.data,before);

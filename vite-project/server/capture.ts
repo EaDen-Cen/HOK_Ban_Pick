@@ -11,10 +11,15 @@ async function features(source: string | Buffer) {
   return values.map(n=>n/Math.max(norm,1));
 }
 let templates: Promise<{heroId:number; values:number[]}[]> | undefined;
-export async function recognizeImage(buffer: Buffer) {
+export async function recognizeImage(buffer: Buffer, allowedHeroIds?: number[]) {
   templates ??= Promise.all(heroes.map(async h=>({heroId:h.id,values:await features(fileURLToPath(new URL(`../public${h.imageLink}`,import.meta.url)))}))).catch(error=>{templates=undefined;throw error;});
   const values=await features(buffer);
-  return (await templates).map(h=>({heroId:h.heroId,confidence:Math.max(0,Math.min(1,h.values.reduce((sum,n,i)=>sum+n*values[i],0)))})).sort((a,b)=>b.confidence-a.confidence).slice(0,3);
+  const allowed = allowedHeroIds?.length ? new Set(allowedHeroIds) : undefined;
+  return (await templates)
+    .filter(hero => !allowed || allowed.has(hero.heroId))
+    .map(h=>({heroId:h.heroId,confidence:Math.max(0,Math.min(1,h.values.reduce((sum,n,i)=>sum+n*values[i],0))) }))
+    .sort((a,b)=>b.confidence-a.confidence)
+    .slice(0,3);
 }
 
 export function localCaptureRequest(req: Pick<IncomingMessage, 'headers' | 'socket'>) {
@@ -32,18 +37,43 @@ export function captureRegion(value: unknown): { x: number; y: number; width: nu
   if (!r || !['x','y','width','height'].every(k => Number.isInteger(r[k])) || Math.abs(r.x) > 32768 || Math.abs(r.y) > 32768 || r.width < 32 || r.height < 32 || r.width > 1200 || r.height > 1200) throw new Error('Invalid capture region');
   return { x:r.x, y:r.y, width:r.width, height:r.height };
 }
+export function captureRegions(value: unknown) {
+  if (!Array.isArray(value) || value.length !== 10) throw new Error('Invalid lineup regions');
+  return value.map(captureRegion);
+}
 let busy = false;
+async function captureWindows(input: object) {
+  return await new Promise<{ preview?: string; previews?: string[] }>((resolve, reject) => {
+    const child = execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', fileURLToPath(new URL('../scripts/capture/recognize.ps1', import.meta.url))], { timeout:20000, maxBuffer:20*1024*1024, windowsHide:true }, (error, stdout) => {
+      if (error) { reject(new Error('Screen capture failed. Check the visible Windows desktop and region.')); return; }
+      try { resolve(JSON.parse(stdout)); } catch { reject(new Error('Invalid capture result')); }
+    });
+    child.stdin?.end(JSON.stringify(input));
+  });
+}
 export async function recognizeScreen(region: ReturnType<typeof captureRegion>) {
   if (busy) throw new Error('Capture busy');
   busy = true;
   try {
-    const frame = await new Promise<{ preview:string }>((resolve, reject) => {
-      const child = execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', fileURLToPath(new URL('../scripts/capture/recognize.ps1', import.meta.url))], { timeout:20000, maxBuffer:4*1024*1024, windowsHide:true }, (error, stdout) => {
-        if (error) { reject(new Error('Screen capture failed. Check the visible Windows desktop and region.')); return; }
-        try { resolve(JSON.parse(stdout)); } catch { reject(new Error('Invalid capture result')); }
-      });
-      child.stdin?.end(JSON.stringify({ region }));
-    });
-    return {preview:frame.preview, candidates:await recognizeImage(Buffer.from(frame.preview.split(',')[1],'base64'))};
+    const frame = await captureWindows({ region });
+    if (!frame.preview) throw new Error('Invalid capture result');
+    return {preview:frame.preview,candidates:await recognizeImage(Buffer.from(frame.preview.split(',')[1],'base64'))};
+  } finally { busy = false; }
+}
+
+export async function recognizeLineup(
+  regions: ReturnType<typeof captureRegions>,
+  allowedHeroIdsBySlot: number[][],
+) {
+  if (busy) throw new Error('Capture busy');
+  if (allowedHeroIdsBySlot.length !== regions.length) throw new Error('Invalid lineup candidates');
+  busy = true;
+  try {
+    const frame = await captureWindows({ regions });
+    if (!frame.previews || frame.previews.length !== regions.length) throw new Error('Invalid capture result');
+    return await Promise.all(frame.previews.map(async (preview, index) => ({
+      preview,
+      candidates: await recognizeImage(Buffer.from(preview.split(',')[1], 'base64'), allowedHeroIdsBySlot[index]),
+    })));
   } finally { busy = false; }
 }
