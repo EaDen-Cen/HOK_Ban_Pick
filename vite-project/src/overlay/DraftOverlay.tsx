@@ -126,9 +126,14 @@ export function DraftOverlay({ state }: { state: MatchState }) {
       {state.draftHistory.length > 0 && <DraftHistory state={state} compact />}
       <div className="broadcast-bans">{sides.map((side, position) => <div className={`ban-team ${side} display-${position === 0 ? 'left' : 'right'}`} key={state[`${side}Team`].id}><span>{t(side === 'blue' ? 'blueSide' : 'redSide')} · {t('ban')}</span><div className="bans">
         {Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, index) => {
-          const hero = heroes.find(h => h.id === state[`${side}Bans`][index]);
-          const label = hero ? (state.language === 'zh' ? hero.chineseName : hero.englishName) : t('ban');
-          return <div className="hero-slot ban" key={index} title={label}>{hero ? <><img src={hero.imageLink} alt={label} /><b className="ban-mark">╱</b>{state.showHeroName && <span className="ban-name">{label}</span>}</> : <span className="empty">—</span>}</div>;
+          const value = state[`${side}Bans`][index];
+          const skipped = value === null;
+          const hero = typeof value === 'number' ? heroes.find(h => h.id === value) : undefined;
+          const label = skipped ? t('emptyBan') : hero ? (state.language === 'zh' ? hero.chineseName : hero.englishName) : t('ban');
+          return <div className={`hero-slot ban ${skipped ? 'skipped-ban' : ''}`} key={index} title={label}>
+            {hero ? <><img src={hero.imageLink} alt={label} /><b className="ban-mark">╱</b>{state.showHeroName && <span className="ban-name">{label}</span>}</>
+              : <span className={skipped ? 'empty skipped-ban-label' : 'empty'}>{skipped ? t('emptyBan') : '—'}</span>}
+          </div>;
         })}</div></div>)}</div>
       <div className="broadcast-picks">{sides.map((side, position) => <div key={state[`${side}Team`].id} className={`pick-team ${side} display-${position === 0 ? 'left' : 'right'} ${phase?.team === side ? 'acting' : ''}`}>
         {Array.from({ length: 5 }, (_, index) => <PickCard key={index} state={state} side={side} index={index} position={position === 0 ? 'left' : 'right'} />)}
