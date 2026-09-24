@@ -1,6 +1,7 @@
 import type { Language } from './types';
 
 const messages = {
+  opponentAlreadyUsed: { zh: '对手在此前有效局已选过此英雄，无需禁用', eng: 'The opponent already used this hero in a committed game. No ban needed.' },
   portrait: { zh: '选手形象地址', eng: 'Player portrait URL' },
   portraitHint: { zh: 'HTTPS 图片链接或 /playerImg/ 本地路径；留空使用队徽。', eng: 'HTTPS image URL or /playerImg/ local path. Leave blank to use the team logo.' },
   portraitInvalid: { zh: '选手形象须为 HTTPS 图片链接或单斜线开头的本地路径', eng: 'Use an HTTPS portrait URL or a local path starting with one slash.' },

@@ -28,6 +28,17 @@ export function pickRestriction(state: MatchState, side: Side, playerIndex: numb
     record[`${recordSide}Team`].players.some((player, index) => playerIdentity(player) === identity && record[`${recordSide}Picks`][index] === heroId)))) return 'usedByPlayer';
 }
 
+/** Avoid spending a ban on a hero the opposing team cannot reuse in Global BP. */
+export function banRestriction(state: MatchState, side: Side, heroId: number): 'opponentAlreadyUsed' | undefined {
+  if (state.draftRuleMode !== 'global') return;
+  const opponent = state[side === 'blue' ? 'redTeam' : 'blueTeam'];
+  if (state.draftHistory.some(record => record.id !== state.committedGameId && historyForTeam(record, opponent.id)?.picks.includes(heroId))) return 'opponentAlreadyUsed';
+}
+
+export function draftRestriction(state: MatchState, side: Side, action: 'ban' | 'pick', heroId: number) {
+  return action === 'ban' ? banRestriction(state, side, heroId) : pickRestriction(state, side, state[`${side}Picks`].length, heroId);
+}
+
 /** Upgrade every saved snapshot, including undo and delayed events. Never infer history from picks. */
 export function normalizeState(raw: MatchState): MatchState {
   const defaults = initialState();

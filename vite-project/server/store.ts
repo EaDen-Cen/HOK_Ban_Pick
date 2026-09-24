@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, openSync, writeSync, f
 import { dirname } from 'node:path';
 import heroes from '../src/components/HeroList.js';
 import { initialState, phases, type Action, type MatchState, type Role, type Snapshot } from '../src/shared/types.js';
-import { currentGame, normalizeState, pickRestriction, playerIdentity, ruleLocked, seriesFinished } from '../src/shared/draftRules.js';
+import { currentGame, draftRestriction, normalizeState, pickRestriction, playerIdentity, ruleLocked, seriesFinished } from '../src/shared/draftRules.js';
 
 interface Event { id: string; timestamp: number; type: string; resultingState: MatchState; revision: number }
 interface Data { version: 1; state: MatchState; events: Event[]; history: MatchState[]; revision: number; delay: number; ids: string[] }
@@ -95,10 +95,8 @@ export class Store {
       if (!phase || phase.team !== action.team || phase.action !== action.action) throw new Error('当前选禁阶段不支持此操作，请确认轮次和队伍');
       if (!heroes.some(h => h.id === action.heroId)) throw new Error('找不到该英雄');
       if ([...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks].includes(action.heroId)) throw new Error('该英雄已被选择或禁用');
-      if (phase.action === 'pick') {
-        const reason = pickRestriction(state, phase.team, state[`${phase.team}Picks`].length, action.heroId);
-        if (reason) throw new Error(reason);
-      }
+      const reason = draftRestriction(state, phase.team, phase.action, action.heroId);
+      if (reason) throw new Error(reason);
       next.history.push(copy(state));
       state.draftGameNumber ??= state.gameNumber;
       state[`${phase.team}${phase.action === 'ban' ? 'Bans' : 'Picks'}`].push(action.heroId);
@@ -230,10 +228,6 @@ export class Store {
         const identities = [...s.blueTeam.players, ...s.redTeam.players].map(playerIdentity).filter(Boolean);
         if (new Set(identities).size !== identities.length) throw new Error('duplicatePlayerIds');
       }
-      for (const side of ['blue', 'red'] as const) {
-        const current = state[`${side}Team`], requested = s[`${side}Team`];
-        if (state.currentPhase > 0 && (JSON.stringify(current.players) !== JSON.stringify(requested.players) || JSON.stringify(current.playerRoles) !== JSON.stringify(requested.playerRoles))) throw new Error('rosterLocked');
-      }
       if (state.currentPhase > 0 && s.draftMode !== state.draftMode) throw new Error('请先重置选禁，再修改选禁赛制');
       next.history.push(copy(state));
       Object.assign(state, {
@@ -272,6 +266,12 @@ export class Store {
         firstPickSide,
         sideSwapMode: s.sideSwapMode ?? state.sideSwapMode,
       });
+      // Live roster corrections must respect the incoming player’s previous picks.
+      // Committed records remain immutable snapshots of the game already played.
+      if (state.currentPhase > 0 && !state.committedGameId) {
+        if (state.draftRuleMode === 'player' && [...state.blueTeam.players, ...state.redTeam.players].some(player => !playerIdentity(player))) throw new Error('playerMissing');
+        validatePicks(state);
+      }
       break;
     }
     case 'delay': integer(action.seconds, 0, 3600); next.delay = action.seconds; break;

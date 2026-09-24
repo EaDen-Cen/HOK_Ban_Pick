@@ -15,7 +15,7 @@ import { useMatch } from './shared/useMatch';
 import { connectionLabel, lanes, laneName, phaseName, seriesName, stageName, teamName, draftRuleName } from './shared/display';
 import { translator } from './shared/i18n';
 import { errorMessage } from './shared/errorMessages';
-import { currentGame, displaySides, normalizeState, pickRestriction, ruleLocked, seriesWins } from './shared/draftRules';
+import { currentGame, displaySides, normalizeState, draftRestriction, ruleLocked, seriesWins } from './shared/draftRules';
 import { PlayerPortrait } from './shared/PlayerPortrait';
 import { DraftHistory } from './shared/DraftHistory';
 import { DraftLifecycle } from './control/DraftLifecycle';
@@ -83,7 +83,7 @@ function Settings({ state, send, disabled }: { state: MatchState; send: (a: Acti
     draftMode: state.draftMode, draftRuleMode: state.draftRuleMode, firstPickSide: state.firstPickSide, sideSwapMode: state.sideSwapMode, language: state.language, overlayLayout: state.overlayLayout,
   }));
   const maxWins = seriesWins(state);
-  const rosterLocked = state.currentPhase > 0;
+  const firstPickLocked = state.currentPhase > 0;
   return <form className="panel settings" onSubmit={event => {
     event.preventDefault();
     send({ type: 'settings', settings: { ...form, blueScore: state.blueScore, redScore: state.redScore, gameNumber: state.gameNumber } });
@@ -101,8 +101,8 @@ function Settings({ state, send, disabled }: { state: MatchState; send: (a: Acti
           <label>{t('logoAddress')}<input maxLength={1000} placeholder={t('logoPlaceholder')} value={form[teamKey].logo} onChange={e => updateTeam({ logo: e.target.value })} /></label>
           <b>{t('players')}</b>
           {form[teamKey].players.map((player, index) => <div className="player-setting-row" key={index}>
-            <label>{t('playerNumber', { number: index + 1 })}<input maxLength={40} disabled={rosterLocked} value={player} onChange={e => updateTeam({ players: form[teamKey].players.map((p, i) => i === index ? e.target.value : p) })} /></label>
-            <label>{t('lane')}<select disabled={rosterLocked} value={form[teamKey].playerRoles[index]} onChange={e => updateTeam({ playerRoles: form[teamKey].playerRoles.map((r, i) => i === index ? e.target.value as typeof r : r) })}>
+            <label>{t('playerNumber', { number: index + 1 })}<input maxLength={40} disabled={disabled} value={player} onChange={e => updateTeam({ players: form[teamKey].players.map((p, i) => i === index ? e.target.value : p) })} /></label>
+            <label>{t('lane')}<select disabled={disabled} value={form[teamKey].playerRoles[index]} onChange={e => updateTeam({ playerRoles: form[teamKey].playerRoles.map((r, i) => i === index ? e.target.value as typeof r : r) })}>
               {(['clash', 'jungle', 'mid', 'farm', 'roam'] as const).map(role => <option key={role} value={role}>{t(role)}</option>)}
             </select></label>
             <label className="portrait-setting">{t('portrait')}<div className="portrait-input">
@@ -130,7 +130,7 @@ function Settings({ state, send, disabled }: { state: MatchState; send: (a: Acti
           <option value="normal">{t('ruleNormal')}</option><option value="player">{t('rulePlayer')}</option><option value="global">{t('ruleGlobal')}</option>
         </select></label>
         {ruleLocked(state) && <p className="muted">{t('rulesLocked')}</p>}
-        <label>{t('firstPickSide')}<select aria-label={t('firstPickSide')} disabled={rosterLocked} value={form.firstPickSide} onChange={e => setForm({ ...form, firstPickSide: e.target.value as Side })}>
+        <label>{t('firstPickSide')}<select aria-label={t('firstPickSide')} disabled={firstPickLocked} value={form.firstPickSide} onChange={e => setForm({ ...form, firstPickSide: e.target.value as Side })}>
           <option value="blue">{t('blueSide')}</option><option value="red">{t('redSide')}</option>
         </select></label>
         <label>{t('sideSwapMode')}<select aria-label={t('sideSwapMode')} value={form.sideSwapMode} onChange={e => setForm({ ...form, sideSwapMode: e.target.value as MatchSettings['sideSwapMode'] })}>
@@ -232,9 +232,9 @@ export default function BroadcastApp() {
           <p className="muted">{t('availabilityHint')}</p>
           <div className="hero-grid">{heroes.filter(h => (filter === 'all' || h.occupation === filter || h.altOccupation === filter)
             && `${h.englishName} ${h.chineseName} ${(h.aliases || []).join(' ')}`.toLowerCase().includes(search.toLowerCase())).map(h => <button
-            key={h.id} title={name(h.id, lang)} disabled={disabled || !phase || used.includes(h.id) || !!state.committedGameId || (phase.action === 'pick' && !!pickRestriction(state, phase.team, state[`${phase.team}Picks`].length, h.id))}
+            key={h.id} title={name(h.id, lang)} disabled={disabled || !phase || used.includes(h.id) || !!state.committedGameId || (!!draftRestriction(state, phase.team, phase.action, h.id))}
             onClick={() => phase && send({ type: 'draft_action', ...phase, heroId: h.id })}>
-            <img src={h.imageLink} alt="" /><span>{name(h.id, lang)}</span>{phase?.action === 'pick' && pickRestriction(state, phase.team, state[`${phase.team}Picks`].length, h.id) && <small className="eligibility-reason">{t(pickRestriction(state, phase.team, state[`${phase.team}Picks`].length, h.id)!)}</small>}
+            <img src={h.imageLink} alt="" /><span>{name(h.id, lang)}</span>{phase && draftRestriction(state, phase.team, phase.action, h.id) && <small className="eligibility-reason">{t(draftRestriction(state, phase.team, phase.action, h.id)!)}</small>}
           </button>)}</div>
         </section>
       </>}

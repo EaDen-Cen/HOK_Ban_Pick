@@ -48,6 +48,13 @@ for (const mode of ['normal', 'player', 'global'] as const) {
       await control.getByRole('button', { name: 'Start next game', exact: true }).click();
       await expect(overlay.locator('.broadcast-card img')).toHaveCount(0);
       await expect(overlay.locator('.history-game')).toHaveCount(1);
+      const priorEnemy = heroes.find(hero => hero.id === first.redPicks[0])!;
+      const priorOwn = heroes.find(hero => hero.id === first.bluePicks[0])!;
+      if (mode === 'global') {
+        await expect(control.getByTitle(priorEnemy.englishName, {exact:true})).toBeDisabled();
+        await expect(control.getByTitle(priorEnemy.englishName, {exact:true})).toContainText('No ban needed.');
+      } else await expect(control.getByTitle(priorEnemy.englishName, {exact:true})).toBeEnabled();
+      await expect(control.getByTitle(priorOwn.englishName, {exact:true})).toBeEnabled();
       for (let i = 0; i < 4; i++) await h.send({ type: 'draft_action', ...phases('match')[i], heroId: heroes[85 + i].id });
       const firstHero = heroes.find(hero => hero.id === first.bluePicks[0])!;
       const teammateHero = heroes.find(hero => hero.id === first.bluePicks[1])!;

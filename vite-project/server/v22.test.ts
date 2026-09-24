@@ -7,13 +7,13 @@ import { tmpdir } from 'node:os';
 import { Store } from './store.js';
 import heroes from '../src/components/HeroList.js';
 import { phases, type Action, type MatchState } from '../src/shared/types.js';
-import { displaySides, pickRestriction } from '../src/shared/draftRules.js';
+import { displaySides, pickRestriction, banRestriction } from '../src/shared/draftRules.js';
 const act = (s: Store, action: Action) => s.apply(randomUUID(), s.data.revision, action);
 function fill(s: Store) {
   while (!s.data.state.draftComplete) {
     const state = s.data.state, phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
     const used = [...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks];
-    const hero = heroes.find(h => !used.includes(h.id) && (phase.action === 'ban' || !pickRestriction(state, phase.team, state[`${phase.team}Picks`].length, h.id)))!;
+    const hero = heroes.find(h => !used.includes(h.id) && (phase.action === 'ban' ? !banRestriction(state, phase.team, h.id) : !pickRestriction(state, phase.team, state[`${phase.team}Picks`].length, h.id)))!;
     act(s, { type: 'draft_action', ...phase, heroId: hero.id });
   }
 }

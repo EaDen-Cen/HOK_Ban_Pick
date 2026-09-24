@@ -106,7 +106,7 @@ test('V2.2 settings, portrait fallback, mobile, reduced motion and delayed first
     await control.goto('/control#token=e2e-control'); await caster.goto('/caster#token=e2e-caster');
     await overlay.setViewportSize({width:1920,height:1080}); await overlay.goto('/overlay/draft#token=e2e-overlay');
     await expect(caster.locator('.board .phase')).toHaveClass('phase blue');
-    await h.send({ type: 'delay', seconds: 180 });
+    await h.send({ type: 'delay', seconds: 3600 });
     await control.getByRole('button',{name:'Match settings',exact:true}).click();
     await control.getByLabel('Draft starting side',{exact:true}).selectOption('red');
     await control.getByLabel('Side swap behavior',{exact:true}).selectOption('colorsOnly');
@@ -120,6 +120,15 @@ test('V2.2 settings, portrait fallback, mobile, reduced motion and delayed first
     await control.screenshot({path:'artifacts/v22-mobile-settings.png',fullPage:true});
     for (let i=0;i<5;i++) await h.send({type:'draft_action',...phases('match','red')[i],heroId:heroes[70+i].id});
     await expect(control.getByLabel('Draft starting side',{exact:true})).toBeDisabled();
+    await control.getByRole('textbox', { name: 'Player 1', exact: true }).first().fill('Live Substitute');
+    await control.getByRole('combobox', { name: 'Lane', exact: true }).first().selectOption('roam');
+    await control.getByLabel('Player portrait URL', {exact:true}).first().fill(heroes[31].imageLink);
+    await control.getByRole('button', {name:'Save settings',exact:true}).click();
+    await expect(overlay.locator('.pick-team.blue .card-caption').first()).toContainText('Live Substitute');
+    await expect(overlay.locator('.pick-team.blue .position-icon').first()).toHaveAttribute('aria-label','Roaming');
+    await expect(overlay.locator('.pick-team.blue .player-portrait').first()).toHaveAttribute('src',heroes[31].imageLink);
+    expect(h.state().currentPhase).toBe(5);
+
     await expect(overlay.locator('.hero-art')).toHaveCount(1);
     await expect(overlay.locator('.reveal-white')).toHaveCount(0);
     await expect(overlay.locator('.hero-reveal[data-reveal-sequence="0"]')).toHaveCount(10);
