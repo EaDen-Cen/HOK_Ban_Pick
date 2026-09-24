@@ -70,9 +70,10 @@ export function LineupAssignments({
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
   const [results,setResults]=useState<SlotResult[]>([]);
-  const [stable,setStable]=useState({signature:'',count:0});
   const mounted=useRef(true);
   const applying=useRef('');
+  const stableRef=useRef({signature:'',count:0});
+  const busyRef=useRef(false);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
 
   const blueResults=results.filter(slot=>slot.side==='blue').sort((a,b)=>a.playerIndex-b.playerIndex);
@@ -87,8 +88,9 @@ export function LineupAssignments({
   },[disabled,state.committedGameId,send]);
 
   const scan=useCallback(async()=>{
-    if (busy || disabled || !state.draftComplete || state.committedGameId || state.bpInputMode!=='screen') return;
+    if (busyRef.current || disabled || !state.draftComplete || state.committedGameId || state.bpInputMode!=='screen') return;
     if (!regionsReady) { setMessage(zh?'请先配置双方 10 个玩家英雄槽位。':'Configure all ten player hero regions first.'); return; }
+    busyRef.current=true;
     setBusy(true);
     try {
       localStorage.setItem('hok-lineup-regions',JSON.stringify(regions));
@@ -106,13 +108,14 @@ export function LineupAssignments({
       const blue=solveTeam(slots.filter(slot=>slot.side==='blue').sort((a,b)=>a.playerIndex-b.playerIndex),state.bluePicks);
       const red=solveTeam(slots.filter(slot=>slot.side==='red').sort((a,b)=>a.playerIndex-b.playerIndex),state.redPicks);
       if(!blue||!red) {
-        setStable({signature:'',count:0});
+        stableRef.current={signature:'',count:0};
         setMessage(zh?'暂时无法唯一确认 10 个英雄，请保持 BP 画面可见或手动校正。':'Could not uniquely resolve all ten heroes yet. Keep the BP screen visible or correct manually.');
         return;
       }
       const signature=`${blue.heroes.join(',')}|${red.heroes.join(',')}`;
-      const nextCount=stable.signature===signature ? stable.count+1 : 1;
-      setStable({signature,count:nextCount});
+      const previousStable=stableRef.current;
+      const nextCount=previousStable.signature===signature ? previousStable.count+1 : 1;
+      stableRef.current={signature,count:nextCount};
       const highConfidence=blue.minimum>=.72&&red.minimum>=.72&&blue.average>=.82&&red.average>=.82;
       setMessage(zh
         ? `识别完成 · 蓝方平均 ${Math.round(blue.average*100)}% · 红方平均 ${Math.round(red.average*100)}% · 稳定 ${nextCount}/3`
@@ -125,9 +128,10 @@ export function LineupAssignments({
     } catch(error) {
       if(mounted.current) setMessage(error instanceof Error?error.message:'Capture failed');
     } finally {
+      busyRef.current=false;
       if(mounted.current) setBusy(false);
     }
-  },[auto,applyLineups,busy,disabled,regions,regionsReady,revision,stable,state,token,zh]);
+  },[auto,applyLineups,disabled,regions,regionsReady,revision,state,token,zh]);
 
   useEffect(()=>{
     if(!auto||state.bpInputMode!=='screen'||!state.draftComplete||state.committedGameId||disabled) return;
