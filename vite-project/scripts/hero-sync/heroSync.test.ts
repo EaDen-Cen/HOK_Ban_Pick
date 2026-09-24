@@ -123,3 +123,13 @@ test('broadcast artwork uses layout-specific crop presets and per-hero overrides
   assert.deepEqual(heroArtCrop(19, 'panel'), { x: 80, y: 34, scale: 1.16 });
   assert.deepEqual(heroArtCrop(19, 'side'), { x: 83, y: 33, scale: 1.28 });
 });
+
+
+test('runtime director crop overrides static and default artwork framing', () => {
+  assert.deepEqual(
+    heroArtCrop(19, 'side', { side: { x: 44, y: 23, scale: 1.41 } }),
+    { x: 44, y: 23, scale: 1.41 },
+  );
+  assert.deepEqual(heroArtCrop(19, 'panel'), { x: 80, y: 34, scale: 1.16 });
+  assert.deepEqual(heroArtCrop(1, 'side'), { x: 50, y: 29, scale: 1.22 });
+});
