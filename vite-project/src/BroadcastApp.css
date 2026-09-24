@@ -979,3 +979,21 @@
 .hero-names-hidden .hero-slot.ban {
   padding-bottom:0;
 }
+
+
+/* V2.8 crop editor: the live crop is sampled from the original source image.
+   The image itself is positioned/scaled to match the white source rectangle;
+   it is not cover-cropped once and transformed a second time. */
+.art-editor-preview .source-crop-preview-image {
+  position:absolute;
+  display:block;
+  object-fit:fill;
+}
+.art-editor-preview .legacy-preview-image {
+  position:static;
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+  object-position:50% 50%;
+}
