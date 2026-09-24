@@ -31,6 +31,8 @@ const messages = {
   fullArtUnavailable: {zh:'此英雄没有高清封面，将自动使用旧版图片。',eng:'No full artwork is available; the legacy image will be used.'},
   heroArtCropInvalid: {zh:'英雄图片裁切参数无效，请重新调整。',eng:'Invalid hero artwork crop. Adjust the crop and try again.'},
   heroArtOverrideInvalid: {zh:'英雄图片设置无效，请重新调整。',eng:'Invalid hero artwork settings. Adjust them and try again.'},
+  lineupInvalid: {zh:'最终阵容归属无效：每队 5 个已选英雄必须各分配给一名选手。',eng:'Invalid final lineup: each of the five picked heroes must be assigned to exactly one player.'},
+  lineupIncomplete: {zh:'请先确认双方最终英雄归属，再提交本局。',eng:'Confirm both teams’ final hero ownership before committing the game.'},
   scoreDisplay: {zh:'比分显示',eng:'Score display'},
   scoreNumber: {zh:'数字比分',eng:'Numbers'},
   scoreBoxes: {zh:'赛事格子',eng:'Win boxes'},
