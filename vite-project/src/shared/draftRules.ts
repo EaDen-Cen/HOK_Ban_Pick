@@ -8,8 +8,8 @@ export const currentGame = (state: MatchState) => state.draftGameNumber ?? state
 export const displaySides = (state: MatchState): [Side, Side] => [state.displayLeftSide, state.displayLeftSide === 'blue' ? 'red' : 'blue'];
 
 export function historyForTeam(record: GameDraftRecord, teamId: string) {
-  if (record.blueTeam.id === teamId) return { team: record.blueTeam, picks: record.bluePicks, assignments: record.blueAssignments };
-  if (record.redTeam.id === teamId) return { team: record.redTeam, picks: record.redPicks, assignments: record.redAssignments };
+  if (record.blueTeam.id === teamId) return { team: record.blueTeam, bans: record.blueBans, picks: record.bluePicks, assignments: record.blueAssignments };
+  if (record.redTeam.id === teamId) return { team: record.redTeam, bans: record.redBans, picks: record.redPicks, assignments: record.redAssignments };
   return undefined;
 }
 
@@ -70,6 +70,8 @@ export function normalizeState(raw: MatchState): MatchState {
     draftHistory: (raw.draftHistory ?? []).map(record => ({ ...record,
       firstPickSide: record.firstPickSide ?? 'blue',
       blueTeam: normalizeTeam(record.blueTeam, 'blue'), redTeam: normalizeTeam(record.redTeam, 'red'),
+      blueBans: [...(record.blueBans ?? [])],
+      redBans: [...(record.redBans ?? [])],
       blueAssignments: [...(record.blueAssignments ?? record.bluePicks)],
       redAssignments: [...(record.redAssignments ?? record.redPicks)],
     })),
