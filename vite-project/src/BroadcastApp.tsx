@@ -23,6 +23,7 @@ import { ControlDraftWorkspace } from './control/ControlDraftWorkspace';
 import { SettingsDialog } from './control/SettingsDialog';
 import { TeamSettingsDialog } from './control/TeamSettingsDialog';
 import { ScreenInput } from './control/ScreenInput';
+import { HeroArtEditorDialog } from './control/HeroArtEditorDialog';
 import { Score } from './shared/Score';
 import { DraftHistory } from './shared/DraftHistory';
 import { DraftLifecycle } from './control/DraftLifecycle';
@@ -98,6 +99,8 @@ const settingsFromState = (state: MatchState): MatchSettings => ({
   overlayLayout: state.overlayLayout,
   scoreDisplay: state.scoreDisplay,
   bpInputMode: state.bpInputMode,
+  showHeroName: state.showHeroName,
+  artSourceMode: state.artSourceMode,
 });
 
 function MatchSettingsPanel({ state, send, disabled }: { state: MatchState; send: (a: Action) => void; disabled: boolean }) {
@@ -146,6 +149,10 @@ function MatchSettingsPanel({ state, send, disabled }: { state: MatchState; send
         <label>{t('overlayLayout')}<select value={form.overlayLayout} onChange={e => setForm({ ...form, overlayLayout: e.target.value as MatchSettings['overlayLayout'] })}>
           <option value="panel">{t('panelLayout')}</option><option value="side">{t('sideLayout')}</option>
         </select></label>
+        <label>{t('heroImageSource')}<select value={form.artSourceMode} onChange={e => setForm({ ...form, artSourceMode: e.target.value as MatchSettings['artSourceMode'] })}>
+          <option value="auto">{t('heroImageAuto')}</option><option value="legacy">{t('heroImageLegacy')}</option>
+        </select></label>
+        <label className="settings-checkbox"><span>{t('showHeroName')}</span><input type="checkbox" checked={form.showHeroName} onChange={e => setForm({ ...form, showHeroName: e.target.checked })} /><small>{t('showHeroNameHint')}</small></label>
       </section>
     </div>
     <section className="match-score-settings"><h3>{t('seriesScore')}</h3>
@@ -215,11 +222,12 @@ export default function BroadcastApp() {
   const [tokenInput, setTokenInput] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showTeamSettings, setShowTeamSettings] = useState(false);
+  const [showHeroArtEditor, setShowHeroArtEditor] = useState(false);
   const [delayInput, setDelayInput] = useState(180);
   const [lastLanguage, setLastLanguage] = useState<Language>(() => sessionStorage.getItem(`hok-language-${role}`) === 'eng' ? 'eng' : 'zh');
   const { snapshot, status, error, pending, send, acknowledged } = useMatch(role, token);
   const connected = status === 'Connected';
-  const compatible = !!snapshot?.state && Array.isArray(snapshot.state.draftHistory) && !!snapshot.state.draftRuleMode && !!snapshot.state.firstPickSide && !!snapshot.state.sideSwapMode && !!snapshot.state.displayLeftSide;
+  const compatible = !!snapshot?.state && Array.isArray(snapshot.state.draftHistory) && !!snapshot.state.draftRuleMode && !!snapshot.state.firstPickSide && !!snapshot.state.sideSwapMode && !!snapshot.state.displayLeftSide && typeof snapshot.state.showHeroName === 'boolean' && !!snapshot.state.artSourceMode && !!snapshot.state.heroArtOverrides;
   const disabled = !connected || pending || !compatible;
   const state = snapshot?.state ? normalizeState(snapshot.state) : undefined;
   const lang: Language = token && !['Invalid token', 'Access rejected'].includes(status) ? state?.language ?? lastLanguage : lastLanguage;
@@ -266,6 +274,7 @@ export default function BroadcastApp() {
               <button className="danger" disabled={disabled} onClick={() => confirm(t('confirmResetMatch')) && send({ type: 'reset_match' })}>{t('resetMatch')}</button>
               <button aria-expanded={showSettings} aria-controls="match-settings" onClick={() => setShowSettings(value => !value)}>{t('matchSettings')}</button>
               <button onClick={() => setShowTeamSettings(true)}>{t('teamSettings')}</button>
+              <button onClick={() => setShowHeroArtEditor(true)}>{t('heroImageSettings')}</button>
             </div>
             <div className="delay-controls">
               <b>{t('casterDelay', { seconds: snapshot?.casterDelaySeconds ?? '—' })}</b>
@@ -279,14 +288,15 @@ export default function BroadcastApp() {
           </section>
 
           <DraftLifecycle state={state} send={send} disabled={disabled} />
-          {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><MatchSettingsPanel key={JSON.stringify([state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode])} state={state} send={send} disabled={disabled} /></SettingsDialog>}
+          {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><MatchSettingsPanel key={JSON.stringify([state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode, state.showHeroName, state.artSourceMode])} state={state} send={send} disabled={disabled} /></SettingsDialog>}
           {state.bpInputMode === 'screen' && <ScreenInput key={snapshot!.revision} state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />}
         </>}>
-          <ControlHeroPicker state={state} disabled={disabled} active={!showSettings && !showTeamSettings} send={send} acknowledged={acknowledged} />
+          <ControlHeroPicker state={state} disabled={disabled} active={!showSettings && !showTeamSettings && !showHeroArtEditor} send={send} acknowledged={acknowledged} />
         </ControlDraftWorkspace>
         {showTeamSettings && <TeamSettingsDialog label={t('teamSettings')} closeLabel={t('closeTeamSettings')} onClose={() => setShowTeamSettings(false)}>
           <TeamSettingsPanel key={JSON.stringify([state.blueTeam, state.redTeam])} state={state} send={send} disabled={disabled} token={token} />
         </TeamSettingsDialog>}
+        {showHeroArtEditor && <HeroArtEditorDialog state={state} send={send} disabled={disabled} onClose={() => setShowHeroArtEditor(false)} />}
       </>}
       <DraftHistory state={state} />
       <Analysis state={state} lang={lang} />
