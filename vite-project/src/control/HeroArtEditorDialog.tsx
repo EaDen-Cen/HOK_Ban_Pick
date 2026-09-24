@@ -244,10 +244,7 @@ export function HeroArtEditorDialog({
           </div>
           <div
             className="art-editor-reference"
-            style={{
-              aspectRatio: `${sourceSize.width} / ${sourceSize.height}`,
-              width: `min(100%, 980px, calc(46dvh * ${sourceSize.width / sourceSize.height}))`,
-            }}
+            style={{ aspectRatio: `${sourceSize.width} / ${sourceSize.height}` }}
           >
             <img
               src={fullSource}
