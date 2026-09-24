@@ -7,7 +7,7 @@
 | 当前操作 | [运行指南](guides/getting-started.md)、[操作指南](guides/operator-guide.md)、[Windows 启动器](guides/windows-launcher.md) | 安装部署与现场操作 |
 | 当前设计 | [系统结构](design/architecture.md) | 代码职责、状态流与存储边界 |
 | 验证记录 | [历次验证](validation/history.md) | 按日期/版本保留结果和未验收范围 |
-| 研究资料 | [研究索引](research/README.md) | 英雄核查与原始 JSON 证据 |
+| 研究资料 | [研究索引](research/README.md)、[英雄自动同步](research/hero-sync.md) | 英雄核查、自动同步与原始 JSON 证据 |
 | 历史交接 | [归档索引](archive/README.md) | 版本交接、旧计划与原始说明 |
 
 ## 命名和维护规则
