@@ -42,7 +42,7 @@ for (const layout of ['panel', 'side'] as const) {
       }
       expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
       expect(await page.locator('.card-caption').first().evaluate(e => getComputedStyle(e).writingMode)).toBe('horizontal-tb');
-      await page.screenshot({ path: `artifacts/v22-${layout}-portraits.png`, omitBackground: true });
+      await page.bringToFront(); await page.screenshot({ path: `artifacts/v22-${layout}-portraits.png`, omitBackground: true });
       // Record actual rendered cover/image ordering, and CSS animation directions.
       await page.evaluate(() => {
         const events: object[] = []; (window as unknown as {revealEvents: object[]}).revealEvents = events;
@@ -89,7 +89,7 @@ for (const layout of ['panel', 'side'] as const) {
       await h.fill(); await h.send({ type: 'commit_game' });
       await expect(page.locator('.history-game')).toHaveCount(1);
       await expect(page.locator('.hero-reveal[class*="reveal-"]')).toHaveCount(0);
-      await page.screenshot({ path: `artifacts/v22-${layout}-complete.png`, omitBackground: true });
+      await page.bringToFront(); await page.screenshot({ path: `artifacts/v22-${layout}-complete.png`, omitBackground: true });
       expect(errors).toEqual([]);
     } finally { h.close(); await context.close(); }
   });
@@ -117,7 +117,7 @@ test('V2.2 settings, portrait fallback, mobile, reduced motion and delayed first
     await expect(overlay.locator('.pick-team.blue .player-portrait').first()).toHaveAttribute('src',heroes[30].imageLink);
     await expect(overlay.locator('.pick-team.red .portrait-placeholder')).toHaveCount(5);
     expect(await control.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
-    await control.screenshot({path:'artifacts/v22-mobile-settings.png',fullPage:true});
+    await control.bringToFront(); await control.screenshot({path:'artifacts/v22-mobile-settings.png',fullPage:true});
     for (let i=0;i<5;i++) await h.send({type:'draft_action',...phases('match','red')[i],heroId:heroes[70+i].id});
     await expect(control.getByLabel('Draft starting side',{exact:true})).toBeDisabled();
     await control.getByRole('textbox', { name: 'Player 1', exact: true }).first().fill('Live Substitute');

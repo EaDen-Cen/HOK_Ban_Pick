@@ -89,7 +89,7 @@ test('updated roster portraits, aliases and new heroes work across all three pag
       await expect.poll(() => portrait.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
     }
   }
-  await overlay.screenshot({ path: 'artifacts/updated-heroes-overlay.png', omitBackground: true });
+  await overlay.bringToFront(); await overlay.screenshot({ path: 'artifacts/updated-heroes-overlay.png', omitBackground: true });
   await context.close();
 });
 
@@ -168,9 +168,9 @@ test('operator, caster and OBS keep separate timelines and recover', async ({ br
     const broken = await page.locator('img').evaluateAll(images => images.filter(i => !(i as HTMLImageElement).complete || (i as HTMLImageElement).naturalWidth === 0).map(i => (i as HTMLImageElement).src));
     expect(broken).toEqual([]);
   }
-  await control.screenshot({ path: 'artifacts/control.png', fullPage: true });
-  await caster.screenshot({ path: 'artifacts/caster.png', fullPage: true });
-  await overlay.screenshot({ path: 'artifacts/overlay.png', omitBackground: true });
+  await control.bringToFront(); await control.screenshot({ path: 'artifacts/control.png', fullPage: true });
+  await caster.bringToFront(); await caster.screenshot({ path: 'artifacts/caster.png', fullPage: true });
+  await overlay.bringToFront(); await overlay.screenshot({ path: 'artifacts/overlay.png', omitBackground: true });
   expect(errors).toEqual([]);
   await context.close();
 });

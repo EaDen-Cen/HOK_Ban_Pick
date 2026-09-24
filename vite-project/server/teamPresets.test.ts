@@ -1,0 +1,91 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { TeamPresetStore } from './teamPresets.js';
+import { Store } from './store.js';
+import { initialState, phases, type Action } from '../src/shared/types.js';
+import heroes from '../src/components/HeroList.js';
+import { pickRestriction } from '../src/shared/draftRules.js';
+const apply = (s:Store,a:Action) => s.apply(randomUUID(),s.data.revision,a);
+const library = () => new TeamPresetStore(join(mkdtempSync(join(tmpdir(),'hok-library-')),'team-presets.json'));
+
+test('library CRUD persists independent copies, immutable IDs and only roster fields', () => {
+  const file = join(mkdtempSync(join(tmpdir(),'hok-library-')),'team-presets.json');
+  const lib = new TeamPresetStore(file);
+  const input = {...initialState().blueTeam,name:'Alpha',scores:3};
+  const team = lib.create(input); input.players[0]='Changed';
+  assert.match(team.id,/^team-[0-9a-f-]{36}$/);
+  assert.equal(team.players[0],''); assert.equal('scores' in team,false);
+  lib.update(team.id,{...team,id:'forged',name:'Renamed'});
+  const reloaded = new TeamPresetStore(file);
+  assert.equal(reloaded.get(team.id)?.name,'Renamed');
+  assert.equal(reloaded.get(team.id)?.createdAt,team.createdAt);
+  assert.equal(JSON.parse(readFileSync(file,'utf8')).version,1);
+  assert.throws(()=>lib.create({...team,playerPortraits:['javascript:alert(1)']}),/presetInvalid/);
+  reloaded.delete(team.id);assert.deepEqual(new TeamPresetStore(file).list(),[]);
+});
+test('library failed persistence never changes acknowledged in-memory teams', () => {
+  const file = join(mkdtempSync(join(tmpdir(),'hok-library-')),'team-presets.json');
+  const lib = new TeamPresetStore(file);mkdirSync(file+'.tmp');
+  assert.throws(()=>lib.create(initialState().blueTeam));assert.deepEqual(lib.list(),[]);
+});
+test('loading presets is authoritative, copied, delayed, locked and cannot duplicate identities', () => {
+  const lib=library(),team=lib.create({...initialState().blueTeam,name:'Alpha',players:['a','b','c','d','e'],playerPortraits:['/photo.png','','','','']});
+  const s=new Store(undefined,()=>1000000,lib);
+  apply(s,{type:'load_team_preset',side:'blue',presetId:team.id});
+  assert.deepEqual(s.data.state.blueTeam,{id:team.id,name:team.name,logo:team.logo,players:team.players,playerRoles:team.playerRoles,playerPortraits:team.playerPortraits});
+  assert.notEqual(s.snapshot('caster').state.blueTeam.id,team.id);
+  assert.throws(()=>apply(s,{type:'load_team_preset',side:'red',presetId:team.id}),/presetDuplicate/);
+  apply(s,{type:'settings',settings:{...s.data.state,blueTeam:{...s.data.state.blueTeam,id:'forged',players:['sub','b','c','d','e']}}});
+  assert.equal(s.data.state.blueTeam.id,team.id);assert.equal(lib.get(team.id)?.players[0],'a');
+  lib.update(team.id,s.data.state.blueTeam);assert.equal(lib.get(team.id)?.players[0],'sub');
+  apply(s,{type:'draft_action',...phases('match')[0],heroId:heroes[0].id});
+  assert.throws(()=>apply(s,{type:'load_team_preset',side:'blue',presetId:team.id}),/presetLocked/);
+});
+test('preset identities follow global history across swaps; deleting a preset retains current match and committed history', () => {
+  const lib=library(),a=lib.create({...initialState().blueTeam,name:'Alpha'}),b=lib.create({...initialState().redTeam,name:'Beta'});
+  const s=new Store(undefined,Date.now,lib);
+  apply(s,{type:'load_team_preset',side:'blue',presetId:a.id});apply(s,{type:'load_team_preset',side:'red',presetId:b.id});
+  apply(s,{type:'settings',settings:{...s.data.state,draftRuleMode:'global'}});
+  phases('match').forEach((phase,i)=>apply(s,{type:'draft_action',...phase,heroId:heroes[i].id}));
+  const used=s.data.state.bluePicks[0];apply(s,{type:'commit_game'});
+  const record=structuredClone(s.data.state.draftHistory);
+  lib.delete(a.id);assert.equal(s.data.state.blueTeam.id,a.id);assert.deepEqual(s.data.state.draftHistory,record);
+  apply(s,{type:'score',team:'blue',delta:1});apply(s,{type:'next_game'});apply(s,{type:'swap_sides'});
+  assert.equal(s.data.state.redTeam.id,a.id);assert.equal(pickRestriction(s.data.state,'red',0,used),'usedByTeam');
+  assert.equal(pickRestriction(s.data.state,'blue',0,used),undefined);
+  assert.throws(()=>apply(s,{type:'load_team_preset',side:'blue',presetId:b.id}),/presetLocked/);
+  apply(s,{type:'reset_match'});assert.equal(lib.list().length,1);
+});
+
+test('substitutes survive restart and legacy roster updates; old libraries migrate without reserves', () => {
+  const file=join(mkdtempSync(join(tmpdir(),'hok-bench-')),'team-presets.json');
+  const lib=new TeamPresetStore(file);
+  const reserve={id:randomUUID(),name:'Bench Player',role:'roam',portrait:'/bench.png'};
+  const team=lib.create({...initialState().blueTeam,substitutes:[reserve]});
+  assert.deepEqual(new TeamPresetStore(file).get(team.id)?.substitutes,[reserve]);
+  lib.update(team.id,{...initialState().blueTeam,name:'Renamed'});
+  assert.deepEqual(lib.get(team.id)?.substitutes,[reserve]);
+  assert.throws(()=>lib.update(team.id,{...team,substitutes:[reserve,{...reserve,id:randomUUID()}]}),/substitutesInvalid/);
+  assert.throws(()=>lib.update(team.id,{...team,substitutes:[{...reserve,portrait:'javascript:alert(1)'}]}),/substitutesInvalid/);
+  const legacy=JSON.parse(readFileSync(file,'utf8'));delete legacy.teams[0].substitutes;writeFileSync(file,JSON.stringify(legacy));
+  assert.deepEqual(new TeamPresetStore(file).get(team.id)?.substitutes,[]);
+});
+test('live reserve substitution preserves draft, team identity and library, remains delayed and supports undo', () => {
+  const lib=library(); const reserve={id:randomUUID(),name:'Bench Player',role:'roam' as const,portrait:'/bench.png'};
+  const team=lib.create({...initialState().blueTeam,players:['Starter','B','C','D','E'],substitutes:[reserve]});
+  let now=1000000; const s=new Store(undefined,()=>now,lib);
+  apply(s,{type:'load_team_preset',side:'blue',presetId:team.id});now+=180000;
+  apply(s,{type:'draft_action',...phases('match')[0],heroId:heroes[0].id});
+  const old=structuredClone(s.data.state.blueTeam);
+  apply(s,{type:'settings',settings:{...s.data.state,blueTeam:{...old,players:[reserve.name,...old.players.slice(1)],playerRoles:[reserve.role,...old.playerRoles.slice(1)],playerPortraits:[reserve.portrait,...old.playerPortraits.slice(1)]}}});
+  assert.equal(s.data.state.currentPhase,1);assert.equal(s.data.state.blueTeam.id,team.id);
+  assert.equal(s.snapshot('overlay').state.blueTeam.players[0],reserve.name);
+  assert.equal(s.snapshot('caster').state.blueTeam.players[0],'Starter');
+  assert.equal(lib.get(team.id)?.players[0],'Starter');
+  now+=180000;assert.equal(s.snapshot('caster').state.blueTeam.playerPortraits[0],reserve.portrait);
+  apply(s,{type:'undo'});assert.deepEqual(s.data.state.blueTeam,old);
+});

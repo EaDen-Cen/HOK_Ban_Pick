@@ -1,11 +1,13 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { resolve, extname } from 'node:path';
+import { resolve, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
 import heroes from '../src/components/HeroList.js';
 import type { Role } from '../src/shared/types.js';
+import { TeamPresetStore } from './teamPresets.js';
 import { Store } from './store.js';
+import { uploadPortrait, servePortrait } from './portraits.js';
 
 const production = process.env.NODE_ENV === 'production';
 const tokens: Record<Role, string> = {
@@ -16,7 +18,10 @@ const tokens: Record<Role, string> = {
 if (Object.values(tokens).some(t => !t || (production && t.length < 24)) || new Set(Object.values(tokens)).size !== 3) throw new Error('Set three distinct tokens of at least 24 characters in production');
 const roleFor = (token: unknown): Role | undefined => (Object.keys(tokens) as Role[]).find(role => tokens[role] === token);
 const project = fileURLToPath(new URL('../', import.meta.url));
-const store = new Store(resolve(process.env.DATA_FILE || resolve(project, 'data/match.json')));
+const dataFile = resolve(process.env.DATA_FILE || resolve(project, 'data/match.json'));
+const presets = new TeamPresetStore(resolve(dirname(dataFile), 'team-presets.json'));
+const store = new Store(dataFile, Date.now, presets);
+const uploadDirectory = resolve(process.env.UPLOAD_DIR || resolve(dirname(dataFile), 'uploads/player-portraits'));
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean);
 const server = createServer(async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -25,14 +30,43 @@ const server = createServer(async (req, res) => {
   if (req.headers.origin && allowedOrigins.includes(req.headers.origin)) {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
     res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-File-Name');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   }
   const json = (status: number, data: unknown) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)); };
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
-  if (req.method !== 'GET') { json(405, { error: '不支持此请求方式' }); return; }
   try {
     const url = new URL(req.url || '/', 'http://localhost');
+    if (url.pathname === '/api/team-presets' || url.pathname.startsWith('/api/team-presets/')) {
+      const role = roleFor(req.headers.authorization?.replace(/^Bearer /, ''));
+      if (role !== 'control' || (production && req.headers.origin && !allowedOrigins.includes(req.headers.origin))) { json(role ? 403 : 401, {error:'uploadUnauthorized'}); req.resume(); return; }
+      const id = url.pathname.slice('/api/team-presets/'.length);
+      const collection = url.pathname === '/api/team-presets';
+      try {
+        if (req.method === 'GET' && collection) { json(200, {teams:presets.list()}); return; }
+        if (req.method === 'DELETE' && !collection) { presets.delete(id); json(200, {ok:true}); return; }
+        if ((req.method === 'POST' && collection) || (req.method === 'PUT' && !collection)) {
+          if (!req.headers['content-type']?.startsWith('application/json')) { json(415, {error:'presetInvalid'}); req.resume(); return; }
+          const chunks: Buffer[] = []; let size = 0;
+          req.setTimeout(15000, () => req.destroy());
+          for await (const chunk of req) { size += chunk.length; if (size > 65536) { json(413, {error:'presetInvalid'}); return; } chunks.push(chunk); }
+          let input; try { input = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { json(400, {error:'presetInvalid'}); return; }
+          json(collection ? 201 : 200, collection ? presets.create(input) : presets.update(id, input)); return;
+        }
+        json(405, {error:'不支持此请求方式'}); return;
+      } catch (e) {
+        const error = e instanceof Error ? e.message : '';
+        json(error === 'presetMissing' ? 404 : ['presetInvalid','substitutesInvalid'].includes(error) ? 400 : 500, {error: ['presetMissing','presetInvalid','substitutesInvalid'].includes(error) ? error : 'presetSaveFailed'}); return;
+      }
+    }
+    if (url.pathname === '/api/uploads/player-portrait' && req.method === 'POST') {
+      const role = roleFor(req.headers.authorization?.replace(/^Bearer /, ''));
+      if (role !== 'control') { json(role ? 403 : 401, { error: 'uploadUnauthorized' }); req.resume(); return; }
+      if (production && req.headers.origin && !allowedOrigins.includes(req.headers.origin)) { json(403, { error: 'uploadUnauthorized' }); req.resume(); return; }
+      await uploadPortrait(req, res, uploadDirectory); return;
+    }
+    if (req.method !== 'GET') { json(405, { error: '不支持此请求方式' }); return; }
+    if (url.pathname.startsWith('/uploads/player-portraits/')) { await servePortrait(url.pathname, res, uploadDirectory); return; }
     if (url.pathname === '/api/health') { json(200, { ok: true }); return; }
     if (url.pathname.startsWith('/api/')) {
       const role = roleFor(req.headers.authorization?.replace(/^Bearer /, ''));

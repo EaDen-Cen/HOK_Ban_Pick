@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, openSync, writeSync, fsyncSync, closeSync } from 'node:fs';
+import type { TeamPresetStore } from './teamPresets.js';
 import { dirname } from 'node:path';
 import heroes from '../src/components/HeroList.js';
 import { initialState, phases, type Action, type MatchState, type Role, type Snapshot } from '../src/shared/types.js';
@@ -42,7 +43,7 @@ function validatePicks(state: MatchState) {
 }
 export class Store {
   data: Data;
-  constructor(private file?: string, private clock = Date.now) {
+  constructor(private file?: string, private clock = Date.now, private presets?: TeamPresetStore) {
     this.data = file && existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {
       version: 1, state: initialState(), events: [], history: [], revision: 0, delay: 180, ids: [],
     };
@@ -87,6 +88,21 @@ export class Store {
     const next = copy(this.data);
     const state = next.state;
     switch (action.type) {
+    case 'load_team_preset': {
+      if (state.currentPhase !== 0 || state.draftHistory.length || state.committedGameId) throw new Error('presetLocked');
+      if (!['blue', 'red'].includes(action.side)) throw new Error('presetInvalid');
+      const preset = this.presets?.get(action.presetId);
+      if (!preset) throw new Error('presetMissing');
+      const other = state[action.side === 'blue' ? 'redTeam' : 'blueTeam'];
+      if (other.id === preset.id) throw new Error('presetDuplicate');
+      if (state.draftRuleMode === 'player') {
+        const ids = [...other.players, ...preset.players].map(playerIdentity).filter(Boolean);
+        if (new Set(ids).size !== ids.length) throw new Error('duplicatePlayerIds');
+      }
+      next.history.push(copy(state));
+      state[action.side === 'blue' ? 'blueTeam' : 'redTeam'] = { id: preset.id, name: preset.name, logo: preset.logo, players: [...preset.players], playerRoles: [...preset.playerRoles], playerPortraits: [...preset.playerPortraits] };
+      break;
+    }
     case 'draft_action': {
       if (state.committedGameId) throw new Error('gameAlreadyCommitted');
       if (state.draftRuleMode === 'player' && [...state.blueTeam.players, ...state.redTeam.players].some(player => !playerIdentity(player))) throw new Error('playerMissing');

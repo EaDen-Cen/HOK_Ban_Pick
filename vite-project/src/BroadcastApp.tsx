@@ -12,11 +12,15 @@ import {
   type Side,
 } from './shared/types';
 import { useMatch } from './shared/useMatch';
-import { connectionLabel, lanes, laneName, phaseName, seriesName, stageName, teamName, draftRuleName } from './shared/display';
+import { connectionLabel, phaseName, seriesName, stageName, teamName, draftRuleName } from './shared/display';
 import { translator } from './shared/i18n';
 import { errorMessage } from './shared/errorMessages';
-import { currentGame, displaySides, normalizeState, draftRestriction, ruleLocked, seriesWins } from './shared/draftRules';
-import { PlayerPortrait } from './shared/PlayerPortrait';
+import { currentGame, displaySides, normalizeState, ruleLocked, seriesWins } from './shared/draftRules';
+import { TeamLibrary } from './control/TeamLibrary';
+import { PortraitField } from './control/PortraitField';
+import { ControlHeroPicker } from './control/ControlHeroPicker';
+import { ControlDraftWorkspace } from './control/ControlDraftWorkspace';
+import { SettingsDialog } from './control/SettingsDialog';
 import { DraftHistory } from './shared/DraftHistory';
 import { DraftLifecycle } from './control/DraftLifecycle';
 import { DraftOverlay } from './overlay/DraftOverlay';
@@ -26,10 +30,10 @@ function HeroSlot({ id, ban = false, lang }: { id?: number; ban?: boolean; lang:
   const t = translator(lang);
   return <div className={`hero-slot ${ban ? 'ban' : ''} ${id ? 'filled' : ''}`} key={id || 'empty'}>{id ? <><img src={hero(id)?.imageLink} alt={name(id, lang)} /><span>{name(id, lang)}</span>{ban && <b className="ban-mark">╱</b>}</> : <span className="empty">{t(ban ? 'ban' : 'emptyPick')}</span>}</div>;
 }
-function Board({ state, lang }: { state: MatchState; lang: Language }) {
+function Board({ state, lang, compact = false }: { state: MatchState; lang: Language; compact?: boolean }) {
   const t = translator(lang);
   const phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
-  return <section className="board"><div className="match-strip"><span>{t('gameTitle')}</span><span>{stageName(state.stage, lang)} · {t('gameNumber', { number: currentGame(state) })} · {seriesName(state.seriesFormat, lang)} · {draftRuleName(state, lang)}</span></div>
+  return <section className={`board ${compact ? 'compact-board' : ''}`}><div className="match-strip"><span>{t('gameTitle')}</span><span>{stageName(state.stage, lang)} · {t('gameNumber', { number: currentGame(state) })} · {seriesName(state.seriesFormat, lang)} · {draftRuleName(state, lang)}</span></div>
     <div className="team-grid">{displaySides(state).map(side => <section key={side} className={`team ${side} ${phase?.team === side ? 'active' : ''}`}><header>{state[`${side}Team`].logo && <img className="logo" src={state[`${side}Team`].logo} alt="" />}<h2>{teamName(state, side)}</h2><strong>{state[`${side}Score`]}</strong></header><div className="picks">{Array.from({ length: 5 }, (_, i) => <HeroSlot key={i} id={state[`${side}Picks`][i]} lang={lang} />)}</div><div className="bans"><small>{t('ban')}</small>{Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, i) => <HeroSlot key={i} id={state[`${side}Bans`][i]} ban lang={lang} />)}</div></section>)}</div>
     <footer className={`phase ${phase?.team || ''}`} key={state.currentPhase}>{phase ? `${phaseName(state, lang)} · ${t('phaseStep', { step: state.currentPhase + 1, total: phases(state.draftMode, state.firstPickSide).length })}` : t('draftComplete')}</footer></section>;
 }
@@ -75,26 +79,29 @@ function Analysis({
     </section>
   );
 }
-function Settings({ state, send, disabled }: { state: MatchState; send: (a: Action) => void; disabled: boolean }) {
+function Settings({ state, send, disabled, token }: { state: MatchState; send: (a: Action) => void; disabled: boolean; token: string }) {
   const t = translator(state.language);
   const [form, setForm] = useState<MatchSettings>(() => ({
     blueTeam: state.blueTeam, redTeam: state.redTeam, blueScore: state.blueScore, redScore: state.redScore,
     gameNumber: state.gameNumber, seriesFormat: state.seriesFormat, stage: state.stage,
     draftMode: state.draftMode, draftRuleMode: state.draftRuleMode, firstPickSide: state.firstPickSide, sideSwapMode: state.sideSwapMode, language: state.language, overlayLayout: state.overlayLayout,
   }));
+  const [uploads, setUploads] = useState<Set<string>>(() => new Set());
   const maxWins = seriesWins(state);
   const firstPickLocked = state.currentPhase > 0;
   return <form className="panel settings" onSubmit={event => {
     event.preventDefault();
+    if (uploads.size) return;
     send({ type: 'settings', settings: { ...form, blueScore: state.blueScore, redScore: state.redScore, gameNumber: state.gameNumber } });
   }}>
     <h2>{t('matchSettings')}</h2>
+    <TeamLibrary onRosterApply={(side,index,player) => setForm(previous => {const key = side === 'blue' ? 'blueTeam' : 'redTeam';const team=previous[key];return {...previous,[key]:{...team,players:team.players.map((p,i) => i === index ? player.name : p),playerRoles:team.playerRoles.map((r,i) => i === index ? player.role : r),playerPortraits:team.playerPortraits.map((p,i) => i === index ? player.portrait : p)}};})} state={state} form={form} token={token} disabled={disabled || uploads.size > 0} send={send} />
     <div className="settings-grid">
       {displaySides(state).map(side => {
         const teamKey = side === 'blue' ? 'blueTeam' : 'redTeam';
         const scoreKey = side === 'blue' ? 'blueScore' : 'redScore';
         const otherScore = side === 'blue' ? state.redScore : state.blueScore;
-        const updateTeam = (patch: Partial<MatchState['blueTeam']>) => setForm({ ...form, [teamKey]: { ...form[teamKey], ...patch } });
+        const updateTeam = (patch: Partial<MatchState['blueTeam']>) => setForm(previous => ({ ...previous, [teamKey]: { ...previous[teamKey], ...patch } }));
         return <section key={side}>
           <h3>{t(teamKey)}</h3>
           <label>{t('teamName')}<input required maxLength={60} value={form[teamKey].name} onChange={e => updateTeam({ name: e.target.value })} /></label>
@@ -105,10 +112,9 @@ function Settings({ state, send, disabled }: { state: MatchState; send: (a: Acti
             <label>{t('lane')}<select disabled={disabled} value={form[teamKey].playerRoles[index]} onChange={e => updateTeam({ playerRoles: form[teamKey].playerRoles.map((r, i) => i === index ? e.target.value as typeof r : r) })}>
               {(['clash', 'jungle', 'mid', 'farm', 'roam'] as const).map(role => <option key={role} value={role}>{t(role)}</option>)}
             </select></label>
-            <label className="portrait-setting">{t('portrait')}<div className="portrait-input">
-              <div className="portrait-preview"><PlayerPortrait key={form[teamKey].playerPortraits[index] + form[teamKey].logo} portrait={form[teamKey].playerPortraits[index]} logo={form[teamKey].logo} slot={index} label={player} /></div>
-              <input aria-label={t('portrait')} maxLength={1000} value={form[teamKey].playerPortraits[index]} onChange={e => updateTeam({ playerPortraits: form[teamKey].playerPortraits.map((p, i) => i === index ? e.target.value : p) })} />
-            </div><small>{t('portraitHint')}</small></label>
+            <PortraitField value={form[teamKey].playerPortraits[index]} token={token} lang={state.language} disabled={disabled}
+              onChange={url => setForm(previous => ({...previous,[teamKey]:{...previous[teamKey],playerPortraits:previous[teamKey].playerPortraits.map((p,i) => i === index ? url : p)}}))}
+              onBusy={busy => setUploads(previous => { const next = new Set(previous); if(busy) next.add(`${side}-${index}`); else next.delete(`${side}-${index}`); return next; })} />
           </div>)}
           <div className="score-setting"><p>{t('seriesScore')}</p><div className="score-control">
             <button type="button" aria-label={t('decreaseScore')} disabled={disabled || state[scoreKey] <= 0} onClick={() => send({ type: 'score', team: side, delta: -1 })}>−</button>
@@ -144,7 +150,7 @@ function Settings({ state, send, disabled }: { state: MatchState; send: (a: Acti
         </select></label>
       </section>
     </div>
-    <button disabled={disabled} className="primary">{t('saveSettings')}</button><p className="muted">{t('scoreImmediate')}</p>
+    <button disabled={disabled || uploads.size > 0} className="primary">{t('saveSettings')}</button><p className="muted">{t('scoreImmediate')}</p>
   </form>;
 }
 function initialToken(role: Role) {
@@ -156,12 +162,10 @@ export default function BroadcastApp() {
   const role: Role = location.pathname === '/caster' ? 'caster' : location.pathname === '/overlay/draft' ? 'overlay' : 'control';
   const [token, setToken] = useState(() => initialToken(role));
   const [tokenInput, setTokenInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all');
   const [showSettings, setShowSettings] = useState(false);
   const [delayInput, setDelayInput] = useState(180);
   const [lastLanguage, setLastLanguage] = useState<Language>(() => sessionStorage.getItem(`hok-language-${role}`) === 'eng' ? 'eng' : 'zh');
-  const { snapshot, status, error, pending, send } = useMatch(role, token);
+  const { snapshot, status, error, pending, send, acknowledged } = useMatch(role, token);
   const connected = status === 'Connected';
   const compatible = !!snapshot?.state && Array.isArray(snapshot.state.draftHistory) && !!snapshot.state.draftRuleMode && !!snapshot.state.firstPickSide && !!snapshot.state.sideSwapMode && !!snapshot.state.displayLeftSide;
   const disabled = !connected || pending || !compatible;
@@ -186,9 +190,7 @@ export default function BroadcastApp() {
       </form><p>{connectionLabel(status, lang)}</p>
     </main>;
   }
-  const phase = state && phases(state.draftMode, state.firstPickSide)[state.currentPhase];
-  const used = state ? [...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks] : [];
-  return <main className="workspace">
+  return <main className={`workspace ${role === 'control' ? 'control-workspace' : ''}`}>
     <header className="topbar">
       <div><span className="eyebrow">{t(role === 'caster' ? 'casterEyebrow' : 'controlEyebrow')}</span><h1>{t('brandTitle')} <span>{t('brandSubtitle')}</span></h1></div>
       <div className="toolbar">
@@ -201,42 +203,33 @@ export default function BroadcastApp() {
     {connected && !compatible && <p className="notice">{t('backendUpgrade')}</p>}
     {error && <p role="alert" className="error">{errorMessage(error, lang)}</p>}
     {state ? <>
-      <Board state={state} lang={lang} />
+      {role === 'caster' && <Board state={state} lang={lang} />}
       {role === 'control' && <>
-        <section className="operator-bar panel">
-          <div className="toolbar">
-            <button disabled={disabled || !snapshot?.canUndo} onClick={() => send({ type: 'undo' })}>{t('undo')}</button>
-            <button disabled={disabled} onClick={() => confirm(t('confirmResetDraft')) && send({ type: 'reset_draft' })}>{t('resetDraft')}</button>
-            <button className="danger" disabled={disabled} onClick={() => confirm(t('confirmResetMatch')) && send({ type: 'reset_match' })}>{t('resetMatch')}</button>
-            <button onClick={() => setShowSettings(!showSettings)}>{t(showSettings ? 'hideSettings' : 'matchSettings')}</button>
-          </div>
-          <div className="delay-controls">
-            <b>{t('casterDelay', { seconds: snapshot?.casterDelaySeconds ?? '—' })}</b>
-            {[-10, -5, -1, 1, 5, 10].map(n => <button key={n}
-              aria-label={t(n > 0 ? 'increaseDelay' : 'decreaseDelay', { seconds: Math.abs(n) })}
-              disabled={disabled || (snapshot?.casterDelaySeconds || 0) + n < 0 || (snapshot?.casterDelaySeconds || 0) + n > 3600}
-              onClick={() => send({ type: 'delay', seconds: (snapshot?.casterDelaySeconds || 0) + n })}>{n > 0 ? '+' : ''}{n} {t('secondsShort')}</button>)}
-            <input aria-label={t('delayInput')} type="number" min={0} max={3600} value={delayInput} onChange={e => setDelayInput(Number(e.target.value))} />
-            <button disabled={disabled} onClick={() => send({ type: 'delay', seconds: delayInput })}>{t('setDelay')}</button>
-          </div>
-        </section>
-        {showSettings && <Settings key={JSON.stringify([state.blueTeam, state.redTeam, state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.displayLeftSide, state.language, state.overlayLayout])} state={state} send={send} disabled={disabled} />}
-        <DraftLifecycle state={state} send={send} disabled={disabled} />
-        <section className="panel">
-          <div className="section-head">
-            <h2>{phaseName(state, lang)}{phase && <small> · {t('selectHero')}</small>}</h2>
-            <input aria-label={t('searchHeroes')} placeholder={t('searchHeroes')} value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          {phase?.action === 'pick' && <p className="picking-for">{t('pickingFor', { player: state[`${phase.team}Team`].players[state[`${phase.team}Picks`].length] || t('playerNumber', { number: state[`${phase.team}Picks`].length + 1 }), slot: state[`${phase.team}Picks`].length + 1 })}</p>}
-          <div className="filters">{lanes.map(r => <button key={r} className={filter === r ? 'selected' : ''} onClick={() => setFilter(r)}>{laneName(r, lang)}</button>)}</div>
-          <p className="muted">{t('availabilityHint')}</p>
-          <div className="hero-grid">{heroes.filter(h => (filter === 'all' || h.occupation === filter || h.altOccupation === filter)
-            && `${h.englishName} ${h.chineseName} ${(h.aliases || []).join(' ')}`.toLowerCase().includes(search.toLowerCase())).map(h => <button
-            key={h.id} title={name(h.id, lang)} disabled={disabled || !phase || used.includes(h.id) || !!state.committedGameId || (!!draftRestriction(state, phase.team, phase.action, h.id))}
-            onClick={() => phase && send({ type: 'draft_action', ...phase, heroId: h.id })}>
-            <img src={h.imageLink} alt="" /><span>{name(h.id, lang)}</span>{phase && draftRestriction(state, phase.team, phase.action, h.id) && <small className="eligibility-reason">{t(draftRestriction(state, phase.team, phase.action, h.id)!)}</small>}
-          </button>)}</div>
-        </section>
+        <ControlDraftWorkspace monitor={<>
+          <Board state={state} lang={lang} compact />
+          <section className="operator-bar panel">
+            <div className="toolbar">
+              <button disabled={disabled || !snapshot?.canUndo} onClick={() => send({ type: 'undo' })}>{t('undo')}</button>
+              <button disabled={disabled} onClick={() => confirm(t('confirmResetDraft')) && send({ type: 'reset_draft' })}>{t('resetDraft')}</button>
+              <button className="danger" disabled={disabled} onClick={() => confirm(t('confirmResetMatch')) && send({ type: 'reset_match' })}>{t('resetMatch')}</button>
+              <button onClick={() => setShowSettings(true)}>{t('matchSettings')}</button>
+            </div>
+            <div className="delay-controls">
+              <b>{t('casterDelay', { seconds: snapshot?.casterDelaySeconds ?? '—' })}</b>
+              {[-10, -5, -1, 1, 5, 10].map(n => <button key={n}
+                aria-label={t(n > 0 ? 'increaseDelay' : 'decreaseDelay', { seconds: Math.abs(n) })}
+                disabled={disabled || (snapshot?.casterDelaySeconds || 0) + n < 0 || (snapshot?.casterDelaySeconds || 0) + n > 3600}
+                onClick={() => send({ type: 'delay', seconds: (snapshot?.casterDelaySeconds || 0) + n })}>{n > 0 ? '+' : ''}{n} {t('secondsShort')}</button>)}
+              <input aria-label={t('delayInput')} type="number" min={0} max={3600} value={delayInput} onChange={e => setDelayInput(Number(e.target.value))} />
+              <button disabled={disabled} onClick={() => send({ type: 'delay', seconds: delayInput })}>{t('setDelay')}</button>
+            </div>
+          </section>
+
+          <DraftLifecycle state={state} send={send} disabled={disabled} />
+        </>}>
+          <ControlHeroPicker state={state} disabled={disabled} active={!showSettings} send={send} acknowledged={acknowledged} />
+        </ControlDraftWorkspace>
+        {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><Settings key={JSON.stringify([state.blueTeam, state.redTeam, state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.displayLeftSide, state.language, state.overlayLayout])} state={state} send={send} disabled={disabled} token={token} /></SettingsDialog>}
       </>}
       <DraftHistory state={state} />
       <Analysis state={state} lang={lang} />

@@ -7,6 +7,8 @@ export function useMatch(role: Role, token: string) {
   const [status, setStatus] = useState('Connecting');
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
+  const [acknowledged, setAcknowledged] = useState<{ id: string; action: Action }>();
+  const pendingAction = useRef<Action>();
   const socket = useRef<WebSocket>();
   const pendingID = useRef<string>();
   const pendingTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -16,8 +18,8 @@ export function useMatch(role: Role, token: string) {
     let active: WebSocket | undefined;
     let attempts = 0;
     let abort: AbortController;
-    setSnapshot(undefined);
-    function clearPending() { pendingID.current = undefined; clearTimeout(pendingTimer.current); setPending(false); }
+    setSnapshot(undefined); setAcknowledged(undefined);
+    function clearPending() { pendingAction.current = undefined; pendingID.current = undefined; clearTimeout(pendingTimer.current); setPending(false); }
     async function connect() {
       if (stopped || !token) { setStatus('Access token required'); return; }
       setStatus('Connecting');
@@ -45,7 +47,10 @@ export function useMatch(role: Role, token: string) {
           const msg = JSON.parse(event.data);
           if (msg.type === 'match_state_update') { authenticated = true; clearTimeout(connectTimeout); attempts = 0; setSnapshot(msg); setStatus('Connected'); }
           else if (msg.type === 'error') { setError(msg.error); if (msg.id === pendingID.current) clearPending(); }
-          else if (msg.type === 'ack' && msg.id === pendingID.current) clearPending();
+          else if (msg.type === 'ack' && msg.id === pendingID.current) {
+            if (pendingAction.current) setAcknowledged({ id: msg.id, action: pendingAction.current });
+            clearPending();
+          }
         };
         ws.onclose = event => {
           clearInterval(heartbeat);
@@ -65,9 +70,9 @@ export function useMatch(role: Role, token: string) {
   }, [role, token]);
   function send(action: Action) {
     if (role !== 'control' || status !== 'Connected' || !snapshot || pendingID.current || socket.current?.readyState !== WebSocket.OPEN) return;
-    setError(''); const id = crypto.randomUUID(); pendingID.current = id; setPending(true);
+    setError(''); const id = crypto.randomUUID(); pendingID.current = id; pendingAction.current = action; setPending(true);
     socket.current.send(JSON.stringify({ type: 'action', id, revision: snapshot.revision, action }));
     pendingTimer.current = setTimeout(() => { setError('操作确认超时，正在重新加载比赛状态。请确认结果后再重试。'); socket.current?.close(); }, 8000);
   }
-  return { snapshot, status, error, pending, send };
+  return { snapshot, status, error, pending, send, acknowledged };
 }

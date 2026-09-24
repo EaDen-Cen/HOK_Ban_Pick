@@ -22,6 +22,19 @@ export interface Team {
   playerPortraits: string[];
 }
 
+export interface ReservePlayer {
+  id: string;
+  name: string;
+  role: PlayerRole;
+  portrait: string;
+}
+
+export interface TeamPreset extends Team {
+  substitutes: ReservePlayer[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface GameDraftRecord {
   firstPickSide: Side;
   id: string;
@@ -82,6 +95,7 @@ export type MatchSettings = Pick<
 >;
 
 export type Action =
+  | { type: 'load_team_preset'; side: Side; presetId: string }
   | { type: 'draft_action'; team: Side; action: 'ban' | 'pick'; heroId: number }
   | { type: 'undo' | 'reset_draft' | 'reset_match' }
   | { type: 'commit_game' | 'next_game' | 'swap_sides' }

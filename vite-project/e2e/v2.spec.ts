@@ -86,8 +86,8 @@ for (const mode of ['normal', 'player', 'global'] as const) {
       }
       expect(await overlay.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
       expect(await overlay.evaluate(() => document.documentElement.scrollWidth)).toBe(1920);
-      await overlay.screenshot({ path: `artifacts/v2-${mode}-overlay.png`, omitBackground: true });
-      await control.screenshot({ path: `artifacts/v2-${mode}-control.png`, fullPage: true });
+      await overlay.bringToFront(); await overlay.screenshot({ path: `artifacts/v2-${mode}-overlay.png`, omitBackground: true });
+      await control.bringToFront(); await control.screenshot({ path: `artifacts/v2-${mode}-control.png`, fullPage: true });
       expect(pageErrors).toEqual([]);
     } finally { h.close(); await context.close(); }
   });

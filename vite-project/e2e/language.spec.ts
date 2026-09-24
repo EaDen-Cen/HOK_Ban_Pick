@@ -59,6 +59,7 @@ test('language switches every interface, persists on refresh, and follows the ca
   await expect(caster.locator('.analysis[data-side="blue"] h2')).toHaveText('蓝方队伍');
   await expect(caster.locator('.blue .bans img')).toHaveCount(0);
 
+  await control.getByRole('button', { name: 'Hide match settings', exact: true }).click();
   await control.locator('.delay-controls input').fill('0');
   await control.getByRole('button', { name: 'Set delay', exact: true }).click();
   await expect(caster.locator('.status')).toHaveText('Connected');
@@ -73,7 +74,8 @@ test('language switches every interface, persists on refresh, and follows the ca
     await expect(page.locator('.blue .bans img')).toHaveAttribute('alt', 'Lam');
     await expectEnglishInterface(page);
   }
-  await control.screenshot({ path: 'artifacts/settings-en.png', fullPage: true });
+  await control.getByRole('button', { name: 'Match settings', exact: true }).click();
+  await control.bringToFront(); await control.screenshot({ path: 'artifacts/settings-en.png', fullPage: true });
 
   // Scores update immediately and saving other settings must not roll them back.
   await control.locator('.score-control').first().getByRole('button', { name: 'Increase series score', exact: true }).click();
@@ -97,9 +99,9 @@ test('language switches every interface, persists on refresh, and follows the ca
   for (const page of [control, caster, overlay]) await page.reload();
   for (const page of [control, caster]) await expect(page.locator('.status')).toHaveText('Connected');
   for (const page of [control, caster, overlay]) await expectEnglishInterface(page);
-  await control.screenshot({ path: 'artifacts/control-en.png', fullPage: true });
-  await caster.screenshot({ path: 'artifacts/caster-en.png', fullPage: true });
-  await overlay.screenshot({ path: 'artifacts/overlay-en.png', omitBackground: true });
+  await control.bringToFront(); await control.screenshot({ path: 'artifacts/control-en.png', fullPage: true });
+  await caster.bringToFront(); await caster.screenshot({ path: 'artifacts/caster-en.png', fullPage: true });
+  await overlay.bringToFront(); await overlay.screenshot({ path: 'artifacts/overlay-en.png', omitBackground: true });
 
   // The alternative OBS layout also contains translated team and player defaults.
   await control.getByRole('button', { name: 'Match settings', exact: true }).click();
@@ -118,7 +120,7 @@ test('language switches every interface, persists on refresh, and follows the ca
     expect(box!.x + box!.width).toBeLessThanOrEqual(1920);
     expect(box!.y + box!.height).toBeLessThanOrEqual(1080);
   }
-  await overlay.screenshot({ path: 'artifacts/overlay-side-en.png', omitBackground: true });
+  await overlay.bringToFront(); await overlay.screenshot({ path: 'artifacts/overlay-side-en.png', omitBackground: true });
 
   await layoutSelect.selectOption('panel');
   await control.getByLabel('Interface language', { exact: true }).selectOption('zh');
@@ -131,6 +133,7 @@ test('language switches every interface, persists on refresh, and follows the ca
     await expect(page.locator('.blue h2')).toHaveText('蓝方队伍');
     await expect(page.locator('.red h2')).toHaveText('红方队伍');
   }
+  await control.getByRole('button', { name: '收起比赛设置', exact: true }).click();
   await expect(control.getByRole('button', { name: '设置延迟', exact: true })).toBeVisible();
   await expect(control.getByLabel('搜索英雄', { exact: true })).toBeVisible();
   await expect(control.getByRole('button', { name: '打野', exact: true })).toBeVisible();
