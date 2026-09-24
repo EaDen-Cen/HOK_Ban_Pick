@@ -1,0 +1,96 @@
+name: Hero data sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly check. The synchronizer is intentionally not part of match startup.
+    - cron: '17 10 * * 1'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: vite-project/package-lock.json
+
+      - name: Install dependencies
+        working-directory: vite-project
+        run: npm ci
+
+      - name: Check remote hero roster
+        id: check
+        working-directory: vite-project
+        shell: bash
+        run: |
+          npm --silent run hero:check -- --json > hero-check.json
+          node - <<'NODE'
+          const fs = require('fs');
+          const result = JSON.parse(fs.readFileSync('hero-check.json', 'utf8'));
+          console.log(JSON.stringify(result, null, 2));
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `changed=${result.changed}\n`);
+          NODE
+          rm hero-check.json
+
+      - name: Prepare candidate hero update
+        if: steps.check.outputs.changed == 'true'
+        working-directory: vite-project
+        run: npm run hero:sync
+
+      - name: Validate hero data
+        if: steps.check.outputs.changed == 'true'
+        working-directory: vite-project
+        run: npm run hero:validate
+
+      - name: Build
+        if: steps.check.outputs.changed == 'true'
+        working-directory: vite-project
+        run: npm run build
+
+      - name: Run tests
+        if: steps.check.outputs.changed == 'true'
+        working-directory: vite-project
+        run: npm test
+
+      - name: Lint
+        if: steps.check.outputs.changed == 'true'
+        working-directory: vite-project
+        run: npm run lint
+
+      - name: Open or update review PR
+        if: steps.check.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: automation/hero-data-sync
+          delete-branch: true
+          commit-message: 'data: refresh HOK global hero roster'
+          title: 'Hero data sync: review latest global roster'
+          body: |
+            Automated weekly hero-roster candidate update.
+
+            Safety rules:
+            - this workflow never edits main directly;
+            - local hero IDs are append-only and are never replaced by remote/Camp IDs;
+            - remote omissions create warnings and never delete local heroes;
+            - counter, combo, and beCountered are never scraped or overwritten;
+            - new/renamed heroes use the public catalog for discovery and official HOK IP pages/CDN assets as supporting evidence where available;
+            - lane changes from the auxiliary catalog are reported for manual review instead of being auto-applied.
+
+            Please inspect the generated audit JSON under research/hero-sync/, then merge only after the diff looks correct.
+          add-paths: |
+            vite-project/src/data/autoSyncedHeroes.ts
+            vite-project/src/data/heroSyncOverrides.ts
+            vite-project/public/heroesImg/
+            research/hero-sync/
