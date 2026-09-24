@@ -925,3 +925,57 @@
     grid-template-columns:1fr;
   }
 }
+
+
+/* V2.7 hidden hero-name mode:
+   give the player ID the whole caption space, remove the dark name plate,
+   and auto-fit the ID in JS so it never spills outside the hero artwork. */
+.card-caption .player-id {
+  max-width:100%;
+  min-width:0;
+}
+.card-caption.player-only {
+  background:none !important;
+  border:0 !important;
+  box-shadow:none !important;
+  text-shadow:0 2px 6px #000, 0 0 12px #000b;
+  overflow:hidden;
+}
+.card-caption.player-only .player-id-only {
+  display:block;
+  width:100%;
+  max-width:100%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:clip;
+  font-weight:850;
+  line-height:1.05;
+  color:#fff;
+  letter-spacing:.01em;
+}
+.broadcast-panel .card-caption.player-only {
+  height:86px;
+  padding:18px 8px 12px;
+  justify-content:flex-end;
+  align-items:center;
+  text-align:center;
+}
+.broadcast-side .card-caption.player-only {
+  height:88px;
+  padding:18px 14px 12px;
+  justify-content:flex-end;
+}
+.broadcast-side .pick-team.display-left .card-caption.player-only {
+  align-items:flex-end;
+  text-align:right;
+}
+.broadcast-side .pick-team.display-right .card-caption.player-only {
+  align-items:flex-start;
+  text-align:left;
+}
+.hero-names-hidden .hero-slot.ban > .ban-name {
+  display:none !important;
+}
+.hero-names-hidden .hero-slot.ban {
+  padding-bottom:0;
+}
