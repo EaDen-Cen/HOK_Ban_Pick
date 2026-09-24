@@ -495,3 +495,136 @@
   .team-settings-dialog .team-settings-grid { grid-template-columns:1fr; }
   .team-settings-dialog { width:96vw; max-height:94vh; }
 }
+
+
+/* V2.5 official-style broadcast cards.
+   Full art keeps one source image; crop/zoom changes per layout around a focal point. */
+.broadcast-overlay .hero-art-full {
+  will-change: transform;
+}
+
+.broadcast-panel .broadcast-card {
+  height:306px;
+}
+.broadcast-panel .hero-reveal {
+  bottom:38px;
+}
+.broadcast-panel .broadcast-art {
+  top:0;
+  bottom:58px;
+  height:auto;
+}
+.broadcast-panel .card-caption {
+  top:auto;
+  bottom:0;
+  height:58px;
+  padding:7px 8px 6px;
+  justify-content:center;
+  gap:1px;
+  background:#07111ff2;
+  border-top:1px solid #ffffff12;
+}
+.broadcast-panel .card-caption strong {
+  font-size:18px;
+  line-height:22px;
+}
+.broadcast-panel .card-caption span {
+  font-size:12px;
+  line-height:16px;
+}
+.broadcast-panel .position-bar {
+  height:38px;
+}
+
+/* Side rails use mirrored broadcast cards: artwork on the outside, identity
+   text toward the gameplay area, and a narrow role strip on the outer edge. */
+.broadcast-side .broadcast-picks {
+  grid-template-columns:340px 340px;
+}
+.broadcast-side .hero-reveal {
+  inset:0 34px 0 0;
+}
+.broadcast-side .pick-team.display-right .hero-reveal {
+  inset:0 0 0 34px;
+}
+.broadcast-side .broadcast-art {
+  top:0;
+  bottom:0;
+  height:auto;
+  width:auto;
+}
+.broadcast-side .pick-team.display-left .broadcast-art {
+  left:0;
+  right:112px;
+}
+.broadcast-side .pick-team.display-right .broadcast-art {
+  left:112px;
+  right:0;
+}
+.broadcast-side .card-caption {
+  top:0;
+  bottom:0;
+  width:112px;
+  padding:10px 7px;
+  justify-content:center;
+  gap:3px;
+  background:#091729f5;
+  border:0;
+}
+.broadcast-side .pick-team.display-left .card-caption {
+  left:auto;
+  right:0;
+  text-align:center;
+}
+.broadcast-side .pick-team.display-right .card-caption {
+  left:0;
+  right:auto;
+  text-align:center;
+}
+.broadcast-side .card-caption strong {
+  font-size:16px;
+  line-height:20px;
+}
+.broadcast-side .card-caption span {
+  font-size:12px;
+  line-height:16px;
+}
+.broadcast-side .position-bar {
+  top:0;
+  bottom:0;
+  width:34px;
+  height:auto;
+}
+.broadcast-side .pick-team.display-left .position-bar {
+  left:auto;
+  right:0;
+}
+.broadcast-side .pick-team.display-right .position-bar {
+  left:0;
+  right:auto;
+}
+.broadcast-side .position-icon {
+  width:20px;
+  height:20px;
+}
+
+/* Current bans are live draft information and stay readable at broadcast scale. */
+.broadcast-overlay .bans .hero-slot {
+  width:76px;
+  height:76px;
+  flex:0 0 76px;
+}
+.broadcast-overlay .ban-mark {
+  font-size:60px;
+}
+.broadcast-side .broadcast-bans {
+  grid-template-columns:420px 420px;
+}
+.broadcast-side .broadcast-bans .ban-team {
+  min-height:92px;
+}
+
+/* No empty history placeholder is rendered; when history exists it stays secondary. */
+.broadcast-overlay .draft-history {
+  min-height:0;
+}
