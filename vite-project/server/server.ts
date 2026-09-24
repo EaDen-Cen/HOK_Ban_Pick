@@ -8,7 +8,7 @@ import type { Role } from '../src/shared/types.js';
 import { TeamPresetStore } from './teamPresets.js';
 import { Store } from './store.js';
 import { uploadPortrait, servePortrait } from './portraits.js';
-import { captureRegion, localCaptureRequest, recognizeScreen } from './capture.js';
+import { captureRegion, captureRegions, localCaptureRequest, recognizeLineup, recognizeScreen } from './capture.js';
 
 const production = process.env.NODE_ENV === 'production';
 const tokens: Record<Role, string> = {
@@ -51,6 +51,36 @@ const server = createServer(async (req, res) => {
         if (input.revision !== store.data.revision) { json(409,{error:'State changed during capture'}); return; }
         json(200,result);
       } catch { json(400,{error:'Capture failed; check region and visible desktop'}); }
+      return;
+    }
+    if (url.pathname === '/api/capture-lineup') {
+      if (req.method !== 'POST') { json(405, {error:'POST required'}); return; }
+      if (roleFor(req.headers.authorization?.replace(/^Bearer /, '')) !== 'control' || !localCaptureRequest(req)) { json(403,{error:'Local control only'}); req.resume(); return; }
+      if (process.platform !== 'win32' || process.env.HOK_CAPTURE_ENABLED !== '1' || store.data.state.bpInputMode !== 'screen') { json(503,{error:'Windows capture is not enabled'}); req.resume(); return; }
+      if (!store.data.state.draftComplete || store.data.state.committedGameId) { json(409,{error:'Lineup sync requires a completed uncommitted draft'}); req.resume(); return; }
+      try {
+        const chunks: Buffer[] = []; let size = 0; req.setTimeout(5000, () => req.destroy());
+        for await (const chunk of req) {
+          size += chunk.length;
+          if (size > 16384) { json(413,{error:'Request too large'}); return; }
+          chunks.push(chunk);
+        }
+        const input = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        if (input.revision !== store.data.revision) { json(409,{error:'Stale capture'}); return; }
+        const regions = captureRegions(input.regions);
+        const state = store.data.state;
+        const allowed = [
+          ...Array.from({length:5},()=>[...state.bluePicks]),
+          ...Array.from({length:5},()=>[...state.redPicks]),
+        ];
+        const results = await recognizeLineup(regions, allowed);
+        if (input.revision !== store.data.revision) { json(409,{error:'State changed during capture'}); return; }
+        json(200,{slots:results.map((result,index)=>({
+          side:index < 5 ? 'blue' : 'red',
+          playerIndex:index % 5,
+          ...result,
+        }))});
+      } catch { json(400,{error:'Lineup capture failed; check all ten player regions and visible desktop'}); }
       return;
     }
     if (url.pathname === '/api/team-presets' || url.pathname.startsWith('/api/team-presets/')) {
