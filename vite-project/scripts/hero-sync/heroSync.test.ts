@@ -133,3 +133,11 @@ test('runtime director crop overrides static and default artwork framing', () =>
   assert.deepEqual(heroArtCrop(19, 'panel'), { x: 80, y: 34, scale: 1.16 });
   assert.deepEqual(heroArtCrop(1, 'side'), { x: 50, y: 29, scale: 1.22 });
 });
+
+
+test('hero art crop never shrinks an already-cover-cropped source image', () => {
+  assert.deepEqual(
+    heroArtCrop(1, 'panel', { panel: { x: 47, y: 0, scale: 0.6 } }),
+    { x: 47, y: 0, scale: 1 },
+  );
+});
