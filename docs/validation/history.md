@@ -1,4 +1,17 @@
-# 第一版本地验证
+> [文档索引](../README.md) · 除特别注明外，文件路径以仓库根目录为基准，npm 命令在 `vite-project/` 中执行。
+
+> 本文是历次验证记录，测试通过数量及本机服务状态属于记录当时，不能视为本次整理已重新验证。截图与存档通常是本机未入库产物。
+
+# 验证记录
+
+## 文档目录整理验证（2026-09-23）
+
+- 基线：main `bbcf24807596c75046ebb3e8a82d775c760c4dd6`；提交前再次核对远端 main 未变化。
+- 环境：Windows、Node.js 24.14.1、npm 11.11.0。
+- 本次实际执行：`npm run build`、`npm run lint`、`npm test` 全部通过，42 项服务器测试通过。
+- 89 个仓库内 Markdown 文件链接目标存在；7 份历史归档正文保留，仅增加归档说明和调整文档引用。
+- 211 个非 Markdown 已跟踪文件内容保持不变（比较时考虑 Git 的 Windows 换行转换）；包括源码、配置、锁文件、启动脚本、图片及研究 JSON。
+- 本次只改文档，未运行浏览器 E2E、OBS、Cloudflare 或现场音画彩排，也未启动正式比赛实例。下文的历史测试结果不算作本次执行结果。
 
 ## 替补快速换人增量验证（2026-09-23）
 
@@ -16,7 +29,7 @@
 - 已查看桌面、900px 平板、390px 手机及队伍库截图。截图保存在 vite-project/artifacts/。
 - 3001 本机新版服务已启动；health、Control、资料库接口返回 200。正式比赛存档未用于自动化测试，浏览器测试使用独立 3101 实例。
 - 实际 OBS、Cloudflare 跨设备链路、10 张实际参赛选手照片仍需赛前实机彩排。
-- 使用与备份说明见 [V2.3-IMPLEMENTATION.md](V2.3-IMPLEMENTATION.md)。
+- 使用与备份说明见 [V2.3-IMPLEMENTATION.md](../guides/operator-guide.md)。
 
 
 ## V2 验证（2026-09-17）
@@ -28,7 +41,7 @@
 
 截图：`vite-project/artifacts/v2-normal-overlay.png`、`v2-player-overlay.png`、`v2-global-overlay.png`。
 实际 OBS 内置浏览器验收仍待完成；测试实例启动未成功，不将 Chromium 验收等同 OBS 验收。
-详见 [V2-HANDOFF.md](V2-HANDOFF.md)。以下为第一阶段历史验证记录。
+详见 [V2-HANDOFF.md](../archive/handoffs/v2-handoff.md)。以下为第一阶段历史验证记录。
 
 验证环境：Windows、Node.js 24.14.1、已安装的 Google Chrome。
 

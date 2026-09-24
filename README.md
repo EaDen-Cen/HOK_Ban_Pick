@@ -1,123 +1,51 @@
+# HOK Broadcast · 王者荣耀赛事 BP 导播系统
 
-# Honor of Kings Ban/Pick Simulator 王者荣耀国际服BP模拟器
+基于 React、TypeScript、Node.js 与 WebSocket，提供操作台、延迟解说台及 OBS 直播画面。当前 main 包含 V2.3 导播快捷录入、选手照片上传、服务器端队伍资料库及替补快速换人。
 
-This project is a **ban/pick simulator** for the game **Honor of Kings** (King of Glory). It allows users to simulate the drafting process with customizable ban/pick phases, supporting both **normal/ranking mode** (2 bans) and **match mode** (4 bans).
+## 快速启动
 
-Website: https://hokbp.netlify.app
+使用 Node.js 24，首次下载并启动：
 
-## Table of Contents
+```powershell
+git clone https://github.com/EaDen-Cen/HOK_Ban_Pick.git
+cd HOK_Ban_Pick/vite-project
+npm ci
+npm run build
+npm run server
+```
 
-- [Project Setup](#project-setup)
-- [Features](#features)
-- [Future](#future)
-- [License](#license)
+本机开发入口：[操作台](http://127.0.0.1:3001/control#token=local-control)、[解说台](http://127.0.0.1:3001/caster#token=local-caster)、[OBS](http://127.0.0.1:3001/overlay/draft#token=local-overlay)。这些口令仅用于本机开发；公网部署按运行指南配置独立口令。
 
----
+## 文档导航
 
-## Project Setup
+| 需要做什么 | 文档 |
+| --- | --- |
+| 安装、三端接入、延迟、备份和部署 | [运行指南](docs/guides/getting-started.md) |
+| 比赛流程、快捷 BP、照片、队伍库及替补 | [操作指南](docs/guides/operator-guide.md) |
+| Windows 一键启动及 Cloudflare | [启动器说明](docs/guides/windows-launcher.md) |
+| 理解源码目录和状态流 | [系统结构](docs/design/architecture.md) |
+| 查看历次测试及未验收范围 | [验证记录](docs/validation/history.md) |
+| 查英雄资料来源 | [研究索引](docs/research/README.md) |
+| 查旧交接、旧计划和原项目介绍 | [历史归档](docs/archive/README.md) |
+| 查全部文档、旧路径去向及维护规则 | [文档总索引](docs/README.md) |
 
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/qiqi47/honor-of-kings-ban-pick-simulator.git
-   cd honor-of-kings-ban-pick-simulator
-   ```
+## 仓库结构
 
-2. **Install Dependencies:**
-   Make sure you have [Node.js](https://nodejs.org/) and [npm](https://www.npmjs.com/) installed, then run:
-   ```bash
-   npm install
-   ```
+```text
+README.md           项目入口
+LICENSE.txt         MIT 许可
+docs/               当前指南、设计、验证、研究索引、历史归档
+research/           英雄研究原始 JSON 证据（保留原路径）
+deploy/             Docker Compose / Caddy / 环境变量示例
+vite-project/       应用与 npm 命令执行目录
+  src/              前端、共享类型与 BP 规则
+  server/           状态存储、HTTP/WS、上传与队伍资料库
+  e2e/              浏览器测试与测试素材
+  public/           静态图片
+  data/             运行时比赛、队伍库、上传图片（不入库）
+  artifacts/        本机测试截图、日志等（不入库）
+```
 
-3. **Start the Development Server:**
-   Run the project in development mode using:
-   ```bash
-   npm run dev
-   ```
+开发和验证命令见 [应用目录说明](vite-project/README.md)。OBS、跨设备公网和音画同步仍需真实设备彩排；历史自动测试结果不能代替现场验收。
 
-   This will start the app on a local server.
-
-
-## Features
-
-- **Dynamic Phase Selection**: Toggle between normal and match mode to simulate different drafting setups.
-- **Real-Time Updates**: Ban/pick phases update interactively based on user selection.
-- **Flexible Ban/Pick Panel**: The `GameBanPickPanel` component dynamically renders the draft process according to the selected mode.
-
-## Future
-
-- **Responsiveness**: Enhanced responsiveness for mobile and tablet devices, ensuring a seamless user experience across various platforms.
-- **Intelligent Team Recommendation**: An AI-powered team composition recommendation system that suggests optimal hero choices based on team needs and match-up analysis.
-
-## License
-
-This project is licensed under the MIT License.
-
----
-
-Enjoy simulating your Honor of Kings drafts!
-
-# Honor of Kings Ban/Pick Simulator 王者荣耀国际服BP模拟器
-
-本项目是一个用于**王者荣耀**（Honor of Kings）游戏的**ban/pick模拟器**。用户可以通过此工具模拟比赛中的选英雄过程，支持**普通/排位模式**（2个ban位）和**比赛模式**（4个ban位），并允许自定义ban/pick阶段。
-
-网站在线访问：https://hokbp.netlify.app
-
-## 目录
-
-- [项目设置](#项目设置)
-- [使用方法](#使用方法)
-- [功能特色](#功能特色)
-- [未来功能](#未来功能)
-- [许可证](#许可证)
-
----
-
-## 项目设置
-
-1. **克隆仓库：**
-   ```bash
-   git clone https://github.com/qiqi47/honor-of-kings-ban-pick-simulator.git
-   cd honor-of-kings-ban-pick-simulator
-   ```
-
-2. **安装依赖：**
-   确保已安装 [Node.js](https://nodejs.org/) 和 [npm](https://www.npmjs.com/)，然后运行以下命令：
-   ```bash
-   npm install
-   ```
-
-3. **启动开发服务器：**
-   使用以下命令在开发模式下运行项目：
-   ```bash
-   npm run dev
-   ```
-
-   这将启动本地服务器。
-
-## 使用方法
-
-1. 进入**Simulator**页面，即可进入ban/pick模拟界面。
-2. 可在**普通/排位模式**（2个ban位）和**比赛模式**（4个ban位）之间切换。
-3. 查看实时ban/pick阶段更新，享受交互式UI体验。
-
-## 功能特色
-
-- **动态阶段选择**：在普通/排位模式与比赛模式间自由切换，以模拟不同的选英雄设置。
-- **实时更新**：ban/pick阶段根据用户选择实时更新。
-- **灵活的Ban/Pick面板**：`GameBanPickPanel`组件能够动态渲染选英雄过程，并适应不同模式。
-
-## 未来功能
-
-- **响应式设计**：适配移动端和平板设备，为用户提供更加流畅的体验。  
-  *Responsiveness*: Enhanced responsiveness for mobile and tablet devices, ensuring a seamless user experience across various platforms.
-
-- **智能阵容推荐**：提供基于对战情况的智能英雄推荐，提高用户的战术选择效率。  
-  *Intelligent Team Recommendation*: An AI-powered team composition recommendation system that suggests optimal hero choices based on team needs and match-up analysis.
-
-## 许可证
-
-本项目基于 MIT 许可证开源。
-
----
-
-这个设置文档帮助开发者和贡献者快速了解项目的结构和目的，便于快速上手。希望您能享受此王者荣耀的BP模拟工具！
+基于 qiqi47 的原项目，保留原英雄数据及 [MIT 许可](LICENSE.txt)。[原中英文 README](docs/archive/legacy/upstream-readme.md) 已完整归档，其旧站点及旧安装说明仅作历史参考。
