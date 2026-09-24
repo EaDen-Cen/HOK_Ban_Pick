@@ -528,22 +528,28 @@ https://<fixed-domain>/overlay/draft
 
 ## M14 — Hero Database 持续维护
 
-**状态：🔁 长期任务**
+**状态：🔁 长期任务；自动检查框架已实现**
 
-英雄数据已经经过一次较大的 Global roster 补齐和审计。
+英雄数据已经经过一次较大的 Global roster 补齐和审计，并新增独立的 Hero Data Synchronizer：
 
-未来需要持续维护：
+- 每周 GitHub Actions 检查国际服公开目录；
+- 通过 Camp ID / 名称 / Alias 保持英雄身份稳定；
+- 新英雄使用新的本地 ID，绝不覆盖既有 ID；
+- 新增头像从官方资源域名下载并校验 SHA-256；
+- 远端缺失只报警，不自动删除本地英雄；
+- Counter / Combo / Be Countered 不自动抓取；
+- 候选变化先通过 Build / Tests / Lint，再自动建立 PR；
+- 每次候选同步生成可追溯的 `research/hero-sync/` 审计记录。
 
-- 新英雄
-- 英雄改名
-- 国际服正式名称
-- 中文名称
-- Hero Portrait
-- Lane / Occupation
-- Counter
-- Combo
-- Be Countered
-- Alias
+长期仍需要维护和人工判断：
+
+- 新英雄及改名；
+- 国际服正式名称与中文名称；
+- Hero Portrait；
+- Lane / Occupation 变化；
+- Counter / Combo / Be Countered；
+- Alias；
+- 赛事自定义房实际可用性。
 
 研究依据保留在：
 
@@ -552,7 +558,7 @@ research/
 docs/research/
 ```
 
-不要用国服英雄表直接覆盖国际服数据。
+同步器不会把官网首页的不完整展示 JSON 当完整英雄池，也不会用国服英雄表直接覆盖国际服数据。
 
 ---
 
