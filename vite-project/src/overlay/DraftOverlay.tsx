@@ -88,7 +88,7 @@ function HeroArtwork({ hero, alt, state }: { hero: (typeof heroes)[number]; alt:
 }
 function PickCard({ state, side, index, position }: { state: MatchState; side: Side; index: number; position: 'left' | 'right' }) {
   const t = translator(state.language), team = state[`${side}Team`];
-  const id = state[`${side}Picks`][index], hero = heroes.find(h => h.id === id);
+  const id = state[`${side}Assignments`][index] ?? undefined, hero = heroes.find(h => h.id === id);
   const heroName = hero ? (state.language === 'zh' ? hero.chineseName : hero.englishName) : t('emptyPick');
   const player = team.players[index] || t('playerNumber', { number: index + 1 });
   const role = team.playerRoles[index];
