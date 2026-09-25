@@ -5,6 +5,7 @@ import { lanes, laneName, phaseName } from '../shared/display';
 import { translator } from '../shared/i18n';
 import { phases, type Action, type MatchState } from '../shared/types';
 import { heroSortCoverage, heroSortModes, sortHeroes, type HeroSortMode } from './heroSort';
+import { enterTarget, heroMatchesSearch } from './heroSearch';
 
 export function ControlHeroPicker({ state, disabled, active, send, acknowledged }: {
   state: MatchState; disabled: boolean; active: boolean; send: (action: Action) => void;
@@ -23,9 +24,10 @@ export function ControlHeroPicker({ state, disabled, active, send, acknowledged 
   const used = [...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks];
   const unavailable = (id: number) => disabled || !phase || !!state.committedGameId || used.includes(id) || !!draftRestriction(state, phase.team, phase.action, id);
   const filtered = heroes.filter(h => (filter === 'all' || h.occupation === filter || h.altOccupation === filter)
-    && `${h.englishName} ${h.chineseName} ${(h.aliases || []).join(' ')}`.toLowerCase().includes(search.trim().toLowerCase()));
+    && heroMatchesSearch(h, search, state.language));
   const visible = sortHeroes(filtered, sortMode, unavailable);
   const eligible = visible.filter(h => !unavailable(h.id));
+  const enterHero = enterTarget(eligible, search);
   const sortCoverage = heroSortCoverage(filtered, sortMode);
   const metadataSort = sortMode === 'release' || sortMode === 'pick-rate';
   useEffect(() => {
@@ -58,9 +60,9 @@ export function ControlHeroPicker({ state, disabled, active, send, acknowledged 
         {phase && <small>{t('phaseStep',{step:state.currentPhase+1,total:phases(state.draftMode,state.firstPickSide).length})}</small>}
       </div>
       <input ref={searchInput} aria-label={t('searchHeroes')} placeholder={t('searchHeroes')} value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => {
-        if (e.key !== 'Enter' || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229 || e.repeat) return;
+        if (e.key !== 'Enter' || e.nativeEvent.isComposing || e.repeat) return;
         e.preventDefault();
-        if (active && phase && eligible.length === 1) send({type:'draft_action',...phase,heroId:eligible[0].id});
+        if (active && phase && enterHero) send({type:'draft_action',...phase,heroId:enterHero.id});
       }} />
       <p className="quick-input-hint">{t('quickInputHint')}</p>
       <div className="record-feedback" role="status">
@@ -97,7 +99,7 @@ export function ControlHeroPicker({ state, disabled, active, send, acknowledged 
     <div className="hero-grid-scroll"><div className="hero-grid">{visible.map(h => {
       const reason = phase && draftRestriction(state,phase.team,phase.action,h.id);
       const label = state.language === 'zh' ? h.chineseName : h.englishName;
-      return <button key={h.id} title={label} disabled={unavailable(h.id)} onClick={() => phase && send({type:'draft_action',...phase,heroId:h.id})}>
+      return <button key={h.id} title={label} className={enterHero?.id === h.id ? 'enter-target' : ''} disabled={unavailable(h.id)} onClick={() => phase && send({type:'draft_action',...phase,heroId:h.id})}>
         <img src={h.imageLink} alt=""/><span>{label}</span>{reason && <small className="eligibility-reason">{t(reason)}</small>}
       </button>;
     })}</div>{!visible.length && <p className="muted">{t('noMatchingHeroes')}</p>}</div>
