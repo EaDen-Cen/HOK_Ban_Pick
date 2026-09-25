@@ -352,3 +352,112 @@
   .window-capture-calibration > button { flex:1 1 180px; }
   .window-capture-calibration .muted { flex-basis:100%; white-space:normal; }
 }
+
+
+/* Four-zone Auto BP calibration and live slot status */
+.capture-zone {
+  position:absolute;
+  border:2px solid #9fb5ce;
+  background:#08111d24;
+  pointer-events:none;
+  z-index:3;
+}
+.capture-zone > span,
+.capture-slot-target > span {
+  position:absolute;
+  left:-2px;
+  top:-24px;
+  padding:3px 6px;
+  border-radius:4px 4px 0 0;
+  background:#dbe7f5;
+  color:#07101c;
+  font-size:9px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.capture-zone.bluePick,
+.capture-zone.blueBan { border-color:#5fc6ff; }
+.capture-zone.redPick,
+.capture-zone.redBan { border-color:#ff6f8a; }
+.capture-zone.bluePick > span,
+.capture-zone.blueBan > span { background:#5fc6ff; }
+.capture-zone.redPick > span,
+.capture-zone.redBan > span { background:#ff6f8a; }
+.capture-zone.active {
+  border-width:3px;
+  box-shadow:0 0 0 2px #ffffff44,0 0 16px #fff5;
+}
+.capture-zone.editing {
+  border-style:dashed;
+  border-color:#fff;
+  background:#ffffff10;
+}
+.capture-slot-target {
+  position:absolute;
+  z-index:4;
+  border:2px solid #fff;
+  box-shadow:0 0 0 9999px #00000028,0 0 16px #000c;
+  pointer-events:none;
+}
+.capture-slot-target > span {
+  top:auto;
+  bottom:-24px;
+  background:#fff;
+}
+.capture-zone-calibration {
+  display:grid;
+  gap:8px;
+  padding:10px 12px;
+  border:1px solid #2f435e;
+  border-radius:8px;
+  background:#0a1422;
+}
+.capture-zone-calibration > strong {
+  color:#dce8f6;
+  font-size:12px;
+}
+.capture-zone-buttons {
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+}
+.capture-zone-buttons button.selected {
+  background:#136b77;
+  border-color:#42bec0;
+}
+.capture-live-status {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  margin:12px 0;
+}
+.capture-live-status > div {
+  min-width:0;
+  display:grid;
+  gap:3px;
+  padding:8px 10px;
+  border:1px solid #2d4058;
+  border-radius:7px;
+  background:#0a1524;
+}
+.capture-live-status span {
+  color:#8298b4;
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.capture-live-status strong {
+  min-width:0;
+  color:#e6f0fb;
+  font-size:11px;
+  line-height:1.35;
+  overflow-wrap:anywhere;
+}
+
+@media(max-width:980px) {
+  .capture-live-status { grid-template-columns:1fr 1fr; }
+}
+@media(max-width:560px) {
+  .capture-live-status { grid-template-columns:1fr; }
+  .capture-zone-buttons button { flex:1 1 45%; }
+}
