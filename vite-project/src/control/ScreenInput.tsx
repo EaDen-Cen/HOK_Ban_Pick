@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import heroes from '../components/HeroList';
-import { captureTargetForState, captureZoneKeys, defaultCaptureZones, normalizeCaptureZones, zoneLabelKey, type CaptureZoneKey, type CaptureZones } from './bpCaptureLayout';
+import {
+  captureSlotKeys,
+  captureTargetForState,
+  defaultCaptureSlots,
+  normalizeCaptureSlots,
+  slotMeta,
+  slotsFromLegacyZones,
+  type CaptureSlotKey,
+  type CaptureSlots,
+  type LegacyCaptureZones,
+} from './bpCaptureLayout';
 import { detectEmptyBan, EMPTY_BAN_GRACE_MS, type EmptyBanStability } from './emptyBanDetection';
 import { updateHeroRecognitionStability, type HeroRecognitionStability } from './heroRecognitionStability';
-import {
-  regionFromDrag,
-  regionToPixels,
-} from './windowCaptureGeometry';
+import { regionFromDrag, regionToPixels } from './windowCaptureGeometry';
 import { phaseName } from '../shared/display';
 import { translator } from '../shared/i18n';
 import { phases, type Action, type MatchState } from '../shared/types';
@@ -36,14 +43,23 @@ type RecognitionResponse = {
 const freshEmptyStability = (): EmptyBanStability => ({ phaseKey:'', fingerprint:'', count:0 });
 const freshHeroStability = (): HeroRecognitionStability => ({ phaseKey:'', heroId:null, count:0 });
 const nativeDefault = {x:0,y:0,width:100,height:100};
-const ZONES_STORAGE='hok-window-capture-zones-v2';
+const SLOTS_STORAGE='hok-window-capture-slots-v3';
+const LEGACY_ZONES_STORAGE='hok-window-capture-zones-v2';
 
-function readCaptureZones() {
+function readCaptureSlots() {
   try {
-    const value=JSON.parse(localStorage.getItem(ZONES_STORAGE)||'null');
-    if(value&&typeof value==='object') return normalizeCaptureZones(value);
+    const value=JSON.parse(localStorage.getItem(SLOTS_STORAGE)||'null');
+    if(value&&typeof value==='object') return normalizeCaptureSlots(value);
+  } catch { /* use migration/defaults */ }
+
+  try {
+    const legacy=JSON.parse(localStorage.getItem(LEGACY_ZONES_STORAGE)||'null') as LegacyCaptureZones|null;
+    if(legacy&&typeof legacy==='object'&&legacy.bluePick&&legacy.redPick&&legacy.blueBan&&legacy.redBan) {
+      return normalizeCaptureSlots(slotsFromLegacyZones(legacy));
+    }
   } catch { /* use defaults */ }
-  return normalizeCaptureZones(defaultCaptureZones);
+
+  return normalizeCaptureSlots(defaultCaptureSlots);
 }
 
 function pointInElement(event:React.PointerEvent<HTMLElement>) {
@@ -73,7 +89,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const [nativeRegion,setNativeRegion]=useState(()=>{
     try { return JSON.parse(localStorage.getItem('hok-capture-region')||'null')||nativeDefault; } catch { return nativeDefault; }
   });
-  const [zones,setZones]=useState<CaptureZones>(readCaptureZones);
+  const [slots,setSlots]=useState<CaptureSlots>(readCaptureSlots);
   const [autoWatch,setAutoWatch]=useState(()=>localStorage.getItem('hok-capture-auto-watch')==='1');
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
@@ -81,7 +97,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const [result,setResult]=useState<CaptureResult>();
   const [selected,setSelected]=useState(0);
   const [windowInfo,setWindowInfo]=useState<WindowInfo>();
-  const [calibratingZone,setCalibratingZone]=useState<CaptureZoneKey>();
+  const [calibratingSlot,setCalibratingSlot]=useState<CaptureSlotKey>();
   const [videoReady,setVideoReady]=useState(false);
 
   const dialog=useRef<HTMLDialogElement>(null);
@@ -97,11 +113,21 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
 
   const phase=phases(state.draftMode,state.firstPickSide)[state.currentPhase];
   const phaseKey=`${state.draftGameNumber ?? state.gameNumber}:${state.currentPhase}:${phase?.team ?? 'done'}:${phase?.action ?? 'done'}`;
-  const target=useMemo(()=>captureTargetForState(state,zones),[state,zones]);
+  const target=useMemo(()=>captureTargetForState(state,slots),[state,slots]);
+
   const label=useCallback((id:number)=>{
     const hero=heroes.find(item=>item.id===id);
     return zh?hero?.chineseName??String(id):hero?.englishName??String(id);
   },[zh]);
+
+  const captureSlotLabel=useCallback((key:CaptureSlotKey)=>{
+    const meta=slotMeta(key);
+    return t('captureExplicitSlot',{
+      side:t(meta.side==='blue'?'blueSide':'redSide'),
+      action:t(meta.action==='ban'?'banAction':'pickAction'),
+      number:meta.index+1,
+    });
+  },[t]);
 
   const stopWindowCapture=useCallback(()=>{
     const stream=streamRef.current;
@@ -110,7 +136,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     if(videoRef.current) videoRef.current.srcObject=null;
     setVideoReady(false);
     setWindowInfo(undefined);
-    setCalibratingZone(undefined);
+    setCalibratingSlot(undefined);
   },[]);
 
   useEffect(()=>{
@@ -176,7 +202,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         streamRef.current=undefined;
         setVideoReady(false);
         setWindowInfo(undefined);
-        setCalibratingZone(undefined);
+        setCalibratingSlot(undefined);
         setMessage(t('windowCaptureEnded'));
       },{once:true});
       setMessage(t('windowCaptureConnected'));
@@ -192,7 +218,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     const video=videoRef.current;
     if(!videoReady||!video||!video.videoWidth||!video.videoHeight) throw new Error(t('windowCaptureNotConnected'));
     if(!target) throw new Error(t('captureNoActiveSlot'));
-    const pixels=regionToPixels(target.slot,video.videoWidth,video.videoHeight);
+    const pixels=regionToPixels(target.region,video.videoWidth,video.videoHeight);
     const maxSide=384;
     const scale=Math.min(1,maxSide/Math.max(pixels.width,pixels.height));
     const canvas=document.createElement('canvas');
@@ -319,24 +345,26 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   };
 
   const pointerDown=(event:React.PointerEvent<HTMLDivElement>)=>{
-    if(!calibratingZone||!videoReady) return;
+    if(!calibratingSlot||!videoReady) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     dragStart.current=pointInElement(event);
   };
+
   const pointerMove=(event:React.PointerEvent<HTMLDivElement>)=>{
-    if(!calibratingZone||!dragStart.current) return;
+    if(!calibratingSlot||!dragStart.current) return;
     const next=regionFromDrag(dragStart.current,pointInElement(event));
-    setZones(previous=>({...previous,[calibratingZone]:next}));
+    setSlots(previous=>({...previous,[calibratingSlot]:next}));
   };
+
   const pointerUp=(event:React.PointerEvent<HTMLDivElement>)=>{
-    if(!calibratingZone||!dragStart.current) return;
+    if(!calibratingSlot||!dragStart.current) return;
     const next=regionFromDrag(dragStart.current,pointInElement(event));
     dragStart.current=null;
-    const updated={...zones,[calibratingZone]:next};
-    setZones(updated);
-    localStorage.setItem(ZONES_STORAGE,JSON.stringify(updated));
-    setMessage(t('captureZoneSaved',{zone:t(zoneLabelKey(calibratingZone))}));
-    setCalibratingZone(undefined);
+    const updated={...slots,[calibratingSlot]:next};
+    setSlots(updated);
+    localStorage.setItem(SLOTS_STORAGE,JSON.stringify(updated));
+    setMessage(t('captureExplicitSlotSaved',{slot:captureSlotLabel(calibratingSlot)}));
+    setCalibratingSlot(undefined);
   };
 
   const closeReview=()=>{
@@ -365,11 +393,31 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     })
     : t('draftComplete');
 
+  const renderSlotButtons=(side:'blue'|'red',action:'ban'|'pick')=>{
+    const count=action==='ban'?4:5;
+    return <div className={`explicit-slot-group ${side} ${action}`}>
+      <strong>{t(side==='blue'?'blueSide':'redSide')} · {t(action==='ban'?'banAction':'pickAction')}</strong>
+      <div className="explicit-slot-buttons">{Array.from({length:count},(_,index)=>{
+        const key=`${side}${action==='ban'?'Ban':'Pick'}${index+1}` as CaptureSlotKey;
+        return <button
+          type="button"
+          key={key}
+          disabled={!videoReady}
+          className={[
+            calibratingSlot===key?'selected':'',
+            target?.key===key?'active':'',
+          ].filter(Boolean).join(' ')}
+          onClick={()=>setCalibratingSlot(current=>current===key?undefined:key)}
+        >{action==='ban'?'B':'P'}{index+1}</button>;
+      })}</div>
+    </div>;
+  };
+
   return <section className="panel screen-input">
     <div className="screen-input-heading">
       <div>
         <h2>{zh?'自动 BP · 屏幕识别':'Auto BP · screen recognition'}</h2>
-        <p>{t('captureFourZoneHint')}</p>
+        <p>{t('captureExplicitSlotsHint')}</p>
       </div>
       <div className="capture-mode-switch" role="group" aria-label={t('captureSource')}>
         <button type="button" className={captureMode==='window'?'selected':''} onClick={()=>setMode('window')}>{t('windowCaptureMode')}</button>
@@ -385,42 +433,42 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       </div>
 
       <div
-        className={`window-capture-preview ${videoReady?'ready':''} ${calibratingZone?'calibrating':''}`}
+        className={`window-capture-preview ${videoReady?'ready':''} ${calibratingSlot?'calibrating':''}`}
         onPointerDown={pointerDown}
         onPointerMove={pointerMove}
         onPointerUp={pointerUp}
         onPointerCancel={()=>{dragStart.current=null;}}
       >
         <video ref={videoRef} playsInline muted />
-        {videoReady&&captureZoneKeys.map(key=><div
+        {videoReady&&captureSlotKeys.map(key=><div
           key={key}
-          className={`capture-zone ${key} ${target?.key===key?'active':''} ${calibratingZone===key?'editing':''}`}
-          style={percentageStyle(zones[key])}
-        ><span>{t(zoneLabelKey(key))}</span></div>)}
-        {videoReady&&target&&<div className="capture-slot-target" style={percentageStyle(target.slot)}>
-          <span>{currentSlotText}</span>
-        </div>}
+          className={`capture-explicit-slot ${key.startsWith('blue')?'blue':'red'} ${key.includes('Ban')?'ban':'pick'} ${target?.key===key?'active':''} ${calibratingSlot===key?'editing':''}`}
+          style={percentageStyle(slots[key])}
+        ><span>{captureSlotLabel(key)}</span></div>)}
         {!videoReady&&<div className="window-capture-placeholder">{t('windowCaptureChooseHint')}</div>}
       </div>
 
-      <div className="capture-zone-calibration">
-        <strong>{t('captureCalibrateFourZones')}</strong>
-        <div className="capture-zone-buttons">
-          {captureZoneKeys.map(key=><button
-            type="button"
-            key={key}
-            disabled={!videoReady}
-            className={calibratingZone===key?'selected':''}
-            onClick={()=>setCalibratingZone(current=>current===key?undefined:key)}
-          >{calibratingZone===key?t('windowCaptureDragNow'):t(zoneLabelKey(key))}</button>)}
+      <div className="explicit-slot-calibration">
+        <div className="explicit-slot-calibration-heading">
+          <div>
+            <strong>{t('captureCalibrateExplicitSlots')}</strong>
+            <p className="muted">{calibratingSlot?t('captureDragSelectedSlot',{slot:captureSlotLabel(calibratingSlot)}):t('captureExplicitCalibrationHint')}</p>
+          </div>
           <button type="button" disabled={!videoReady} onClick={()=>{
-            const next=normalizeCaptureZones(defaultCaptureZones);
-            setZones(next);
-            localStorage.setItem(ZONES_STORAGE,JSON.stringify(next));
-            setMessage(t('captureZonesReset'));
-          }}>{t('windowCaptureResetArea')}</button>
+            const next=normalizeCaptureSlots(defaultCaptureSlots);
+            setSlots(next);
+            localStorage.setItem(SLOTS_STORAGE,JSON.stringify(next));
+            setCalibratingSlot(undefined);
+            setMessage(t('captureExplicitSlotsReset'));
+          }}>{t('captureResetAllSlots')}</button>
         </div>
-        <p className="muted">{t('captureZoneCalibrationHint')}</p>
+
+        <div className="explicit-slot-groups">
+          {renderSlotButtons('blue','ban')}
+          {renderSlotButtons('red','ban')}
+          {renderSlotButtons('blue','pick')}
+          {renderSlotButtons('red','pick')}
+        </div>
       </div>
 
       <p className="muted">{videoReady&&windowInfo?`${windowInfo.width}×${windowInfo.height} · ${windowInfo.surface} · ${t('windowCaptureRelativeHint')}`:t('windowCaptureRelativeHint')}</p>
@@ -451,7 +499,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         localStorage.setItem('hok-capture-auto-watch',event.target.checked?'1':'0');
       }}/>{t('autoCaptureWatch')}</label>
     </div>
-    <small>{captureMode==='window'?t('captureAutoSlotHint'):t('autoCaptureWatchHint')}</small>
+    <small>{captureMode==='window'?t('captureExplicitAutoHint'):t('autoCaptureWatchHint')}</small>
     <p role="status">{message}</p>
 
     {result&&<dialog ref={dialog} className="library-dialog capture-review" aria-label={result.kind==='empty-ban'?t('emptyBanReviewTitle'):(zh?'确认识别结果':'Review recognition')} onCancel={event=>{event.preventDefault();closeReview();}}>

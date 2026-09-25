@@ -1,46 +1,60 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { captureTargetForState, defaultCaptureZones, slotInsideZone } from '../src/control/bpCaptureLayout.js';
+import {
+  captureSlotKeys,
+  captureTargetForState,
+  defaultCaptureSlots,
+  normalizeCaptureSlots,
+  slotMeta,
+} from '../src/control/bpCaptureLayout.js';
 
-test('match BP maps current phase to the correct team/action slot',()=>{
-  const base={draftMode:'match' as const,firstPickSide:'blue' as const,currentPhase:0};
-  const first=captureTargetForState(base,defaultCaptureZones)!;
-  assert.equal(first.key,'blueBan');
-  assert.equal(first.slotIndex,0);
-  assert.equal(first.slotCount,4);
+test('capture layout exposes exactly 18 independently stored slots',()=>{
+  assert.equal(captureSlotKeys.length,18);
+  assert.equal(new Set(captureSlotKeys).size,18);
+  assert.equal(captureSlotKeys.filter(key=>key.includes('Ban')).length,8);
+  assert.equal(captureSlotKeys.filter(key=>key.includes('Pick')).length,10);
 
-  const redSecond=captureTargetForState({...base,currentPhase:1},defaultCaptureZones)!;
-  assert.equal(redSecond.key,'redBan');
-  assert.equal(redSecond.slotIndex,0);
-
-  const firstPick=captureTargetForState({...base,currentPhase:4},defaultCaptureZones)!;
-  assert.equal(firstPick.key,'bluePick');
-  assert.equal(firstPick.slotIndex,0);
-  assert.equal(firstPick.slotCount,5);
-
-  const redPick2=captureTargetForState({...base,currentPhase:6},defaultCaptureZones)!;
-  assert.equal(redPick2.key,'redPick');
-  assert.equal(redPick2.slotIndex,1);
+  const changed=normalizeCaptureSlots(defaultCaptureSlots);
+  const originalOther=structuredClone(changed.redPick5);
+  changed.blueBan1={x:.51,y:.52,width:.12,height:.13};
+  assert.deepEqual(changed.redPick5,originalOther);
+  assert.notDeepEqual(changed.blueBan1,defaultCaptureSlots.blueBan1);
 });
 
-test('red first-pick swaps capture sides but preserves per-side slot counts',()=>{
+test('match BP maps every phase to one explicit slot key',()=>{
+  const state={draftMode:'match' as const,firstPickSide:'blue' as const,currentPhase:0};
+  const expected=[
+    'blueBan1','redBan1','blueBan2','redBan2',
+    'bluePick1','redPick1','redPick2','bluePick2','bluePick3','redPick3',
+    'redBan3','blueBan3','redBan4','blueBan4',
+    'redPick4','bluePick4','bluePick5','redPick5',
+  ];
+  for(let phase=0;phase<expected.length;phase++) {
+    const target=captureTargetForState({...state,currentPhase:phase},defaultCaptureSlots)!;
+    assert.equal(target.key,expected[phase]);
+    assert.deepEqual(target.region,defaultCaptureSlots[expected[phase] as keyof typeof defaultCaptureSlots]);
+  }
+});
+
+test('red first-pick mirrors the team ownership without changing slot numbers',()=>{
   const state={draftMode:'match' as const,firstPickSide:'red' as const,currentPhase:0};
-  const first=captureTargetForState(state,defaultCaptureZones)!;
-  assert.equal(first.key,'redBan');
-  const firstPick=captureTargetForState({...state,currentPhase:4},defaultCaptureZones)!;
-  assert.equal(firstPick.key,'redPick');
-  assert.equal(firstPick.slotIndex,0);
+  assert.equal(captureTargetForState(state,defaultCaptureSlots)!.key,'redBan1');
+  assert.equal(captureTargetForState({...state,currentPhase:4},defaultCaptureSlots)!.key,'redPick1');
+  assert.equal(captureTargetForState({...state,currentPhase:17},defaultCaptureSlots)!.key,'bluePick5');
 });
 
-test('Pick columns split vertically and Ban rows split horizontally',()=>{
-  const zone={x:.1,y:.2,width:.5,height:.6};
-  const pick0=slotInsideZone(zone,'pick',0,5);
-  const pick4=slotInsideZone(zone,'pick',4,5);
-  assert.ok(pick4.y>pick0.y);
-  assert.ok(Math.abs(pick0.x-pick4.x)<1e-9);
+test('normal BP uses only B1/B2 while keeping all 18 calibration boxes available',()=>{
+  const state={draftMode:'normal' as const,firstPickSide:'blue' as const,currentPhase:0};
+  const keys=Array.from({length:14},(_,phase)=>captureTargetForState({...state,currentPhase:phase},defaultCaptureSlots)!.key);
+  assert.ok(keys.includes('blueBan1'));
+  assert.ok(keys.includes('blueBan2'));
+  assert.ok(keys.includes('redBan1'));
+  assert.ok(keys.includes('redBan2'));
+  assert.equal(keys.some(key=>key==='blueBan3'||key==='blueBan4'||key==='redBan3'||key==='redBan4'),false);
+  assert.equal(captureSlotKeys.length,18);
+});
 
-  const ban0=slotInsideZone(zone,'ban',0,4);
-  const ban3=slotInsideZone(zone,'ban',3,4);
-  assert.ok(ban3.x>ban0.x);
-  assert.ok(Math.abs(ban0.y-ban3.y)<1e-9);
+test('slot metadata is explicit and stable',()=>{
+  assert.deepEqual(slotMeta('blueBan4'),{side:'blue',action:'ban',index:3});
+  assert.deepEqual(slotMeta('redPick5'),{side:'red',action:'pick',index:4});
 });
