@@ -151,7 +151,7 @@ test("reviewed Ao'yin artwork override wins over auto-synced full art", () => {
   assert.equal(aoyin.chineseName, '敖隐');
   assert.equal(
     aoyin.artLink,
-    'https://game.gtimg.cn/images/yxzj/coming/v2/heros//image/20250219/17399349866962.jpg',
+    "/heroesArt/ao'yin.jpg",
   );
 });
 

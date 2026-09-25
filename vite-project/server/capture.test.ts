@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { IncomingMessage } from 'node:http';
-import { captureRegion, captureRegions, localCaptureRequest } from './capture.js';
+import { captureRegion, captureRegions, decodeClientCapture, localCaptureRequest } from './capture.js';
 import { Store } from './store.js';
 import type { MatchSettings } from '../src/shared/types.js';
 test('capture accepts bounded negative-monitor coordinates and rejects oversized/malformed regions',()=>{
@@ -32,4 +32,13 @@ test('input and score settings are authoritative, validated, undoable and delaye
   assert.throws(()=>store.apply('settings-002',1,{type:'settings',settings:{...settings,bpInputMode:'bad'} as unknown as MatchSettings}));
   assert.equal(store.data.revision,1);
   store.apply('undo-mode-001',1,{type:'undo'}); assert.equal(store.data.state.bpInputMode,'manual');
+});
+
+
+test('browser frame upload accepts bounded image data URLs only',()=>{
+  const tiny='data:image/png;base64,'+Buffer.from('png').toString('base64');
+  assert.equal(decodeClientCapture(tiny).toString(),'png');
+  assert.throws(()=>decodeClientCapture('https://example.com/frame.png'));
+  assert.throws(()=>decodeClientCapture('data:text/plain;base64,SGVsbG8='));
+  assert.throws(()=>decodeClientCapture(123));
 });

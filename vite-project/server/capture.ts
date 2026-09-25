@@ -89,3 +89,22 @@ export async function recognizeLineup(
     })));
   } finally { busy = false; }
 }
+
+
+export function decodeClientCapture(value: unknown) {
+  if (typeof value !== 'string') throw new Error('Invalid client capture');
+  const match=value.match(/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/);
+  if(!match) throw new Error('Invalid client capture');
+  const buffer=Buffer.from(match[2],'base64');
+  if(!buffer.length||buffer.length>3*1024*1024) throw new Error('Invalid client capture');
+  return buffer;
+}
+
+export async function recognizeClientFrame(value: unknown) {
+  const buffer=decodeClientCapture(value);
+  return {
+    preview:value as string,
+    fingerprint:await frameFingerprint(buffer),
+    candidates:await recognizeImage(buffer),
+  };
+}
