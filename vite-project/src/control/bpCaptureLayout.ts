@@ -1,5 +1,5 @@
-import { phases, type MatchState, type Side } from '../shared/types';
-import { normalizeCaptureRegion, type NormalizedCaptureRegion } from './windowCaptureGeometry';
+import { phases, type MatchState, type Side } from '../shared/types.js';
+import { normalizeCaptureRegion, type NormalizedCaptureRegion } from './windowCaptureGeometry.js';
 
 export type CaptureZoneKey = 'bluePick' | 'redPick' | 'blueBan' | 'redBan';
 
