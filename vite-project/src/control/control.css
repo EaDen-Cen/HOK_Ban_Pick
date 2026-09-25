@@ -469,3 +469,112 @@
   outline-offset:2px;
   box-shadow:0 0 0 1px #53d1d180,0 0 14px #53d1d145;
 }
+
+
+/* 18 independent Auto BP capture boxes */
+.capture-explicit-slot {
+  position:absolute;
+  z-index:3;
+  border:1px solid #9fb5ce88;
+  background:#08111d12;
+  pointer-events:none;
+}
+.capture-explicit-slot > span {
+  display:none;
+  position:absolute;
+  left:-1px;
+  top:-20px;
+  padding:2px 5px;
+  border-radius:3px 3px 0 0;
+  color:#07101c;
+  font-size:8px;
+  font-weight:800;
+  line-height:1.2;
+  white-space:nowrap;
+}
+.capture-explicit-slot.blue { border-color:#5fc6ff88; }
+.capture-explicit-slot.red { border-color:#ff6f8a88; }
+.capture-explicit-slot.blue > span { background:#5fc6ff; }
+.capture-explicit-slot.red > span { background:#ff6f8a; }
+.capture-explicit-slot.active {
+  z-index:5;
+  border:3px solid #fff;
+  background:transparent;
+  box-shadow:0 0 0 1px #47d5ff,0 0 18px #000d;
+}
+.capture-explicit-slot.active > span,
+.capture-explicit-slot.editing > span {
+  display:block;
+}
+.capture-explicit-slot.editing {
+  z-index:6;
+  border:2px dashed #fff;
+  background:#ffffff10;
+  box-shadow:0 0 0 9999px #00000022;
+}
+.explicit-slot-calibration {
+  display:grid;
+  gap:10px;
+  padding:12px;
+  border:1px solid #2f435e;
+  border-radius:8px;
+  background:#0a1422;
+}
+.explicit-slot-calibration-heading {
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+}
+.explicit-slot-calibration-heading > div {
+  min-width:0;
+  display:grid;
+  gap:4px;
+}
+.explicit-slot-calibration-heading p { margin:0; }
+.explicit-slot-groups {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+}
+.explicit-slot-group {
+  min-width:0;
+  padding:9px;
+  border:1px solid #273b54;
+  border-radius:7px;
+  background:#08111e;
+}
+.explicit-slot-group > strong {
+  display:block;
+  margin-bottom:7px;
+  font-size:10px;
+}
+.explicit-slot-group.blue > strong { color:#69caff; }
+.explicit-slot-group.red > strong { color:#ff8197; }
+.explicit-slot-buttons {
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:5px;
+}
+.explicit-slot-group.ban .explicit-slot-buttons {
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+.explicit-slot-buttons button {
+  min-width:0;
+  padding:7px 5px;
+  font-size:10px;
+}
+.explicit-slot-buttons button.active {
+  border-color:#fff;
+  box-shadow:inset 0 0 0 1px #ffffff88;
+}
+.explicit-slot-buttons button.selected {
+  background:#136b77;
+  border-color:#57d6d3;
+}
+
+@media(max-width:760px) {
+  .explicit-slot-calibration-heading { flex-direction:column; }
+  .explicit-slot-calibration-heading > button { width:100%; }
+  .explicit-slot-groups { grid-template-columns:1fr; }
+}
