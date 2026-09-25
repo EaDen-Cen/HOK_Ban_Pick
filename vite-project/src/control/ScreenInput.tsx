@@ -98,6 +98,10 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const phase=phases(state.draftMode,state.firstPickSide)[state.currentPhase];
   const phaseKey=`${state.draftGameNumber ?? state.gameNumber}:${state.currentPhase}:${phase?.team ?? 'done'}:${phase?.action ?? 'done'}`;
   const target=useMemo(()=>captureTargetForState(state,zones),[state,zones]);
+  const label=useCallback((id:number)=>{
+    const hero=heroes.find(item=>item.id===id);
+    return zh?hero?.chineseName??String(id):hero?.englishName??String(id);
+  },[zh]);
 
   const stopWindowCapture=useCallback(()=>{
     const stream=streamRef.current;
@@ -295,7 +299,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       busyRef.current=false;
       if(mounted.current) setBusy(false);
     }
-  },[captureMode,captureWindowFrame,disabled,nativeRegion,phase,phaseKey,revision,state.committedGameId,t,token,zh]);
+  },[captureMode,captureWindowFrame,disabled,label,nativeRegion,phase,phaseKey,revision,state.committedGameId,t,token,zh]);
 
   useEffect(()=>{
     if(!autoWatch||result||disabled||!phase||state.committedGameId) return;
@@ -333,11 +337,6 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     localStorage.setItem(ZONES_STORAGE,JSON.stringify(updated));
     setMessage(t('captureZoneSaved',{zone:t(zoneLabelKey(calibratingZone))}));
     setCalibratingZone(undefined);
-  };
-
-  const label=(id:number)=>{
-    const hero=heroes.find(item=>item.id===id);
-    return zh?hero?.chineseName??String(id):hero?.englishName??String(id);
   };
 
   const closeReview=()=>{
