@@ -461,3 +461,11 @@
   .capture-live-status { grid-template-columns:1fr; }
   .capture-zone-buttons button { flex:1 1 45%; }
 }
+
+
+/* Keyboard search: show exactly which available hero Enter will submit. */
+.control-hero-picker .hero-grid button.enter-target:not(:disabled) {
+  outline:2px solid #f5f7fb;
+  outline-offset:2px;
+  box-shadow:0 0 0 1px #53d1d180,0 0 14px #53d1d145;
+}

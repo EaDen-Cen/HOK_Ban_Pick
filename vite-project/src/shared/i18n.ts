@@ -155,7 +155,7 @@ const messages = {
   emptyBanReviewHintOnce: { zh:'当前 Ban 阶段已经等待超过保护时间，并连续 3 次看到稳定的低置信度空槽。请确认是否空 Ban；如果拒绝，本阶段不会再次询问，但仍会继续识别正常英雄。', eng:'This Ban phase passed the grace period and showed the same low-confidence empty slot for 3 scans. Confirm an empty ban if correct. If rejected, this phase will not ask again, while normal hero recognition continues.' },
   captureNow: { zh:'立即识别', eng:'Recognize now' },
   emptyBanOnlyDuringBan: { zh:'只有当前阶段为 Ban 时才能记录空 Ban。', eng:'An empty ban can only be recorded during a Ban phase.' },
-  quickInputHint: { zh: '/ 或 Ctrl+K 搜索 · Esc 清空 · 仅一个可选结果时按 Enter 录入', eng: '/ or Ctrl+K to search · Esc to clear · Enter submits only one eligible result' },
+  quickInputHint: { zh: '/ 或 Ctrl+K 搜索 · 中文模式支持拼音声母（如 lplp）· Enter 录入当前第一个可用结果 · Esc 清空', eng: '/ or Ctrl+K to search · Enter submits the first available filtered result · Esc clears' },
   recordAccepted: { zh: '已记录：{side} {action} · {hero}', eng: 'Recorded: {side} {action} · {hero}' },
   pickAction: { zh: '选择', eng: 'PICK' },
   banAction: { zh: '禁用', eng: 'BAN' },
