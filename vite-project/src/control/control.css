@@ -219,3 +219,136 @@
   .screen-input-actions { align-items:stretch; }
   .screen-input-actions > button { flex:1 1 auto; }
 }
+
+
+/* Browser-selected game-window capture for Auto BP */
+.screen-input-heading {
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  align-items:flex-start;
+}
+.screen-input-heading > div:first-child { min-width:0; }
+.capture-mode-switch {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  flex:0 0 auto;
+}
+.capture-mode-switch button.selected,
+.window-capture-calibration button.selected {
+  background:#136b77;
+  border-color:#42bec0;
+}
+.window-capture {
+  display:grid;
+  gap:10px;
+  margin:12px 0;
+}
+.window-capture-toolbar {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+.window-capture-status {
+  min-width:0;
+  max-width:100%;
+  color:#9aabc0;
+  font-size:11px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.window-capture-status.connected { color:#73deb6; }
+.window-capture-preview {
+  position:relative;
+  width:min(100%,960px);
+  min-height:220px;
+  margin:0 auto;
+  overflow:hidden;
+  border:1px solid #334a67;
+  border-radius:8px;
+  background:#050b13;
+  touch-action:none;
+  user-select:none;
+}
+.window-capture-preview video {
+  width:100%;
+  height:auto;
+  max-height:58dvh;
+  display:block;
+  object-fit:contain;
+  background:#02050a;
+}
+.window-capture-placeholder {
+  min-height:260px;
+  display:grid;
+  place-items:center;
+  padding:26px;
+  color:#91a7c3;
+  text-align:center;
+  line-height:1.5;
+}
+.window-capture-preview.calibrating {
+  cursor:crosshair;
+  border-color:#53d1d1;
+  box-shadow:0 0 0 1px #53d1d155;
+}
+.capture-roi {
+  position:absolute;
+  border:2px solid #fff;
+  box-shadow:0 0 0 9999px #0005,0 0 14px #000a;
+  pointer-events:none;
+}
+.capture-roi > span {
+  position:absolute;
+  left:-2px;
+  top:-26px;
+  padding:3px 7px;
+  background:#fff;
+  color:#07101c;
+  font-size:10px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.window-capture-calibration {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+}
+.window-capture-calibration .muted {
+  min-width:0;
+  flex:1 1 240px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.native-capture-settings {
+  margin:12px 0;
+  padding:10px 12px;
+  border:1px solid #31445e;
+  border-radius:8px;
+  background:#091321;
+}
+.native-capture-settings summary {
+  cursor:pointer;
+  font-weight:700;
+}
+.screen-input-phase {
+  margin:10px 0;
+  font-weight:700;
+  color:#dce8f6;
+}
+
+@media(max-width:760px) {
+  .screen-input-heading { flex-direction:column; }
+  .capture-mode-switch { width:100%; }
+  .capture-mode-switch button { flex:1 1 150px; }
+  .window-capture-preview { min-height:180px; }
+  .window-capture-placeholder { min-height:200px; }
+  .window-capture-calibration { align-items:stretch; }
+  .window-capture-calibration > button { flex:1 1 180px; }
+  .window-capture-calibration .muted { flex-basis:100%; white-space:normal; }
+}
