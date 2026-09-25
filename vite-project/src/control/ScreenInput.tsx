@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import heroes from '../components/HeroList';
-import { detectEmptyBan, type EmptyBanStability } from './emptyBanDetection';
+import { captureTargetForState, captureZoneKeys, defaultCaptureZones, normalizeCaptureZones, zoneLabelKey, type CaptureZoneKey, type CaptureZones } from './bpCaptureLayout';
+import { detectEmptyBan, EMPTY_BAN_GRACE_MS, type EmptyBanStability } from './emptyBanDetection';
+import { updateHeroRecognitionStability, type HeroRecognitionStability } from './heroRecognitionStability';
 import {
-  defaultNormalizedCaptureRegion,
-  normalizeCaptureRegion,
   regionFromDrag,
   regionToPixels,
-  type NormalizedCaptureRegion,
 } from './windowCaptureGeometry';
 import { phaseName } from '../shared/display';
 import { translator } from '../shared/i18n';
@@ -34,15 +33,17 @@ type RecognitionResponse = {
   fingerprint?:string;
 };
 
-const freshStability = (): EmptyBanStability => ({ phaseKey:'', fingerprint:'', count:0 });
+const freshEmptyStability = (): EmptyBanStability => ({ phaseKey:'', fingerprint:'', count:0 });
+const freshHeroStability = (): HeroRecognitionStability => ({ phaseKey:'', heroId:null, count:0 });
 const nativeDefault = {x:0,y:0,width:100,height:100};
+const ZONES_STORAGE='hok-window-capture-zones-v2';
 
-function readNormalizedRegion() {
+function readCaptureZones() {
   try {
-    const value=JSON.parse(localStorage.getItem('hok-window-capture-roi')||'null');
-    if(value&&typeof value==='object') return normalizeCaptureRegion(value);
-  } catch { /* use default */ }
-  return defaultNormalizedCaptureRegion;
+    const value=JSON.parse(localStorage.getItem(ZONES_STORAGE)||'null');
+    if(value&&typeof value==='object') return normalizeCaptureZones(value);
+  } catch { /* use defaults */ }
+  return normalizeCaptureZones(defaultCaptureZones);
 }
 
 function pointInElement(event:React.PointerEvent<HTMLElement>) {
@@ -53,9 +54,18 @@ function pointInElement(event:React.PointerEvent<HTMLElement>) {
   };
 }
 
+function percentageStyle(region:{x:number;y:number;width:number;height:number}) {
+  return {
+    left:`${region.x*100}%`,
+    top:`${region.y*100}%`,
+    width:`${region.width*100}%`,
+    height:`${region.height*100}%`,
+  };
+}
+
 export function ScreenInput({ state, revision, token, disabled, send }: { state:MatchState; revision:number; token:string; disabled:boolean; send:(action:Action)=>void }) {
-  const zh = state.language === 'zh';
-  const t = translator(state.language);
+  const zh=state.language==='zh';
+  const t=translator(state.language);
   const [captureMode,setCaptureMode]=useState<CaptureMode>(()=>{
     const saved=localStorage.getItem('hok-capture-mode');
     return saved==='native'?'native':'window';
@@ -63,14 +73,15 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const [nativeRegion,setNativeRegion]=useState(()=>{
     try { return JSON.parse(localStorage.getItem('hok-capture-region')||'null')||nativeDefault; } catch { return nativeDefault; }
   });
-  const [roi,setRoi]=useState<NormalizedCaptureRegion>(readNormalizedRegion);
+  const [zones,setZones]=useState<CaptureZones>(readCaptureZones);
   const [autoWatch,setAutoWatch]=useState(()=>localStorage.getItem('hok-capture-auto-watch')==='1');
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
+  const [candidateStatus,setCandidateStatus]=useState('');
   const [result,setResult]=useState<CaptureResult>();
   const [selected,setSelected]=useState(0);
   const [windowInfo,setWindowInfo]=useState<WindowInfo>();
-  const [calibrating,setCalibrating]=useState(false);
+  const [calibratingZone,setCalibratingZone]=useState<CaptureZoneKey>();
   const [videoReady,setVideoReady]=useState(false);
 
   const dialog=useRef<HTMLDialogElement>(null);
@@ -79,9 +90,14 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const mounted=useRef(true);
   const busyRef=useRef(false);
   const dragStart=useRef<{x:number;y:number}|null>(null);
-  const stability=useRef<EmptyBanStability>(freshStability());
+  const emptyStability=useRef<EmptyBanStability>(freshEmptyStability());
+  const heroStability=useRef<HeroRecognitionStability>(freshHeroStability());
+  const phaseStartedAt=useRef(Date.now());
+  const emptyPromptedPhase=useRef('');
+
   const phase=phases(state.draftMode,state.firstPickSide)[state.currentPhase];
   const phaseKey=`${state.draftGameNumber ?? state.gameNumber}:${state.currentPhase}:${phase?.team ?? 'done'}:${phase?.action ?? 'done'}`;
+  const target=useMemo(()=>captureTargetForState(state,zones),[state,zones]);
 
   const stopWindowCapture=useCallback(()=>{
     const stream=streamRef.current;
@@ -90,7 +106,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     if(videoRef.current) videoRef.current.srcObject=null;
     setVideoReady(false);
     setWindowInfo(undefined);
-    setCalibrating(false);
+    setCalibratingZone(undefined);
   },[]);
 
   useEffect(()=>{
@@ -103,9 +119,13 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   },[]);
 
   useEffect(()=>{
-    stability.current=freshStability();
+    emptyStability.current=freshEmptyStability();
+    heroStability.current=freshHeroStability();
+    phaseStartedAt.current=Date.now();
+    emptyPromptedPhase.current='';
     setResult(undefined);
     setMessage('');
+    setCandidateStatus('');
   },[phaseKey]);
 
   useEffect(()=>{
@@ -140,20 +160,19 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       }
       const track=stream.getVideoTracks()[0];
       const settings=track.getSettings();
-      const refreshInfo=()=>setWindowInfo({
+      setWindowInfo({
         label:track.label||t('windowCaptureConnected'),
         surface:String(settings.displaySurface||'window'),
         width:video.videoWidth||settings.width||0,
         height:video.videoHeight||settings.height||0,
       });
-      refreshInfo();
       setVideoReady(true);
       track.addEventListener('ended',()=>{
         if(!mounted.current) return;
         streamRef.current=undefined;
         setVideoReady(false);
         setWindowInfo(undefined);
-        setCalibrating(false);
+        setCalibratingZone(undefined);
         setMessage(t('windowCaptureEnded'));
       },{once:true});
       setMessage(t('windowCaptureConnected'));
@@ -168,8 +187,9 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const captureWindowFrame=useCallback(()=>{
     const video=videoRef.current;
     if(!videoReady||!video||!video.videoWidth||!video.videoHeight) throw new Error(t('windowCaptureNotConnected'));
-    const pixels=regionToPixels(roi,video.videoWidth,video.videoHeight);
-    const maxSide=640;
+    if(!target) throw new Error(t('captureNoActiveSlot'));
+    const pixels=regionToPixels(target.slot,video.videoWidth,video.videoHeight);
+    const maxSide=384;
     const scale=Math.min(1,maxSide/Math.max(pixels.width,pixels.height));
     const canvas=document.createElement('canvas');
     canvas.width=Math.max(32,Math.round(pixels.width*scale));
@@ -183,8 +203,8 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       pixels.x,pixels.y,pixels.width,pixels.height,
       0,0,canvas.width,canvas.height,
     );
-    return canvas.toDataURL('image/jpeg',.88);
-  },[roi,t,videoReady]);
+    return canvas.toDataURL('image/jpeg',.9);
+  },[target,t,videoReady]);
 
   const capture=useCallback(async()=>{
     if(busyRef.current||disabled||!phase||state.committedGameId) return;
@@ -216,29 +236,58 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       }
       if(!mounted.current) return;
 
-      const top=data.candidates?.[0] as {heroId:number;confidence:number}|undefined;
-      const empty=detectEmptyBan(stability.current,{
+      const candidates=data.candidates??[];
+      const heroEvidence=updateHeroRecognitionStability(heroStability.current,phaseKey,candidates);
+      heroStability.current=heroEvidence.stability;
+      const top=heroEvidence.top;
+      const elapsedMs=Date.now()-phaseStartedAt.current;
+      const empty=detectEmptyBan(emptyStability.current,{
         phaseKey,
         isBan:phase.action==='ban',
         fingerprint:data.fingerprint,
         topConfidence:top?.confidence,
+        elapsedMs,
+        suppressed:emptyPromptedPhase.current===phaseKey,
       });
-      stability.current=empty.stability;
+      emptyStability.current=empty.stability;
 
-      if(top&&top.confidence>=.55){
+      if(heroEvidence.accepted&&top){
         setSelected(top.heroId);
-        setResult({kind:'hero',candidates:data.candidates??[],preview:data.preview,at:Date.now()});
+        setCandidateStatus(t('captureHeroStable',{
+          hero:label(top.heroId),
+          confidence:Math.round(top.confidence*100),
+          count:heroEvidence.stability.count,
+        }));
+        setResult({kind:'hero',candidates,preview:data.preview,at:Date.now()});
         return;
       }
+
+      if(top){
+        setCandidateStatus(t('captureHeroCandidate',{
+          hero:label(top.heroId),
+          confidence:Math.round(top.confidence*100),
+          count:heroEvidence.stability.count,
+        }));
+      }else{
+        setCandidateStatus(t('captureNoCandidate'));
+      }
+
       if(empty.suspected){
-        setResult({kind:'empty-ban',candidates:data.candidates||[],preview:data.preview,at:Date.now()});
+        emptyPromptedPhase.current=phaseKey;
+        setResult({kind:'empty-ban',candidates,preview:data.preview,at:Date.now()});
         setMessage(t('emptyBanSuspected',{count:3}));
         return;
       }
-      if(phase.action==='ban'&&(top?.confidence??0)<.35){
+
+      if(phase.action==='ban'&&empty.waitingForGracePeriod){
+        const remaining=Math.max(0,Math.ceil((EMPTY_BAN_GRACE_MS-elapsedMs)/1000));
+        setMessage(t('emptyBanGraceWaiting',{seconds:remaining}));
+      }else if(phase.action==='ban'&&emptyPromptedPhase.current===phaseKey){
+        setMessage(t('emptyBanSuppressed'));
+      }else if(phase.action==='ban'&&(top?.confidence??0)<.35){
         setMessage(t('emptyBanSuspected',{count:empty.stability.count}));
       }else{
-        setMessage(zh?'没有可靠候选；自动监视会继续读取，或可直接手动选择。':'No reliable candidate yet. Auto-watch will keep reading, or select manually.');
+        setMessage(t('captureWaitingForStableHero'));
       }
     }catch(error){
       if(mounted.current) setMessage(error instanceof Error?error.message:'Capture failed');
@@ -258,40 +307,44 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const setMode=(mode:CaptureMode)=>{
     setCaptureMode(mode);
     localStorage.setItem('hok-capture-mode',mode);
-    stability.current=freshStability();
+    emptyStability.current=freshEmptyStability();
+    heroStability.current=freshHeroStability();
     setResult(undefined);
     setMessage('');
+    setCandidateStatus('');
   };
 
   const pointerDown=(event:React.PointerEvent<HTMLDivElement>)=>{
-    if(!calibrating||!videoReady) return;
+    if(!calibratingZone||!videoReady) return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    const start=pointInElement(event);
-    dragStart.current=start;
-    setRoi({...start,width:.02,height:.02});
+    dragStart.current=pointInElement(event);
   };
   const pointerMove=(event:React.PointerEvent<HTMLDivElement>)=>{
-    if(!calibrating||!dragStart.current) return;
-    setRoi(regionFromDrag(dragStart.current,pointInElement(event)));
+    if(!calibratingZone||!dragStart.current) return;
+    const next=regionFromDrag(dragStart.current,pointInElement(event));
+    setZones(previous=>({...previous,[calibratingZone]:next}));
   };
   const pointerUp=(event:React.PointerEvent<HTMLDivElement>)=>{
-    if(!calibrating||!dragStart.current) return;
+    if(!calibratingZone||!dragStart.current) return;
     const next=regionFromDrag(dragStart.current,pointInElement(event));
     dragStart.current=null;
-    setRoi(next);
-    localStorage.setItem('hok-window-capture-roi',JSON.stringify(next));
-    setCalibrating(false);
-    setMessage(t('windowCaptureRegionSaved'));
+    const updated={...zones,[calibratingZone]:next};
+    setZones(updated);
+    localStorage.setItem(ZONES_STORAGE,JSON.stringify(updated));
+    setMessage(t('captureZoneSaved',{zone:t(zoneLabelKey(calibratingZone))}));
+    setCalibratingZone(undefined);
   };
 
   const label=(id:number)=>{
     const hero=heroes.find(item=>item.id===id);
-    return zh?hero?.chineseName:hero?.englishName;
+    return zh?hero?.chineseName??String(id):hero?.englishName??String(id);
   };
+
   const closeReview=()=>{
     if(dialog.current?.open) dialog.current.close();
     setResult(undefined);
   };
+
   const submitReview=()=>{
     if(!phase||disabled||!result) return;
     if(Date.now()-result.at>30000){
@@ -304,18 +357,20 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     else send({type:'draft_action',heroId:selected,team:phase.team,action:phase.action});
   };
 
-  const roiStyle={
-    left:`${roi.x*100}%`,
-    top:`${roi.y*100}%`,
-    width:`${roi.width*100}%`,
-    height:`${roi.height*100}%`,
-  };
+  const currentSlotText=target
+    ? t('captureCurrentSlot',{
+      side:t(target.side==='blue'?'blueSide':'redSide'),
+      action:t(target.action==='ban'?'banAction':'pickAction'),
+      current:target.slotIndex+1,
+      total:target.slotCount,
+    })
+    : t('draftComplete');
 
   return <section className="panel screen-input">
     <div className="screen-input-heading">
       <div>
         <h2>{zh?'自动 BP · 屏幕识别':'Auto BP · screen recognition'}</h2>
-        <p>{zh?'推荐直接连接游戏窗口，不再填写桌面像素坐标。英雄候选与空 Ban 仍保留人工审核。':'Connect the game window directly instead of entering desktop pixel coordinates. Hero candidates and empty bans still use human review.'}</p>
+        <p>{t('captureFourZoneHint')}</p>
       </div>
       <div className="capture-mode-switch" role="group" aria-label={t('captureSource')}>
         <button type="button" className={captureMode==='window'?'selected':''} onClick={()=>setMode('window')}>{t('windowCaptureMode')}</button>
@@ -331,34 +386,64 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       </div>
 
       <div
-        className={`window-capture-preview ${videoReady?'ready':''} ${calibrating?'calibrating':''}`}
+        className={`window-capture-preview ${videoReady?'ready':''} ${calibratingZone?'calibrating':''}`}
         onPointerDown={pointerDown}
         onPointerMove={pointerMove}
         onPointerUp={pointerUp}
         onPointerCancel={()=>{dragStart.current=null;}}
       >
         <video ref={videoRef} playsInline muted />
-        {videoReady&&<div className="capture-roi" style={roiStyle}><span>{t('windowCaptureRecognitionArea')}</span></div>}
+        {videoReady&&captureZoneKeys.map(key=><div
+          key={key}
+          className={`capture-zone ${key} ${target?.key===key?'active':''} ${calibratingZone===key?'editing':''}`}
+          style={percentageStyle(zones[key])}
+        ><span>{t(zoneLabelKey(key))}</span></div>)}
+        {videoReady&&target&&<div className="capture-slot-target" style={percentageStyle(target.slot)}>
+          <span>{currentSlotText}</span>
+        </div>}
         {!videoReady&&<div className="window-capture-placeholder">{t('windowCaptureChooseHint')}</div>}
       </div>
 
-      <div className="window-capture-calibration">
-        <button type="button" disabled={!videoReady} className={calibrating?'selected':''} onClick={()=>setCalibrating(value=>!value)}>{calibrating?t('windowCaptureDragNow'):t('windowCaptureCalibrate')}</button>
-        <button type="button" disabled={!videoReady} onClick={()=>{
-          const next=defaultNormalizedCaptureRegion;
-          setRoi(next);
-          localStorage.setItem('hok-window-capture-roi',JSON.stringify(next));
-        }}>{t('windowCaptureResetArea')}</button>
-        <span className="muted">{videoReady&&windowInfo?`${windowInfo.width}×${windowInfo.height} · ${windowInfo.surface}`:t('windowCaptureRelativeHint')}</span>
+      <div className="capture-zone-calibration">
+        <strong>{t('captureCalibrateFourZones')}</strong>
+        <div className="capture-zone-buttons">
+          {captureZoneKeys.map(key=><button
+            type="button"
+            key={key}
+            disabled={!videoReady}
+            className={calibratingZone===key?'selected':''}
+            onClick={()=>setCalibratingZone(current=>current===key?undefined:key)}
+          >{calibratingZone===key?t('windowCaptureDragNow'):t(zoneLabelKey(key))}</button>)}
+          <button type="button" disabled={!videoReady} onClick={()=>{
+            const next=normalizeCaptureZones(defaultCaptureZones);
+            setZones(next);
+            localStorage.setItem(ZONES_STORAGE,JSON.stringify(next));
+            setMessage(t('captureZonesReset'));
+          }}>{t('windowCaptureResetArea')}</button>
+        </div>
+        <p className="muted">{t('captureZoneCalibrationHint')}</p>
       </div>
-      <p className="muted">{t('windowCaptureRelativeHint')}</p>
+
+      <p className="muted">{videoReady&&windowInfo?`${windowInfo.width}×${windowInfo.height} · ${windowInfo.surface} · ${t('windowCaptureRelativeHint')}`:t('windowCaptureRelativeHint')}</p>
     </div>:<details className="native-capture-settings" open>
       <summary>{t('nativeCaptureAdvanced')}</summary>
       <p className="muted">{t('nativeCaptureHint')}</p>
       <div className="capture-region">{(['x','y','width','height'] as const).map(key=><label key={key}>{key}<input type="number" value={nativeRegion[key]} onChange={event=>setNativeRegion({...nativeRegion,[key]:Number(event.target.value)})}/></label>)}</div>
     </details>}
 
-    <p className="screen-input-phase">{phaseName(state)}</p>
+    <div className="capture-live-status">
+      <div><span>{t('capturePhaseLabel')}</span><strong>{phaseName(state)}</strong></div>
+      <div><span>{t('captureSlotLabel')}</span><strong>{currentSlotText}</strong></div>
+      <div><span>{t('captureCandidateLabel')}</span><strong>{candidateStatus||t('captureWaiting')}</strong></div>
+      <div><span>{t('captureEmptyBanLabel')}</span><strong>{
+        phase?.action!=='ban'
+          ? t('captureNotApplicable')
+          : emptyPromptedPhase.current===phaseKey
+            ? t('capturePromptedOnce')
+            : t('captureGraceThenCheck',{seconds:Math.max(0,Math.ceil((EMPTY_BAN_GRACE_MS-(Date.now()-phaseStartedAt.current))/1000))})
+      }</strong></div>
+    </div>
+
     <div className="screen-input-actions">
       <button disabled={disabled||busy||!phase||!!state.committedGameId||(captureMode==='window'&&!videoReady)} onClick={()=>void capture()}>{busy?(zh?'正在识别…':'Recognizing…'):t('captureNow')}</button>
       {phase?.action==='ban'&&<button className="empty-ban-button" disabled={disabled||!!state.committedGameId} onClick={()=>send({type:'skip_ban',team:phase.team})}>{t('emptyBanButton')}</button>}
@@ -367,22 +452,22 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         localStorage.setItem('hok-capture-auto-watch',event.target.checked?'1':'0');
       }}/>{t('autoCaptureWatch')}</label>
     </div>
-    <small>{captureMode==='window'?t('windowCaptureAutoHint'):t('autoCaptureWatchHint')}</small>
+    <small>{captureMode==='window'?t('captureAutoSlotHint'):t('autoCaptureWatchHint')}</small>
     <p role="status">{message}</p>
 
     {result&&<dialog ref={dialog} className="library-dialog capture-review" aria-label={result.kind==='empty-ban'?t('emptyBanReviewTitle'):(zh?'确认识别结果':'Review recognition')} onCancel={event=>{event.preventDefault();closeReview();}}>
       {result.kind==='empty-ban'?<>
         <h2>{t('emptyBanReviewTitle')}</h2>
-        <p>{t('emptyBanReviewHint')}</p>
+        <p>{t('emptyBanReviewHintOnce')}</p>
       </>:<>
         <h2>{zh?'识别到：':'Recognized: '}{label(selected)}</h2>
         <label>{zh?'候选英雄（相似度，不代表准确率）':'Candidates (similarity, not accuracy)'}<select value={selected} onChange={event=>setSelected(Number(event.target.value))}>{result.candidates.map(candidate=><option key={candidate.heroId} value={candidate.heroId}>{label(candidate.heroId)} · {Math.round(candidate.confidence*100)}%</option>)}</select></label>
       </>}
-      <p>{phaseName(state)}</p>
-      <img src={result.preview} alt={zh?'截取区域':'Captured region'}/>
+      <p>{currentSlotText}</p>
+      <img src={result.preview} alt={zh?'当前槽位截图':'Current slot capture'}/>
       <div className="capture-review-actions">
         <button disabled={disabled||!phase} onClick={submitReview}>{result.kind==='empty-ban'?t('emptyBanConfirm'):(zh?'确认并提交':'Confirm and submit')}</button>
-        <button onClick={closeReview}>{zh?'拒绝 / 手动选择':'Reject / select manually'}</button>
+        <button onClick={closeReview}>{zh?'拒绝 / 继续监视':'Reject / keep watching'}</button>
       </div>
     </dialog>}
   </section>;
