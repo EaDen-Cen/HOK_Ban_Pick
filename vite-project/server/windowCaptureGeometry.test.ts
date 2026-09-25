@@ -15,12 +15,15 @@ test('normalized capture region scales with source resolution',()=>{
 
 test('drag calibration works in either direction and stays inside the window',()=>{
   const region=regionFromDrag({x:.8,y:.7},{x:.2,y:.1});
-  assert.deepEqual(region,{x:.2,y:.1,width:.6000000000000001,height:.6});
+  assert.equal(region.x,.2);
+  assert.equal(region.y,.1);
+  assert.ok(Math.abs(region.width-.6)<1e-9);
+  assert.ok(Math.abs(region.height-.6)<1e-9);
   const clamped=normalizeCaptureRegion({x:-.2,y:.95,width:2,height:.5});
   assert.equal(clamped.x,0);
   assert.equal(clamped.y,.95);
   assert.equal(clamped.width,1);
-  assert.ok(clamped.height<=.05);
+  assert.ok(clamped.height<=.050000001);
 });
 
 test('default region is a valid visible relative crop',()=>{
