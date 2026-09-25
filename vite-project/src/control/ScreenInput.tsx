@@ -28,6 +28,12 @@ type WindowInfo = {
   height:number;
 };
 
+type RecognitionResponse = {
+  candidates?: {heroId:number;confidence:number}[];
+  preview:string;
+  fingerprint?:string;
+};
+
 const freshStability = (): EmptyBanStability => ({ phaseKey:'', fingerprint:'', count:0 });
 const nativeDefault = {x:0,y:0,width:100,height:100};
 
@@ -186,7 +192,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     setBusy(true);
     setMessage('');
     try{
-      let data:any;
+      let data:RecognitionResponse;
       if(captureMode==='window'){
         const image=captureWindowFrame();
         const response=await fetch('/api/recognize-frame',{
