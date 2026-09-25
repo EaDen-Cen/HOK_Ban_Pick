@@ -8,7 +8,7 @@ import type { Role } from '../src/shared/types.js';
 import { TeamPresetStore } from './teamPresets.js';
 import { Store } from './store.js';
 import { uploadPortrait, servePortrait } from './portraits.js';
-import { captureRegion, captureRegions, localCaptureRequest, recognizeLineup, recognizeScreen } from './capture.js';
+import { captureRegion, captureRegions, localCaptureRequest, recognizeClientFrame, recognizeLineup, recognizeScreen } from './capture.js';
 
 const production = process.env.NODE_ENV === 'production';
 const tokens: Record<Role, string> = {
@@ -38,6 +38,27 @@ const server = createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
   try {
     const url = new URL(req.url || '/', 'http://localhost');
+    if (url.pathname === '/api/recognize-frame') {
+      if (req.method !== 'POST') { json(405,{error:'POST required'}); return; }
+      if (roleFor(req.headers.authorization?.replace(/^Bearer /,'')) !== 'control') { json(403,{error:'Control only'}); req.resume(); return; }
+      if (store.data.state.bpInputMode !== 'screen') { json(409,{error:'Screen input is not enabled'}); req.resume(); return; }
+      try {
+        const chunks:Buffer[]=[]; let size=0; req.setTimeout(10000,()=>req.destroy());
+        for await (const chunk of req) {
+          size+=chunk.length;
+          if(size>4*1024*1024){ json(413,{error:'Frame too large'}); return; }
+          chunks.push(chunk);
+        }
+        const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        if(input.revision!==store.data.revision){ json(409,{error:'Stale capture'}); return; }
+        const result=await recognizeClientFrame(input.image);
+        if(input.revision!==store.data.revision){ json(409,{error:'State changed during capture'}); return; }
+        json(200,result);
+      } catch {
+        json(400,{error:'Browser frame recognition failed'});
+      }
+      return;
+    }
     if (url.pathname === '/api/capture') {
       if (req.method !== 'POST') { json(405, {error:'POST required'}); return; }
       if (roleFor(req.headers.authorization?.replace(/^Bearer /, '')) !== 'control' || !localCaptureRequest(req)) { json(403,{error:'Local control only'}); req.resume(); return; }
