@@ -227,7 +227,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
 
       if(top&&top.confidence>=.55){
         setSelected(top.heroId);
-        setResult({kind:'hero',candidates:data.candidates,preview:data.preview,at:Date.now()});
+        setResult({kind:'hero',candidates:data.candidates??[],preview:data.preview,at:Date.now()});
         return;
       }
       if(empty.suspected){
