@@ -141,8 +141,8 @@ npm run server
 | 115 | 弗洛伦 | Florentino |
 | 116 | 洛里昂 | Lorion |
 | 117 | 元流之子（法师） | Flowborn (Mage) |
-| 118 | Coming soon | Flowborn (Assassin) |
-| 119 | Coming soon | Flowborn (Roamer) |
+| 118 | 元流之子（刺客） | Flowborn (Assassin) |
+| 119 | 元流之子（辅助） | Flowborn (Roamer) |
 <!-- HERO-SYNC:ROSTER:END -->
 
 ## 文档导航
