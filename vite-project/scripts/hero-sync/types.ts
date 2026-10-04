@@ -41,6 +41,15 @@ export interface SourceChange {
   after?: string;
 }
 
+export interface LocalHeroDifference {
+  localId: number;
+  campId: number;
+  field: 'campId' | 'englishName' | 'occupation';
+  localValue?: string;
+  remoteValue?: string;
+  actionable: boolean;
+}
+
 export interface SyncPlan {
   checkedAt: string;
   remoteCount: number;
@@ -48,6 +57,7 @@ export interface SyncPlan {
   additions: CatalogHero[];
   missingLocal: Hero[];
   sourceChanges: SourceChange[];
+  localDifferences: LocalHeroDifference[];
   baselineMissing: boolean;
   changed: boolean;
 }
@@ -87,5 +97,6 @@ export interface SyncAudit {
   manualReview: string[];
   missingLocalWarnings: string[];
   sourceChanges: SourceChange[];
+  localDifferences: LocalHeroDifference[];
   assets: AssetRecord[];
 }
