@@ -237,6 +237,7 @@ export class Store {
       next.history.push(copy(state));
       const reset = initialState();
       reset.heroArtOverrides = copy(state.heroArtOverrides || {});
+      reset.heroDataOverrides = copy(state.heroDataOverrides || {});
       reset.showHeroName = state.showHeroName ?? true;
       reset.artSourceMode = state.artSourceMode ?? 'auto';
       next.state = reset;
@@ -374,6 +375,32 @@ export class Store {
       if (override.side !== undefined) validateArtCrop(override.side);
       next.history.push(copy(state));
       state.heroArtOverrides = { ...(state.heroArtOverrides || {}), [String(action.heroId)]: copy(override) };
+      break;
+    }
+    case 'hero_data_override': {
+      const baseHero = heroes.find(hero => hero.id === action.heroId);
+      if (!baseHero) throw new Error('找不到该英雄');
+      const override = action.override;
+      if (!override || typeof override !== 'object') throw new Error('heroDataOverrideInvalid');
+      if (override.englishName !== undefined) { shortText(override.englishName, 60); if (!override.englishName.trim()) throw new Error('heroDataOverrideInvalid'); }
+      if (override.chineseName !== undefined) { shortText(override.chineseName, 60); if (!override.chineseName.trim()) throw new Error('heroDataOverrideInvalid'); }
+      const validLanes = ['', 'Clash Lane', 'Jungling', 'Mid Lane', 'Farm Lane', 'Roaming'];
+      if (override.occupation !== undefined && !validLanes.includes(override.occupation)) throw new Error('heroDataOverrideInvalid');
+      if (override.altOccupation !== undefined && !validLanes.includes(override.altOccupation)) throw new Error('heroDataOverrideInvalid');
+      if (override.aliases !== undefined) {
+        if (!Array.isArray(override.aliases) || override.aliases.length > 20) throw new Error('heroDataOverrideInvalid');
+        override.aliases.forEach(alias => shortText(alias, 60));
+      }
+      next.history.push(copy(state));
+      state.heroDataOverrides = { ...(state.heroDataOverrides || {}), [String(action.heroId)]: copy(override) };
+      break;
+    }
+    case 'reset_hero_data_override': {
+      if (!heroes.some(hero => hero.id === action.heroId)) throw new Error('找不到该英雄');
+      next.history.push(copy(state));
+      const map = { ...(state.heroDataOverrides || {}) };
+      delete map[String(action.heroId)];
+      state.heroDataOverrides = map;
       break;
     }
     case 'reset_hero_art_override': {
