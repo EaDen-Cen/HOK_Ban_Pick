@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-04T07:38:56.958Z",
+  "mode": "update",
+  "sources": {
+    "catalog": "https://wiki.bittopup.com/hok",
+    "officialEnglishPattern": "https://world.honorofkings.com/zlkdatasys/ip/hero/en/{campId}.html",
+    "officialChinesePattern": "https://world.honorofkings.com/zlkdatasys/ip/hero/zh-Hant/{campId}.html"
+  },
+  "remoteCount": 118,
+  "additions": [],
+  "metadataOverrides": [],
+  "manualReview": [
+    "No high-resolution official key art was detected for local hero #117 Flowborn (Mage); overlay will keep using the local icon fallback.",
+    "No high-resolution official key art was detected for local hero #118 Flowborn (Assassin); overlay will keep using the local icon fallback.",
+    "No high-resolution official key art was detected for local hero #104 Flowborn (Marksman); overlay will keep using the local icon fallback.",
+    "No high-resolution official key art was detected for local hero #119 Flowborn (Roamer); overlay will keep using the local icon fallback.",
+    "No high-resolution official key art was detected for local hero #115 Florentino; overlay will keep using the local icon fallback.",
+    "No high-resolution official key art was detected for local hero #116 Lorion; overlay will keep using the local icon fallback.",
+    "No high-resolution official key art was detected for local hero #108 Annette; overlay will keep using the local icon fallback.",
+    "Official HOK CAMP pick rate could not be parsed for 118 matched heroes; existing values were kept and will be retried later."
+  ],
+  "missingLocalWarnings": [],
+  "sourceChanges": [],
+  "assets": []
+}
