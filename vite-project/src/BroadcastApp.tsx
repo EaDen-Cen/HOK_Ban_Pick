@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import './broadcast.css';
 import './BroadcastApp.css';
-import heroes from './components/HeroList';
+import { heroForState } from './shared/heroData';
 import {
   phases,
   type Action,
@@ -29,13 +29,12 @@ import { Score } from './shared/Score';
 import { DraftHistory } from './shared/DraftHistory';
 import { DraftLifecycle } from './control/DraftLifecycle';
 import { DraftOverlay } from './overlay/DraftOverlay';
-const hero = (id: number) => heroes.find(h => h.id === id);
-const name = (id: number, lang: Language) => { const h = hero(id); return h ? (lang === 'zh' ? h.chineseName : h.englishName) : '—'; };
-function HeroSlot({ id, ban = false, lang }: { id?: number | null; ban?: boolean; lang: Language }) {
+const name = (state: MatchState, id: number, lang: Language) => { const h = heroForState(state, id); return h ? (lang === 'zh' ? h.chineseName : h.englishName) : '—'; };
+function HeroSlot({ state, id, ban = false, lang }: { state: MatchState; id?: number | null; ban?: boolean; lang: Language }) {
   const t = translator(lang);
   const skipped = ban && id === null;
   return <div className={`hero-slot ${ban ? 'ban' : ''} ${id ? 'filled' : ''} ${skipped ? 'skipped-ban' : ''}`} key={id ?? (skipped ? 'skipped' : 'empty')}>
-    {id ? <><img src={hero(id)?.imageLink} alt={name(id, lang)} /><span>{name(id, lang)}</span>{ban && <b className="ban-mark">╱</b>}</>
+    {id ? <><img src={heroForState(state,id)?.imageLink} alt={name(state,id, lang)} /><span>{name(state,id, lang)}</span>{ban && <b className="ban-mark">╱</b>}</>
       : <span className={skipped ? 'empty skipped-ban-label' : 'empty'}>{skipped ? t('emptyBan') : t(ban ? 'ban' : 'emptyPick')}</span>}
   </div>;
 }
@@ -71,8 +70,8 @@ function TeamAnalysis({
       <span className="analysis-opponent">{t('opponent', { team: teamName(state, side === 'blue' ? 'red' : 'blue') })}</span>
     </header>
     <small>{t('relationshipHint')}</small><div className="analysis-grid">{groups.map(g => {
-      const ids = [...new Set(g.sources.flatMap(id => hero(id)?.[g.field] || []))].filter(id => hero(id) && !state.blueBans.includes(id) && !state.redBans.includes(id));
-      return <article key={g.title}><h3>{g.title}</h3>{ids.length ? <div className="recommendations">{ids.map(id => <div className="recommendation" key={id}><img src={hero(id)?.imageLink} alt="" /><div><b>{name(id, lang)}{selected.includes(id) ? ' ✓' : ''}</b><small>{g.sources.filter(s => hero(s)?.[g.field]?.includes(id)).map(s => name(s, lang)).join(' · ')}</small></div></div>)}</div> : <p className="muted">{t('noRelationships')}</p>}</article>;
+      const ids = [...new Set(g.sources.flatMap(id => heroForState(state,id)?.[g.field] || []))].filter(id => heroForState(state,id) && !state.blueBans.includes(id) && !state.redBans.includes(id));
+      return <article key={g.title}><h3>{g.title}</h3>{ids.length ? <div className="recommendations">{ids.map(id => <div className="recommendation" key={id}><img src={heroForState(state,id)?.imageLink} alt="" /><div><b>{name(state,id, lang)}{selected.includes(id) ? ' ✓' : ''}</b><small>{g.sources.filter(s => heroForState(state,s)?.[g.field]?.includes(id)).map(s => name(state,s, lang)).join(' · ')}</small></div></div>)}</div> : <p className="muted">{t('noRelationships')}</p>}</article>;
     })}</div></section>;
 }
 function Analysis({
