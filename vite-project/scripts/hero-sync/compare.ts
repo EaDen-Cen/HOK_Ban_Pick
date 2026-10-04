@@ -1,6 +1,6 @@
 import type { Hero } from '../../src/data/heroTypes.js';
 import { namesForHero, normalizeName } from './normalize.js';
-import type { CatalogHero, MatchResult, SourceChange, SourceSnapshot, SyncPlan } from './types.js';
+import type { CatalogHero, LocalHeroDifference, MatchResult, SourceChange, SourceSnapshot, SyncPlan } from './types.js';
 
 function findMatch(localHeroes: Hero[], remote: CatalogHero, previous?: SourceSnapshot): MatchResult | undefined {
   const byCampId = localHeroes.find(hero => hero.campId === remote.campId);
@@ -45,6 +45,58 @@ export function compareSource(previous: SourceSnapshot | undefined, remoteHeroes
   return changes;
 }
 
+export function compareLocalHeroes(matches: MatchResult[]): LocalHeroDifference[] {
+  const differences: LocalHeroDifference[] = [];
+
+  for (const match of matches) {
+    const { local, remote } = match;
+
+    if (local.campId === undefined) {
+      differences.push({
+        localId: local.id,
+        campId: remote.campId,
+        field: 'campId',
+        localValue: undefined,
+        remoteValue: String(remote.campId),
+        actionable: true,
+      });
+    } else if (local.campId !== remote.campId) {
+      differences.push({
+        localId: local.id,
+        campId: remote.campId,
+        field: 'campId',
+        localValue: String(local.campId),
+        remoteValue: String(remote.campId),
+        actionable: false,
+      });
+    }
+
+    if (normalizeName(local.englishName) !== normalizeName(remote.englishName)) {
+      differences.push({
+        localId: local.id,
+        campId: remote.campId,
+        field: 'englishName',
+        localValue: local.englishName,
+        remoteValue: remote.englishName,
+        actionable: true,
+      });
+    }
+
+    if (local.occupation !== remote.occupation) {
+      differences.push({
+        localId: local.id,
+        campId: remote.campId,
+        field: 'occupation',
+        localValue: local.occupation,
+        remoteValue: remote.occupation,
+        actionable: false,
+      });
+    }
+  }
+
+  return differences;
+}
+
 export function makePlan(localHeroes: Hero[], remoteHeroes: CatalogHero[], previous?: SourceSnapshot): SyncPlan {
   const validLocal = localHeroes.filter(hero => hero.englishName.trim());
   const matches: MatchResult[] = [];
@@ -63,8 +115,12 @@ export function makePlan(localHeroes: Hero[], remoteHeroes: CatalogHero[], previ
 
   const missingLocal = validLocal.filter(hero => !matchedIds.has(hero.id));
   const sourceChanges = compareSource(previous, remoteHeroes);
+  const localDifferences = compareLocalHeroes(matches);
   const baselineMissing = !previous;
-  const changed = baselineMissing || additions.length > 0 || sourceChanges.length > 0;
+  const changed = baselineMissing
+    || additions.length > 0
+    || sourceChanges.length > 0
+    || localDifferences.some(difference => difference.actionable);
 
   return {
     checkedAt: new Date().toISOString(),
@@ -73,6 +129,7 @@ export function makePlan(localHeroes: Hero[], remoteHeroes: CatalogHero[], previ
     additions,
     missingLocal,
     sourceChanges,
+    localDifferences,
     baselineMissing,
     changed,
   };
