@@ -3,7 +3,7 @@ import type { TeamPresetStore } from './teamPresets.js';
 import { dirname } from 'node:path';
 import heroes from '../src/components/HeroList.js';
 import { initialState, phases, type Action, type MatchState, type Role, type Snapshot } from '../src/shared/types.js';
-import { currentGame, draftRestriction, normalizeState, pickRestriction, playerIdentity, ruleLocked, seriesFinished } from '../src/shared/draftRules.js';
+import { currentGame, draftHeroGroupKey, draftHeroUsed, draftRestriction, normalizeState, pickRestriction, playerIdentity, ruleLocked, seriesFinished } from '../src/shared/draftRules.js';
 
 interface Event { id: string; timestamp: number; type: string; resultingState: MatchState; revision: number }
 interface Data { version: 1; state: MatchState; events: Event[]; history: MatchState[]; revision: number; delay: number; ids: string[] }
@@ -51,7 +51,7 @@ function validateLineup(state: MatchState, requireComplete = state.draftComplete
     const assignments = state[`${side}Assignments`];
     if (!Array.isArray(assignments) || assignments.length !== 5) throw new Error('lineupInvalid');
     const assigned = assignments.filter((heroId): heroId is number => heroId !== null);
-    if (new Set(assigned).size !== assigned.length || assigned.some(heroId => !picks.includes(heroId))) throw new Error('lineupInvalid');
+    if (new Set(assigned.map(heroId => draftHeroGroupKey(state, heroId))).size !== assigned.length || assigned.some(heroId => !picks.includes(heroId))) throw new Error('lineupInvalid');
     if (requireComplete) {
       if (picks.length !== 5 || assigned.length !== 5 || picks.some(heroId => !assigned.includes(heroId))) throw new Error('lineupIncomplete');
       if (state.draftRuleMode === 'player') {
@@ -133,7 +133,12 @@ export class Store {
       const phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
       if (!phase || phase.team !== action.team || phase.action !== action.action) throw new Error('当前选禁阶段不支持此操作，请确认轮次和队伍');
       if (!heroes.some(h => h.id === action.heroId)) throw new Error('找不到该英雄');
-      if ([...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks].includes(action.heroId)) throw new Error('该英雄已被选择或禁用');
+      if (draftHeroUsed(state, action.heroId)) {
+        const selected = [...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks]
+          .find(id => id !== null && draftHeroGroupKey(state, id) === draftHeroGroupKey(state, action.heroId));
+        const groupedFlowborn = !state.flowbornFormsIndependent && selected !== undefined && selected !== action.heroId;
+        throw new Error(groupedFlowborn ? 'flowbornAlreadyUsed' : '该英雄已被选择或禁用');
+      }
       const reason = draftRestriction(state, phase.team, phase.action, action.heroId);
       if (reason) throw new Error(reason);
       next.history.push(copy(state));
@@ -257,6 +262,7 @@ export class Store {
         !['number', 'boxes'].includes(s.scoreDisplay ?? state.scoreDisplay ?? 'number') ||
         !['manual', 'screen'].includes(s.bpInputMode ?? state.bpInputMode ?? 'manual') ||
         typeof (s.showHeroName ?? state.showHeroName) !== 'boolean' ||
+        typeof (s.flowbornFormsIndependent ?? state.flowbornFormsIndependent) !== 'boolean' ||
         !['auto', 'legacy'].includes(s.artSourceMode ?? state.artSourceMode ?? 'auto')
       ) {
         throw new Error('比赛设置无效，请检查赛制、语言和画面布局');
@@ -267,8 +273,9 @@ export class Store {
       shortText(s.stage, 80);
       const draftRuleMode = s.draftRuleMode ?? state.draftRuleMode;
       const firstPickSide = s.firstPickSide ?? state.firstPickSide;
+      const flowbornFormsIndependent = s.flowbornFormsIndependent ?? state.flowbornFormsIndependent;
       if (state.currentPhase > 0 && firstPickSide !== state.firstPickSide) throw new Error('firstPickLocked');
-      if (ruleLocked(state) && draftRuleMode !== state.draftRuleMode) throw new Error('rulesLocked');
+      if (ruleLocked(state) && (draftRuleMode !== state.draftRuleMode || flowbornFormsIndependent !== state.flowbornFormsIndependent)) throw new Error('rulesLocked');
       if (state.draftHistory.length && s.seriesFormat !== state.seriesFormat) throw new Error('rulesLocked');
       for (const team of [s.blueTeam, s.redTeam]) {
         if (!team) throw new Error('请填写队伍信息');
@@ -355,6 +362,7 @@ export class Store {
 
         draftMode: s.draftMode,
         draftRuleMode,
+        flowbornFormsIndependent,
         firstPickSide,
         sideSwapMode: s.sideSwapMode ?? state.sideSwapMode,
       });
