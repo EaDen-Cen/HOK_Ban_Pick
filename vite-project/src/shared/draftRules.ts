@@ -1,3 +1,4 @@
+import heroes from '../components/HeroList.js';
 import { initialState, type GameDraftRecord, type MatchState, type Side, type Team } from './types.js';
 
 export const playerIdentity = (name: string) => name.normalize('NFKC').trim().toLocaleLowerCase('en-US');
@@ -6,6 +7,25 @@ export const seriesFinished = (state: MatchState) => Math.max(state.blueScore, s
 export const ruleLocked = (state: MatchState) => state.currentPhase > 0 || state.draftHistory.length > 0;
 export const currentGame = (state: MatchState) => state.draftGameNumber ?? state.gameNumber;
 export const displaySides = (state: MatchState): [Side, Side] => [state.displayLeftSide, state.displayLeftSide === 'blue' ? 'red' : 'blue'];
+
+export function draftHeroGroupKey(state: Pick<MatchState, 'flowbornFormsIndependent'>, heroId: number) {
+  const hero = heroes.find(item => item.id === heroId);
+  if (!state.flowbornFormsIndependent && hero?.variantGroup === 'flowborn') return 'variant:flowborn';
+  return `hero:${heroId}`;
+}
+
+export function sameDraftHero(state: Pick<MatchState, 'flowbornFormsIndependent'>, leftId: number, rightId: number) {
+  return draftHeroGroupKey(state, leftId) === draftHeroGroupKey(state, rightId);
+}
+
+export function draftHeroUsed(state: MatchState, heroId: number) {
+  return [...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks]
+    .some(id => id !== null && sameDraftHero(state, id, heroId));
+}
+
+function historyIncludesHero(state: MatchState, ids: number[], heroId: number) {
+  return ids.some(id => sameDraftHero(state, id, heroId));
+}
 
 export function historyForTeam(record: GameDraftRecord, teamId: string) {
   if (record.blueTeam.id === teamId) return { team: record.blueTeam, bans: record.blueBans ?? [], picks: record.bluePicks, assignments: record.blueAssignments };
@@ -18,21 +38,30 @@ export function pickRestriction(state: MatchState, side: Side, playerIndex: numb
   if (state.draftRuleMode === 'normal') return;
   const team = state[`${side}Team`];
   if (state.draftRuleMode === 'global') {
-    if (state.draftHistory.some(record => record.id !== state.committedGameId && historyForTeam(record, team.id)?.picks.includes(heroId))) return 'usedByTeam';
+    if (state.draftHistory.some(record => {
+      const picks = historyForTeam(record, team.id)?.picks ?? [];
+      return record.id !== state.committedGameId && historyIncludesHero(state, picks, heroId);
+    })) return 'usedByTeam';
     return;
   }
   const identity = playerIdentity(team.players[playerIndex] || '');
   if (!identity) return 'playerMissing';
   // Identity follows the person when a substitute changes slots or a team changes sides.
   if (state.draftHistory.some(record => record.id !== state.committedGameId && (['blue', 'red'] as const).some(recordSide =>
-    record[`${recordSide}Team`].players.some((player, index) => playerIdentity(player) === identity && record[`${recordSide}Assignments`][index] === heroId)))) return 'usedByPlayer';
+    record[`${recordSide}Team`].players.some((player, index) => {
+      const assigned = record[`${recordSide}Assignments`][index];
+      return playerIdentity(player) === identity && sameDraftHero(state, assigned, heroId);
+    })))) return 'usedByPlayer';
 }
 
 /** Avoid spending a ban on a hero the opposing team cannot reuse in Global BP. */
 export function banRestriction(state: MatchState, side: Side, heroId: number): 'opponentAlreadyUsed' | undefined {
   if (state.draftRuleMode !== 'global') return;
   const opponent = state[side === 'blue' ? 'redTeam' : 'blueTeam'];
-  if (state.draftHistory.some(record => record.id !== state.committedGameId && historyForTeam(record, opponent.id)?.picks.includes(heroId))) return 'opponentAlreadyUsed';
+  if (state.draftHistory.some(record => {
+    const picks = historyForTeam(record, opponent.id)?.picks ?? [];
+    return record.id !== state.committedGameId && historyIncludesHero(state, picks, heroId);
+  })) return 'opponentAlreadyUsed';
 }
 
 export function draftRestriction(state: MatchState, side: Side, action: 'ban' | 'pick', heroId: number) {
@@ -79,6 +108,7 @@ export function normalizeState(raw: MatchState): MatchState {
   };
   // Old archives use independent games. Upgrading must not silently impose Global BP.
   state.draftRuleMode = raw.draftRuleMode ?? 'normal';
+  state.flowbornFormsIndependent = raw.flowbornFormsIndependent ?? true;
   state.displayLeftSide = raw.displayLeftSide ?? 'blue';
   state.firstPickSide = raw.firstPickSide ?? 'blue';
   state.sideSwapMode = raw.sideSwapMode ?? 'moveTeams';
