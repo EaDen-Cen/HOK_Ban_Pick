@@ -84,8 +84,8 @@ src/data/heroSyncOverrides.ts
 public/heroesImg/
 ../research/hero-sync/catalog-snapshot.json
 ../research/hero-sync/YYYY-MM-DD.json
-../../README.md
-../../MILESTONES.md
+../README.md
+../MILESTONES.md
 ../docs/research/README.md
 ../docs/research/hero-sync.md
 \`\`\`
