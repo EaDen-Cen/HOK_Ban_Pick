@@ -198,6 +198,11 @@ const messages = {
 
   backendUpgrade: { zh: '当前连接的是旧版服务。请停止旧进程并重新启动服务器，V2 操作将在连接新版服务后启用。', eng: 'Connected to an older server. Stop it and restart the server to enable V2 controls.' },
   draftRules: { zh: 'BP 规则', eng: 'BP rules' },
+  flowbornRule: { zh: '元流之子计算规则', eng: 'Flowborn counting rule' },
+  flowbornIndependent: { zh: '各形态独立计算', eng: 'Count each form separately' },
+  flowbornShared: { zh: '所有形态视为同一英雄', eng: 'Treat all forms as one hero' },
+  flowbornRuleHint: { zh: '关闭独立计算后，任一元流之子被 Ban 或 Pick 后，其他形态在本局也不可再使用；跨局限制遵循当前 BP 规则。', eng: 'When forms are shared, banning or picking any Flowborn blocks every other form in the current game; cross-game restrictions follow the selected BP rule.' },
+  flowbornAlreadyUsed: { zh: '本场规则将所有元流之子视为同一英雄，已有一个形态被选择或禁用', eng: 'This match treats all Flowborn forms as one hero, and one form has already been picked or banned.' },
   ruleNormal: { zh: '普通 BP', eng: 'NORMAL BP' },
   rulePlayer: { zh: '选手 BP', eng: 'PLAYER BP' },
   ruleGlobal: { zh: '全局 BP', eng: 'GLOBAL BP' },
