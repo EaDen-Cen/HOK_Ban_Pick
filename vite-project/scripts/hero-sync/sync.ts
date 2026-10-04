@@ -66,6 +66,7 @@ function compactSummary(plan: ReturnType<typeof makePlan>) {
     artworkBackfill: artBackfill.map(match => ({ localId: match.local.id, campId: match.remote.campId, englishName: match.remote.englishName })),
     pickRateRefresh: pickRateRefresh(plan).map(match => ({ localId: match.local.id, campId: match.remote.campId, englishName: match.remote.englishName })),
     sourceChanges: plan.sourceChanges,
+    localDifferences: plan.localDifferences,
     missingLocalWarnings: plan.missingLocal.map(hero => ({ id: hero.id, englishName: hero.englishName, campId: hero.campId })),
   };
 }
@@ -221,6 +222,48 @@ async function applyUpdate(
     manualReview.push(`Official HOK CAMP pick rate could not be parsed for ${pickRateFailures} matched heroes; existing values were kept and will be retried later.`);
   }
 
+  for (const difference of plan.localDifferences) {
+    const match = plan.matches.find(item => item.local.id === difference.localId);
+    if (!match) continue;
+
+    if (difference.field === 'campId') {
+      if (match.local.campId === undefined) {
+        const next: HeroOverride = { campId: match.remote.campId };
+        overrides[match.local.id] = mergeOverride(overrides[match.local.id], next);
+        overrideAudit.push({ localId: match.local.id, campId: match.remote.campId, fields: next });
+      } else if (match.local.campId !== match.remote.campId) {
+        manualReview.push(
+          `Camp ID mismatch for local hero #${match.local.id} ${match.local.englishName}: local ${match.local.campId} vs remote ${match.remote.campId}. Not auto-applied because this could indicate a bad identity match.`,
+        );
+      }
+      continue;
+    }
+
+    if (difference.field === 'occupation') {
+      manualReview.push(
+        `Local lane differs from current auxiliary catalog for #${match.local.id} ${match.local.englishName}: ${match.local.occupation} → ${match.remote.occupation}. Not auto-applied because lane metadata is not sourced from an authoritative tournament feed.`,
+      );
+      continue;
+    }
+
+    if (difference.field === 'englishName') {
+      const evidence = await fetchOfficialHeroEvidence(match.remote.campId, match.remote.englishName);
+      if (!evidence.confirmed) {
+        manualReview.push(
+          `Local name differs from current catalog for #${match.local.id}: ${match.local.englishName} → ${match.remote.englishName}, but the official page did not confirm it. No runtime rename was applied.`,
+        );
+        continue;
+      }
+      const next: HeroOverride = {
+        englishName: match.remote.englishName,
+        aliases: uniqueStrings([...(match.local.aliases || []), match.local.englishName]),
+        campId: match.remote.campId,
+      };
+      overrides[match.local.id] = mergeOverride(overrides[match.local.id], next);
+      overrideAudit.push({ localId: match.local.id, campId: match.remote.campId, fields: next });
+    }
+  }
+
   for (const change of plan.sourceChanges) {
     if (change.field === 'added' || change.field === 'missing') continue;
     const match = plan.matches.find(item => item.remote.campId === change.campId);
@@ -287,6 +330,7 @@ async function applyUpdate(
       hero => `Local hero #${hero.id} ${hero.englishName} was not found in the current auxiliary catalog. It was NOT deleted.`,
     ),
     sourceChanges: plan.sourceChanges,
+    localDifferences: plan.localDifferences,
     assets,
   };
 
