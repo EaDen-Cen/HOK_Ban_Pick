@@ -4,7 +4,7 @@ import type { Hero } from '../../src/data/heroTypes.js';
 import { detectImage } from './assets.js';
 import { compareLocalHeroes, makePlan, nextLocalIds } from './compare.js';
 import { mergeOverride } from './generated.js';
-import { preferredChineseHeroName } from './sync.js';
+import { preferredChineseHeroName } from './localizedNames.js';
 import { normalizeName } from './normalize.js';
 import { extractOfficialHeroArt, extractOfficialPickRate } from './fetchOfficial.js';
 import { heroArtCrop } from '../../src/data/heroArtFocus.js';
