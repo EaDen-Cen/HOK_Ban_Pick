@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import heroes from '../components/HeroList';
+import { heroForState } from '../shared/heroData';
 import {
   captureSlotKeys,
   captureTargetForState,
@@ -116,9 +116,9 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const target=useMemo(()=>captureTargetForState(state,slots),[state,slots]);
 
   const label=useCallback((id:number)=>{
-    const hero=heroes.find(item=>item.id===id);
+    const hero=heroForState(state,id);
     return zh?hero?.chineseName??String(id):hero?.englishName??String(id);
-  },[zh]);
+  },[state,zh]);
 
   const captureSlotLabel=useCallback((key:CaptureSlotKey)=>{
     const meta=slotMeta(key);
