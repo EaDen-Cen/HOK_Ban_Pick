@@ -12,6 +12,7 @@ import { makePlan, nextLocalIds } from './compare.js';
 import { mergeOverride, renderAutoSyncedHeroes, renderOverrides, type HeroOverride } from './generated.js';
 import { normalizeName, uniqueStrings } from './normalize.js';
 import { updateHeroDocuments } from './documents.js';
+import { needsChineseNameBackfill, PLACEHOLDER_CHINESE_NAMES, preferredChineseHeroName } from './localizedNames.js';
 import type { AssetRecord, SourceSnapshot, SyncAudit } from './types.js';
 
 const projectRoot = fileURLToPath(new URL('../../', import.meta.url));
@@ -42,36 +43,6 @@ function assertSourceHealth(previous: SourceSnapshot | undefined, remoteCount: n
 
 function artworkBackfill(plan: ReturnType<typeof makePlan>) {
   return plan.matches.filter(match => !match.local.artLink || match.local.artLink === match.local.imageLink || match.local.campId === undefined);
-}
-
-const PLACEHOLDER_CHINESE_NAMES = new Set(['', 'coming soon', 'tbd', 'unknown']);
-
-export function preferredChineseHeroName(englishName: string, officialChineseName?: string) {
-  const normalizedEnglish = normalizeName(englishName);
-  const flowbornNames: Record<string, string> = {
-    'flowbornassassin': '元流之子（刺客）',
-    'flowbornroamer': '元流之子（辅助）',
-    'flowbornsupport': '元流之子（辅助）',
-    'flowborntank': '元流之子（坦克）',
-    'flowbornmarksman': '元流之子（射手）',
-    'flowbornmage': '元流之子（法师）',
-  };
-  const mapped = flowbornNames[normalizedEnglish];
-  const official = officialChineseName?.trim();
-  const normalizedOfficial = (official || '').toLowerCase();
-
-  if (mapped && (!official || PLACEHOLDER_CHINESE_NAMES.has(normalizedOfficial) || official === '元流之子')) {
-    return mapped;
-  }
-  if (!official || PLACEHOLDER_CHINESE_NAMES.has(normalizedOfficial)) return undefined;
-  return official;
-}
-
-function needsChineseNameBackfill(hero: Hero) {
-  const current = hero.chineseName.trim();
-  if (PLACEHOLDER_CHINESE_NAMES.has(current.toLowerCase())) return true;
-  if (normalizeName(hero.englishName).startsWith('flowborn') && current === '元流之子') return true;
-  return false;
 }
 
 const PICK_RATE_REFRESH_MS = 6 * 24 * 60 * 60 * 1000;
