@@ -1,10 +1,11 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Hero } from '../../src/data/heroTypes.js';
 import type { HeroOverride } from './generated.js';
 
-const projectRoot = new URL('../../', import.meta.url);
-const repoRoot = resolve(projectRoot.pathname, '..');
+const projectRoot = fileURLToPath(new URL('../../', import.meta.url));
+const repoRoot = resolve(projectRoot, '..');
 
 const START_ROSTER = '<!-- HERO-SYNC:ROSTER:START -->';
 const END_ROSTER = '<!-- HERO-SYNC:ROSTER:END -->';
