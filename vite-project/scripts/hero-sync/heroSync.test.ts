@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Hero } from '../../src/data/heroTypes.js';
 import { detectImage } from './assets.js';
-import { makePlan, nextLocalIds } from './compare.js';
+import { compareLocalHeroes, makePlan, nextLocalIds } from './compare.js';
 import { mergeOverride } from './generated.js';
 import { normalizeName } from './normalize.js';
 import { extractOfficialHeroArt, extractOfficialPickRate } from './fetchOfficial.js';
@@ -52,6 +52,50 @@ test('a source rename keeps identity through the previous camp snapshot', () => 
   assert.equal(plan.additions.length, 0);
   assert.equal(plan.matches[0].local.id, hero.id);
   assert.ok(plan.sourceChanges.some(change => change.field === 'englishName'));
+});
+
+
+test('existing heroes are compared against the current remote roster on every sync', () => {
+  const hero = local({
+    id: 54,
+    campId: undefined,
+    englishName: 'Old Display Name',
+    occupation: 'Mid Lane',
+  });
+  const plan = makePlan([hero], [remote({
+    campId: 519,
+    englishName: "Ao'yin",
+    occupation: 'Farm Lane',
+  })]);
+
+  assert.deepEqual(
+    plan.localDifferences.map(item => [item.field, item.actionable]),
+    [
+      ['campId', true],
+      ['englishName', true],
+      ['occupation', false],
+    ],
+  );
+  assert.equal(plan.changed, true);
+});
+
+test('non-actionable local lane differences are still reported without forcing a sync update', () => {
+  const match = {
+    local: local({ campId: 254, occupation: 'Mid Lane' }),
+    remote: remote({ occupation: 'Farm Lane' }),
+    matchedBy: 'campId' as const,
+  };
+  const differences = compareLocalHeroes([match]);
+  assert.equal(differences.length, 1);
+  assert.equal(differences[0].field, 'occupation');
+  assert.equal(differences[0].actionable, false);
+
+  const plan = makePlan([match.local], [match.remote], {
+    checkedAt: '2026-01-01T00:00:00Z',
+    source: 'test',
+    heroes: [match.remote],
+  });
+  assert.equal(plan.changed, false);
 });
 
 test('remote omissions never remove local heroes', () => {
