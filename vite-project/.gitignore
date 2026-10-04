@@ -8,8 +8,19 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+
+# Local runtime and private match data
 /data/
 .env
+.env.*
+!.env.example
+
+# User-provided media is local/private by default
+/public/playerImg/*
+!/public/playerImg/.gitkeep
+/public/teamLogo/*
+!/public/teamLogo/.gitkeep
+
 artifacts/
 test-results/
 playwright-report/
