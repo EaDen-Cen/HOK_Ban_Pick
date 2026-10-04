@@ -16,11 +16,12 @@ npm run server
 
 本机开发入口：[操作台](http://127.0.0.1:3001/control#token=local-control)、[解说台](http://127.0.0.1:3001/caster#token=local-caster)、[OBS](http://127.0.0.1:3001/overlay/draft#token=local-overlay)。这些口令仅用于本机开发；公网部署按运行指南配置独立口令。
 
+<!-- HERO-SYNC:ROSTER:START -->
 ## 程序内英雄池
 
 当前 `main` 分支程序内共有 **118 个有效英雄条目**。英雄 ID 与程序持久化数据直接关联，因此旧 ID 不会复用；**ID 29 为历史保留空位**，不属于当前英雄池。
 
-> 本表用于快速核对程序当前实际包含的英雄。英雄数据来源于 `vite-project/src/components/HeroList.tsx`、`src/data/additionalHeroes.ts` 与自动同步数据；后续英雄同步合并后，此表也应一并更新。
+> 本表由 Hero Data Synchronizer 自动生成，用于快速核对程序当前实际包含的英雄。请勿手工维护表格；英雄同步 PR 会自动刷新这里。
 
 | ID | 中文名 | English |
 | ---: | --- | --- |
@@ -142,6 +143,7 @@ npm run server
 | 117 | 元流之子（法师） | Flowborn (Mage) |
 | 118 | Coming soon | Flowborn (Assassin) |
 | 119 | Coming soon | Flowborn (Roamer) |
+<!-- HERO-SYNC:ROSTER:END -->
 
 ## 文档导航
 
