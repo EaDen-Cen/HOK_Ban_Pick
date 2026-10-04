@@ -1,6 +1,9 @@
 name: Hero data sync
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     paths:
       - 'vite-project/scripts/hero-sync/**'
@@ -58,7 +61,7 @@ permissions:
 
 jobs:
   validate-pr:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -93,7 +96,7 @@ jobs:
         run: npm run lint
 
   sync:
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
