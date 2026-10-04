@@ -44,6 +44,36 @@ function artworkBackfill(plan: ReturnType<typeof makePlan>) {
   return plan.matches.filter(match => !match.local.artLink || match.local.artLink === match.local.imageLink || match.local.campId === undefined);
 }
 
+const PLACEHOLDER_CHINESE_NAMES = new Set(['', 'coming soon', 'tbd', 'unknown']);
+
+export function preferredChineseHeroName(englishName: string, officialChineseName?: string) {
+  const normalizedEnglish = normalizeName(englishName);
+  const flowbornNames: Record<string, string> = {
+    'flowbornassassin': '元流之子（刺客）',
+    'flowbornroamer': '元流之子（辅助）',
+    'flowbornsupport': '元流之子（辅助）',
+    'flowborntank': '元流之子（坦克）',
+    'flowbornmarksman': '元流之子（射手）',
+    'flowbornmage': '元流之子（法师）',
+  };
+  const mapped = flowbornNames[normalizedEnglish];
+  const official = officialChineseName?.trim();
+  const normalizedOfficial = (official || '').toLowerCase();
+
+  if (mapped && (!official || PLACEHOLDER_CHINESE_NAMES.has(normalizedOfficial) || official === '元流之子')) {
+    return mapped;
+  }
+  if (!official || PLACEHOLDER_CHINESE_NAMES.has(normalizedOfficial)) return undefined;
+  return official;
+}
+
+function needsChineseNameBackfill(hero: Hero) {
+  const current = hero.chineseName.trim();
+  if (PLACEHOLDER_CHINESE_NAMES.has(current.toLowerCase())) return true;
+  if (normalizeName(hero.englishName).startsWith('flowborn') && current === '元流之子') return true;
+  return false;
+}
+
 const PICK_RATE_REFRESH_MS = 6 * 24 * 60 * 60 * 1000;
 function pickRateRefresh(plan: ReturnType<typeof makePlan>) {
   const now = Date.now();
@@ -144,8 +174,8 @@ async function applyUpdate(
     });
     assets.push(asset);
 
-    const chineseName = evidence.chineseName?.trim() || remote.englishName;
-    if (!evidence.chineseName) {
+    const chineseName = preferredChineseHeroName(remote.englishName, evidence.chineseName) || remote.englishName;
+    if (!preferredChineseHeroName(remote.englishName, evidence.chineseName)) {
       manualReview.push(`No official zh-Hant name was available for ${remote.englishName}; Chinese display temporarily falls back to English.`);
     }
 
@@ -195,6 +225,25 @@ async function applyUpdate(
 
   // Ranked pick rate is dynamic official metadata. Refresh it at most once per
   // weekly sync cycle, in small batches to avoid hammering HOK CAMP.
+  // Existing heroes can remain stuck on a placeholder Chinese name even when
+  // their stable Camp identity and English name never change. Re-check only
+  // those suspicious entries against official localized evidence.
+  for (const match of plan.matches.filter(item => needsChineseNameBackfill(item.local))) {
+    const evidence = await fetchOfficialHeroEvidence(match.remote.campId, match.remote.englishName);
+    const chineseName = preferredChineseHeroName(match.remote.englishName, evidence.chineseName);
+    if (!chineseName || chineseName === match.local.chineseName) continue;
+
+    const next: HeroOverride = {
+      chineseName,
+      aliases: uniqueStrings([
+        ...(match.local.aliases || []),
+        ...(PLACEHOLDER_CHINESE_NAMES.has(match.local.chineseName.trim().toLowerCase()) ? [] : [match.local.chineseName]),
+      ]),
+    };
+    overrides[match.local.id] = mergeOverride(overrides[match.local.id], next);
+    overrideAudit.push({ localId: match.local.id, campId: match.remote.campId, fields: next });
+  }
+
   const statsCandidates = pickRateRefresh(plan);
   let pickRateFailures = 0;
   for (let start = 0; start < statsCandidates.length; start += 6) {
