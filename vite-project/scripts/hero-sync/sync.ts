@@ -177,8 +177,6 @@ async function applyUpdate(
     const evidence = await fetchOfficialHeroEvidence(match.remote.campId, match.remote.englishName, { includeChinese: false });
     const next: HeroOverride = {};
 
-    if (match.local.campId === undefined) next.campId = match.remote.campId;
-
     if (!match.local.artLink || match.local.artLink === match.local.imageLink) {
       // A thumbnail fallback is not full art, and must never stop future retries.
       if (evidence.artUrl && evidence.confirmed) next.artLink = evidence.artUrl;
