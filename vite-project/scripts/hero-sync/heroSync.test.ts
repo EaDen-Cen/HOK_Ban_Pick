@@ -58,9 +58,10 @@ test('a source rename keeps identity through the previous camp snapshot', () => 
 test('existing heroes are compared against the current remote roster on every sync', () => {
   const hero = local({
     id: 54,
-    campId: undefined,
+    campId: 519,
     englishName: 'Old Display Name',
     occupation: 'Mid Lane',
+    aliases: [],
   });
   const plan = makePlan([hero], [remote({
     campId: 519,
@@ -68,13 +69,30 @@ test('existing heroes are compared against the current remote roster on every sy
     occupation: 'Farm Lane',
   })]);
 
+  assert.equal(plan.matches.length, 1);
   assert.deepEqual(
     plan.localDifferences.map(item => [item.field, item.actionable]),
     [
-      ['campId', true],
       ['englishName', true],
       ['occupation', false],
     ],
+  );
+  assert.equal(plan.changed, true);
+});
+
+test('missing camp IDs are backfilled when the current hero identity still matches', () => {
+  const hero = local({
+    id: 54,
+    campId: undefined,
+    englishName: "Ao'yin",
+    occupation: 'Farm Lane',
+  });
+  const plan = makePlan([hero], [remote({ campId: 519, englishName: "Ao'yin" })]);
+
+  assert.equal(plan.matches.length, 1);
+  assert.deepEqual(
+    plan.localDifferences.map(item => [item.field, item.actionable]),
+    [['campId', true]],
   );
   assert.equal(plan.changed, true);
 });
