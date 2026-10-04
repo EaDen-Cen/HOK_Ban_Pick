@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { heroesForState } from '../shared/heroData';
-import { draftRestriction } from '../shared/draftRules';
+import { draftHeroUsed, draftRestriction } from '../shared/draftRules';
 import { lanes, laneName, phaseName } from '../shared/display';
 import { translator } from '../shared/i18n';
 import { phases, type Action, type MatchState } from '../shared/types';
@@ -22,8 +22,7 @@ export function ControlHeroPicker({ state, disabled, active, send, acknowledged 
   const activeRef = useRef(active); activeRef.current = active;
   const t = translator(state.language), phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
   const heroes = heroesForState(state);
-  const used = [...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks];
-  const unavailable = (id: number) => disabled || !phase || !!state.committedGameId || used.includes(id) || !!draftRestriction(state, phase.team, phase.action, id);
+  const unavailable = (id: number) => disabled || !phase || !!state.committedGameId || draftHeroUsed(state, id) || !!draftRestriction(state, phase.team, phase.action, id);
   const filtered = heroes.filter(h => (filter === 'all' || h.occupation === filter || h.altOccupation === filter)
     && heroMatchesSearch(h, search, state.language));
   const visible = sortHeroes(filtered, sortMode, unavailable);
