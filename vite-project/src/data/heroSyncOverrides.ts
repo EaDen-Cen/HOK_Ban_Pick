@@ -437,7 +437,13 @@ const heroSyncOverrides: Record<number, Partial<Hero>> = {
   },
   "115": {},
   "116": {},
-  "117": {}
+  "117": {},
+  "118": {
+    "chineseName": "元流之子（刺客）"
+  },
+  "119": {
+    "chineseName": "元流之子（辅助）"
+  }
 };
 
 export default heroSyncOverrides;
