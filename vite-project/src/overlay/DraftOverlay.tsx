@@ -95,7 +95,7 @@ function PickCard({ state, side, index, position }: { state: MatchState; side: S
   const role = team.playerRoles[index];
   return <article className={`broadcast-card ${hero ? 'filled' : ''}`} data-slot={index} data-team-id={team.id}>
     <HeroReveal heroId={id} layout={state.overlayLayout} position={position} renderArt={shownId => {
-      const shown = heroForState(state, shownId);
+      const shown = typeof shownId === 'number' ? heroForState(state, shownId) : undefined;
       return shown ? <HeroArtwork hero={shown} alt={state.language === 'zh' ? shown.chineseName : shown.englishName} state={state} /> :
         <PlayerPortrait key={team.playerPortraits[index] + team.logo} portrait={team.playerPortraits[index]} logo={team.logo} label={player} slot={index} />;
     }}
