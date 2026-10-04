@@ -4,6 +4,10 @@ on:
   pull_request:
     paths:
       - 'vite-project/scripts/hero-sync/**'
+      - 'README.md'
+      - 'MILESTONES.md'
+      - 'docs/research/README.md'
+      - 'docs/research/hero-sync.md'
       - 'vite-project/src/data/autoSyncedHeroes.ts'
       - 'vite-project/src/data/heroSyncOverrides.ts'
       - 'vite-project/src/components/HeroList.tsx'
