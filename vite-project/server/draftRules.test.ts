@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { Store } from './store.js';
 import heroes from '../src/components/HeroList.js';
 import { phases, type Action, type DraftRuleMode, type MatchState } from '../src/shared/types.js';
-import { pickRestriction, banRestriction, draftRestriction } from '../src/shared/draftRules.js';
+import { pickRestriction, banRestriction, draftHeroUsed, draftRestriction } from '../src/shared/draftRules.js';
 
 const act = (s: Store, action: Action) => s.apply(randomUUID(), s.data.revision, action);
 function setup(mode: DraftRuleMode, s = new Store()) {
@@ -20,14 +20,106 @@ function setup(mode: DraftRuleMode, s = new Store()) {
 function fill(s: Store) {
   while (!s.data.state.draftComplete) {
     const st = s.data.state, phase = phases(st.draftMode)[st.currentPhase];
-    const used = [...st.blueBans, ...st.redBans, ...st.bluePicks, ...st.redPicks];
-    const hero = heroes.find(h => !used.includes(h.id) && !draftRestriction(st, phase.team, phase.action, h.id))!;
+    const hero = heroes.find(h => !draftHeroUsed(st, h.id) && !draftRestriction(st, phase.team, phase.action, h.id))!;
     act(s, { type: 'draft_action', ...phase, heroId: hero.id });
   }
 }
 function advance(s: Store) {
   act(s, { type: 'commit_game' }); act(s, { type: 'score', team: 'blue', delta: 1 }); act(s, { type: 'next_game' });
 }
+
+
+const flowborn = heroes.filter(hero => hero.variantGroup === 'flowborn');
+assert.ok(flowborn.length >= 5, 'expected all Flowborn forms in the hero roster');
+
+function setFlowbornIndependent(s: Store, independent: boolean) {
+  act(s, { type: 'settings', settings: { ...s.data.state, flowbornFormsIndependent: independent } });
+}
+
+function fillBans(s: Store) {
+  while (phases(s.data.state.draftMode, s.data.state.firstPickSide)[s.data.state.currentPhase]?.action === 'ban') {
+    const state = s.data.state;
+    const phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
+    const hero = heroes.find(candidate => candidate.variantGroup !== 'flowborn' && !draftHeroUsed(state, candidate.id) && !draftRestriction(state, phase.team, phase.action, candidate.id))!;
+    act(s, { type: 'draft_action', ...phase, heroId: hero.id });
+  }
+}
+
+test('shared Flowborn mode blocks every other form after a ban or pick in the same game', () => {
+  const s = setup('normal');
+  setFlowbornIndependent(s, false);
+
+  const firstPhase = phases(s.data.state.draftMode)[0];
+  act(s, { type: 'draft_action', ...firstPhase, heroId: flowborn[0].id });
+  const secondPhase = phases(s.data.state.draftMode)[1];
+  assert.throws(
+    () => act(s, { type: 'draft_action', ...secondPhase, heroId: flowborn[1].id }),
+    /flowbornAlreadyUsed/,
+  );
+
+  act(s, { type: 'reset_draft' });
+  fillBans(s);
+  const firstPick = phases(s.data.state.draftMode)[s.data.state.currentPhase];
+  act(s, { type: 'draft_action', ...firstPick, heroId: flowborn[0].id });
+  const nextPick = phases(s.data.state.draftMode)[s.data.state.currentPhase];
+  assert.equal(nextPick.action, 'pick');
+  assert.throws(
+    () => act(s, { type: 'draft_action', ...nextPick, heroId: flowborn[1].id }),
+    /flowbornAlreadyUsed/,
+  );
+});
+
+test('independent Flowborn mode keeps forms selectable as separate heroes', () => {
+  const s = setup('normal');
+  assert.equal(s.data.state.flowbornFormsIndependent, true);
+  const first = phases(s.data.state.draftMode)[0];
+  act(s, { type: 'draft_action', ...first, heroId: flowborn[0].id });
+  const second = phases(s.data.state.draftMode)[1];
+  act(s, { type: 'draft_action', ...second, heroId: flowborn[1].id });
+  assert.deepEqual([s.data.state.blueBans[0], s.data.state.redBans[0]], [flowborn[0].id, flowborn[1].id]);
+});
+
+test('shared Flowborn identity follows Global BP history for picks and opponent bans', () => {
+  const s = setup('global');
+  setFlowbornIndependent(s, false);
+  fillBans(s);
+  const firstPick = phases(s.data.state.draftMode)[s.data.state.currentPhase];
+  assert.equal(firstPick.team, 'blue');
+  act(s, { type: 'draft_action', ...firstPick, heroId: flowborn[0].id });
+  fill(s);
+  advance(s);
+
+  assert.equal(pickRestriction(s.data.state, 'blue', 0, flowborn[1].id), 'usedByTeam');
+  assert.equal(pickRestriction(s.data.state, 'red', 0, flowborn[1].id), undefined);
+  assert.equal(banRestriction(s.data.state, 'red', flowborn[1].id), 'opponentAlreadyUsed');
+});
+
+test('shared Flowborn identity follows Player BP history for the same player', () => {
+  const s = setup('player');
+  setFlowbornIndependent(s, false);
+  fillBans(s);
+  const firstPick = phases(s.data.state.draftMode)[s.data.state.currentPhase];
+  act(s, { type: 'draft_action', ...firstPick, heroId: flowborn[0].id });
+  fill(s);
+  act(s, { type: 'commit_game' });
+  act(s, { type: 'score', team: 'blue', delta: 1 });
+  act(s, { type: 'next_game' });
+
+  assert.equal(pickRestriction(s.data.state, 'blue', 0, flowborn[1].id), 'usedByPlayer');
+  assert.equal(pickRestriction(s.data.state, 'blue', 1, flowborn[1].id), undefined);
+});
+
+test('Flowborn counting rule locks with the rest of the draft rules', () => {
+  const s = setup('normal');
+  setFlowbornIndependent(s, false);
+  const phase = phases(s.data.state.draftMode)[0];
+  const hero = heroes.find(candidate => candidate.variantGroup !== 'flowborn')!;
+  act(s, { type: 'draft_action', ...phase, heroId: hero.id });
+  assert.throws(
+    () => act(s, { type: 'settings', settings: { ...s.data.state, flowbornFormsIndependent: true } }),
+    /rulesLocked/,
+  );
+});
 
 test('Normal BP keeps committed history but all previous picks are reusable', () => {
   const s = setup('normal'); fill(s); const old = [...s.data.state.bluePicks, ...s.data.state.redPicks];
