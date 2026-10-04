@@ -97,6 +97,7 @@ const settingsFromState = (state: MatchState): MatchSettings => ({
   stage: state.stage,
   draftMode: state.draftMode,
   draftRuleMode: state.draftRuleMode,
+  flowbornFormsIndependent: state.flowbornFormsIndependent,
   firstPickSide: state.firstPickSide,
   sideSwapMode: state.sideSwapMode,
   language: state.language,
@@ -135,6 +136,10 @@ function MatchSettingsPanel({ state, send, disabled }: { state: MatchState; send
         <label>{t('draftRules')}<select aria-label={t('draftRules')} disabled={ruleLocked(state)} value={form.draftRuleMode} onChange={e => setForm({ ...form, draftRuleMode: e.target.value as MatchSettings['draftRuleMode'] })}>
           <option value="normal">{t('ruleNormal')}</option><option value="player">{t('rulePlayer')}</option><option value="global">{t('ruleGlobal')}</option>
         </select></label>
+        <label>{t('flowbornRule')}<select aria-label={t('flowbornRule')} disabled={ruleLocked(state)} value={form.flowbornFormsIndependent ? 'independent' : 'shared'} onChange={e => setForm({ ...form, flowbornFormsIndependent: e.target.value === 'independent' })}>
+          <option value="independent">{t('flowbornIndependent')}</option>
+          <option value="shared">{t('flowbornShared')}</option>
+        </select><small>{t('flowbornRuleHint')}</small></label>
         {ruleLocked(state) && <p className="muted">{t('rulesLocked')}</p>}
       </section>
       <section><h3>{t('matchSettings')}</h3>
@@ -219,7 +224,7 @@ export default function BroadcastApp() {
   const [lastLanguage, setLastLanguage] = useState<Language>(() => sessionStorage.getItem(`hok-language-${role}`) === 'eng' ? 'eng' : 'zh');
   const { snapshot, status, error, pending, send, acknowledged } = useMatch(role, token);
   const connected = status === 'Connected';
-  const compatible = !!snapshot?.state && Array.isArray(snapshot.state.draftHistory) && !!snapshot.state.draftRuleMode && !!snapshot.state.firstPickSide && !!snapshot.state.sideSwapMode && !!snapshot.state.displayLeftSide && typeof snapshot.state.showHeroName === 'boolean' && !!snapshot.state.artSourceMode && !!snapshot.state.heroArtOverrides;
+  const compatible = !!snapshot?.state && Array.isArray(snapshot.state.draftHistory) && !!snapshot.state.draftRuleMode && !!snapshot.state.firstPickSide && !!snapshot.state.sideSwapMode && !!snapshot.state.displayLeftSide && typeof snapshot.state.showHeroName === 'boolean' && !!snapshot.state.artSourceMode && !!snapshot.state.heroArtOverrides && typeof snapshot.state.flowbornFormsIndependent === 'boolean';
   const disabled = !connected || pending || !compatible;
   const state = snapshot?.state ? normalizeState(snapshot.state) : undefined;
   const lang: Language = token && !['Invalid token', 'Access rejected'].includes(status) ? state?.language ?? lastLanguage : lastLanguage;
