@@ -11,6 +11,7 @@ import { fetchOfficialHeroEvidence, fetchOfficialHeroRankStats } from './fetchOf
 import { makePlan, nextLocalIds } from './compare.js';
 import { mergeOverride, renderAutoSyncedHeroes, renderOverrides, type HeroOverride } from './generated.js';
 import { normalizeName, uniqueStrings } from './normalize.js';
+import { updateHeroDocuments } from './documents.js';
 import type { AssetRecord, SourceSnapshot, SyncAudit } from './types.js';
 
 const projectRoot = fileURLToPath(new URL('../../', import.meta.url));
@@ -300,6 +301,14 @@ async function applyUpdate(
       'utf8',
     ),
   ]);
+
+  await updateHeroDocuments({
+    baseHeroes: heroes,
+    autoHeroes,
+    overrides,
+    checkedAt: plan.checkedAt,
+    remoteCount: plan.remoteCount,
+  });
 
   return audit;
 }
