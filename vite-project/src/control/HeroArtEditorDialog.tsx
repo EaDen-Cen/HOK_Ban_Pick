@@ -1,9 +1,10 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import heroes from '../components/HeroList';
+import { heroesForState } from '../shared/heroData';
 import { defaultHeroArtCrop, heroArtCrop } from '../data/heroArtFocus';
 import { translator } from '../shared/i18n';
-import type { Action, HeroArtCrop, HeroArtLayout, HeroArtOverride, MatchState } from '../shared/types';
+import type { Action, HeroArtCrop, HeroArtLayout, HeroArtOverride, HeroDataOverride, MatchState } from '../shared/types';
 
 const targetAspect: Record<HeroArtLayout, number> = {
   // Matches the actual 1920x1080 broadcast card viewports.
@@ -138,6 +139,7 @@ export function HeroArtEditorDialog({
   const t = translator(state.language);
   const dialog = useRef<HTMLDialogElement>(null);
   const currentPicks = [...state.bluePicks, ...state.redPicks];
+  const effectiveHeroes = useMemo(() => heroesForState(state), [state.heroDataOverrides]);
   const initialId = currentPicks[0] ?? heroes[0]?.id ?? 1;
   const [heroId, setHeroId] = useState(initialId);
 
@@ -151,6 +153,18 @@ export function HeroArtEditorDialog({
   };
 
   const [draft, setDraft] = useState<HeroArtOverride>(() => makeDraft(initialId));
+  const makeDataDraft = (id: number): HeroDataOverride => {
+    const base = heroes.find(item => item.id === id);
+    const runtime = state.heroDataOverrides?.[String(id)];
+    return {
+      englishName: runtime?.englishName ?? base?.englishName ?? '',
+      chineseName: runtime?.chineseName ?? base?.chineseName ?? '',
+      occupation: runtime?.occupation ?? base?.occupation ?? '',
+      altOccupation: runtime?.altOccupation ?? base?.altOccupation ?? '',
+      aliases: runtime?.aliases ?? base?.aliases ?? [],
+    };
+  };
+  const [dataDraft, setDataDraft] = useState<HeroDataOverride>(() => makeDataDraft(initialId));
   const [sourceSize, setSourceSize] = useState<SourceSize>({ width: 16, height: 9 });
   useEffect(() => {
     const element = dialog.current;
@@ -159,7 +173,7 @@ export function HeroArtEditorDialog({
     return () => { if (element.open) element.close(); };
   }, []);
 
-  const hero = useMemo(() => heroes.find(item => item.id === heroId) ?? heroes[0], [heroId]);
+  const hero = useMemo(() => effectiveHeroes.find(item => item.id === heroId) ?? effectiveHeroes[0], [effectiveHeroes, heroId]);
   if (!hero) return null;
 
   const panel = draft.panel ?? defaultHeroArtCrop('panel');
@@ -192,10 +206,24 @@ export function HeroArtEditorDialog({
               const nextId = Number(event.target.value);
               setHeroId(nextId);
               setDraft(makeDraft(nextId));
+              setDataDraft(makeDataDraft(nextId));
             }}>
-              {heroes.map(item => <option key={item.id} value={item.id}>{state.language === 'zh' ? item.chineseName : item.englishName}</option>)}
+              {effectiveHeroes.map(item => <option key={item.id} value={item.id}>{state.language === 'zh' ? item.chineseName : item.englishName}</option>)}
             </select>
           </label>
+
+          <fieldset className="hero-data-editor">
+            <legend>{t('heroDataSettings')}</legend>
+            <label>{t('heroChineseName')}<input maxLength={60} value={dataDraft.chineseName ?? ''} onChange={event => setDataDraft(previous => ({ ...previous, chineseName: event.target.value }))} /></label>
+            <label>{t('heroEnglishName')}<input maxLength={60} value={dataDraft.englishName ?? ''} onChange={event => setDataDraft(previous => ({ ...previous, englishName: event.target.value }))} /></label>
+            <label>{t('heroPrimaryLane')}<select value={dataDraft.occupation ?? ''} onChange={event => setDataDraft(previous => ({ ...previous, occupation: event.target.value }))}>{['Clash Lane','Jungling','Mid Lane','Farm Lane','Roaming'].map(lane => <option key={lane} value={lane}>{lane}</option>)}</select></label>
+            <label>{t('heroSecondaryLane')}<select value={dataDraft.altOccupation ?? ''} onChange={event => setDataDraft(previous => ({ ...previous, altOccupation: event.target.value }))}><option value="">{t('noSecondaryLane')}</option>{['Clash Lane','Jungling','Mid Lane','Farm Lane','Roaming'].map(lane => <option key={lane} value={lane}>{lane}</option>)}</select></label>
+            <label>{t('heroAliases')}<input maxLength={500} value={(dataDraft.aliases ?? []).join(', ')} onChange={event => setDataDraft(previous => ({ ...previous, aliases: event.target.value.split(',').map(value => value.trim()).filter(Boolean) }))} /><small>{t('heroAliasesHint')}</small></label>
+            <div className="art-editor-actions">
+              <button type="button" className="primary" disabled={disabled} onClick={() => send({ type: 'hero_data_override', heroId: hero.id, override: dataDraft })}>{t('saveHeroData')}</button>
+              <button type="button" disabled={disabled} onClick={() => { send({ type: 'reset_hero_data_override', heroId: hero.id }); const base = heroes.find(item => item.id === hero.id); if (base) setDataDraft({ englishName: base.englishName, chineseName: base.chineseName, occupation: base.occupation, altOccupation: base.altOccupation ?? '', aliases: base.aliases ?? [] }); }}>{t('resetHeroData')}</button>
+            </div>
+          </fieldset>
 
           <label className="art-editor-checkbox">
             <input
