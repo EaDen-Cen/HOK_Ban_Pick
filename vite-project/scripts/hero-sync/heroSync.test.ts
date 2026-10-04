@@ -4,6 +4,7 @@ import type { Hero } from '../../src/data/heroTypes.js';
 import { detectImage } from './assets.js';
 import { compareLocalHeroes, makePlan, nextLocalIds } from './compare.js';
 import { mergeOverride } from './generated.js';
+import { preferredChineseHeroName } from './sync.js';
 import { normalizeName } from './normalize.js';
 import { extractOfficialHeroArt, extractOfficialPickRate } from './fetchOfficial.js';
 import { heroArtCrop } from '../../src/data/heroArtFocus.js';
@@ -32,6 +33,14 @@ const remote = (overrides: Partial<CatalogHero> = {}): CatalogHero => ({
   detailUrl: 'https://wiki.bittopup.com/hok/254',
   source: 'bittopup',
   ...overrides,
+});
+
+
+test('Flowborn localized names replace generic or coming-soon placeholders', () => {
+  assert.equal(preferredChineseHeroName('Flowborn (Assassin)', 'Coming soon'), '元流之子（刺客）');
+  assert.equal(preferredChineseHeroName('Flowborn (Roamer)', '元流之子'), '元流之子（辅助）');
+  assert.equal(preferredChineseHeroName('Flowborn (Support)', undefined), '元流之子（辅助）');
+  assert.equal(preferredChineseHeroName('Flowborn (Mage)', '元流之子'), '元流之子（法师）');
 });
 
 test('normalization matches historical aliases without creating a duplicate hero', () => {
