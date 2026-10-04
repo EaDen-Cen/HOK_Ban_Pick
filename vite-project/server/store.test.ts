@@ -119,6 +119,43 @@ test('director hero art overrides persist, reset safely, and survive match reset
   assert.equal(s.data.state.heroArtOverrides[String(heroId)].useLegacyImage, true);
 });
 
+test('director hero data overrides persist, reset, and survive match reset', () => {
+  const s = new Store();
+  const heroId = heroes[0].id;
+  apply(s, {
+    type: 'hero_data_override',
+    heroId,
+    override: {
+      chineseName: '测试英雄',
+      englishName: 'Test Hero',
+      occupation: 'Mid Lane',
+      altOccupation: 'Roaming',
+      aliases: ['test', 'th'],
+    },
+  });
+  assert.deepEqual(s.data.state.heroDataOverrides[String(heroId)], {
+    chineseName: '测试英雄',
+    englishName: 'Test Hero',
+    occupation: 'Mid Lane',
+    altOccupation: 'Roaming',
+    aliases: ['test', 'th'],
+  });
+
+  apply(s, { type: 'reset_match' });
+  assert.equal(s.data.state.heroDataOverrides[String(heroId)].englishName, 'Test Hero');
+
+  apply(s, { type: 'reset_hero_data_override', heroId });
+  assert.equal(s.data.state.heroDataOverrides[String(heroId)], undefined);
+});
+
+test('director hero data overrides reject invalid names lanes and aliases', () => {
+  const s = new Store();
+  const heroId = heroes[0].id;
+  assert.throws(() => apply(s, { type: 'hero_data_override', heroId, override: { englishName: '' } }), /heroDataOverrideInvalid/);
+  assert.throws(() => apply(s, { type: 'hero_data_override', heroId, override: { occupation: 'Bottom Lane' } }), /heroDataOverrideInvalid/);
+  assert.throws(() => apply(s, { type: 'hero_data_override', heroId, override: { aliases: Array.from({ length: 21 }, (_, i) => String(i)) } }), /heroDataOverrideInvalid/);
+});
+
 test('director artwork settings validate crop ranges and presentation settings', () => {
   const s = new Store();
   const heroId = heroes[0].id;

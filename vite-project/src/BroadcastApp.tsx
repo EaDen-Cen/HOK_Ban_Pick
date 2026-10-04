@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import './broadcast.css';
 import './BroadcastApp.css';
-import heroes from './components/HeroList';
+import { heroForState } from './shared/heroData';
 import {
   phases,
   type Action,
@@ -29,13 +29,12 @@ import { Score } from './shared/Score';
 import { DraftHistory } from './shared/DraftHistory';
 import { DraftLifecycle } from './control/DraftLifecycle';
 import { DraftOverlay } from './overlay/DraftOverlay';
-const hero = (id: number) => heroes.find(h => h.id === id);
-const name = (id: number, lang: Language) => { const h = hero(id); return h ? (lang === 'zh' ? h.chineseName : h.englishName) : '—'; };
-function HeroSlot({ id, ban = false, lang }: { id?: number | null; ban?: boolean; lang: Language }) {
+const name = (state: MatchState, id: number, lang: Language) => { const h = heroForState(state, id); return h ? (lang === 'zh' ? h.chineseName : h.englishName) : '—'; };
+function HeroSlot({ state, id, ban = false, lang }: { state: MatchState; id?: number | null; ban?: boolean; lang: Language }) {
   const t = translator(lang);
   const skipped = ban && id === null;
   return <div className={`hero-slot ${ban ? 'ban' : ''} ${id ? 'filled' : ''} ${skipped ? 'skipped-ban' : ''}`} key={id ?? (skipped ? 'skipped' : 'empty')}>
-    {id ? <><img src={hero(id)?.imageLink} alt={name(id, lang)} /><span>{name(id, lang)}</span>{ban && <b className="ban-mark">╱</b>}</>
+    {id ? <><img src={heroForState(state,id)?.imageLink} alt={name(state,id, lang)} /><span>{name(state,id, lang)}</span>{ban && <b className="ban-mark">╱</b>}</>
       : <span className={skipped ? 'empty skipped-ban-label' : 'empty'}>{skipped ? t('emptyBan') : t(ban ? 'ban' : 'emptyPick')}</span>}
   </div>;
 }
@@ -43,7 +42,7 @@ function Board({ state, lang, compact = false }: { state: MatchState; lang: Lang
   const t = translator(lang);
   const phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
   return <section className={`board ${compact ? 'compact-board' : ''}`}><div className="match-strip"><span>{t('gameTitle')}</span><span>{stageName(state.stage, lang)} · {t('gameNumber', { number: currentGame(state) })} · {seriesName(state.seriesFormat, lang)} · {draftRuleName(state, lang)}</span></div>
-    <div className="team-grid">{displaySides(state).map(side => <section key={side} className={`team ${side} ${phase?.team === side ? 'active' : ''}`}><header>{state[`${side}Team`].logo && <img className="logo" src={state[`${side}Team`].logo} alt="" />}<h2>{teamName(state, side)}</h2><Score state={state} side={side} /></header><div className="picks">{Array.from({ length: 5 }, (_, i) => <HeroSlot key={i} id={state[`${side}Picks`][i]} lang={lang} />)}</div><div className="bans"><small>{t('ban')}</small>{Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, i) => <HeroSlot key={i} id={state[`${side}Bans`][i]} ban lang={lang} />)}</div></section>)}</div>
+    <div className="team-grid">{displaySides(state).map(side => <section key={side} className={`team ${side} ${phase?.team === side ? 'active' : ''}`}><header>{state[`${side}Team`].logo && <img className="logo" src={state[`${side}Team`].logo} alt="" />}<h2>{teamName(state, side)}</h2><Score state={state} side={side} /></header><div className="picks">{Array.from({ length: 5 }, (_, i) => <HeroSlot key={i} state={state} id={state[`${side}Picks`][i]} lang={lang} />)}</div><div className="bans"><small>{t('ban')}</small>{Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, i) => <HeroSlot key={i} state={state} id={state[`${side}Bans`][i]} ban lang={lang} />)}</div></section>)}</div>
     <footer className={`phase ${phase?.team || ''}`} key={state.currentPhase}>{phase ? `${phaseName(state, lang)} · ${t('phaseStep', { step: state.currentPhase + 1, total: phases(state.draftMode, state.firstPickSide).length })}` : t('draftComplete')}</footer></section>;
 }
 function TeamAnalysis({
@@ -71,8 +70,8 @@ function TeamAnalysis({
       <span className="analysis-opponent">{t('opponent', { team: teamName(state, side === 'blue' ? 'red' : 'blue') })}</span>
     </header>
     <small>{t('relationshipHint')}</small><div className="analysis-grid">{groups.map(g => {
-      const ids = [...new Set(g.sources.flatMap(id => hero(id)?.[g.field] || []))].filter(id => hero(id) && !state.blueBans.includes(id) && !state.redBans.includes(id));
-      return <article key={g.title}><h3>{g.title}</h3>{ids.length ? <div className="recommendations">{ids.map(id => <div className="recommendation" key={id}><img src={hero(id)?.imageLink} alt="" /><div><b>{name(id, lang)}{selected.includes(id) ? ' ✓' : ''}</b><small>{g.sources.filter(s => hero(s)?.[g.field]?.includes(id)).map(s => name(s, lang)).join(' · ')}</small></div></div>)}</div> : <p className="muted">{t('noRelationships')}</p>}</article>;
+      const ids = [...new Set(g.sources.flatMap(id => heroForState(state,id)?.[g.field] || []))].filter(id => heroForState(state,id) && !state.blueBans.includes(id) && !state.redBans.includes(id));
+      return <article key={g.title}><h3>{g.title}</h3>{ids.length ? <div className="recommendations">{ids.map(id => <div className="recommendation" key={id}><img src={heroForState(state,id)?.imageLink} alt="" /><div><b>{name(state,id, lang)}{selected.includes(id) ? ' ✓' : ''}</b><small>{g.sources.filter(s => heroForState(state,s)?.[g.field]?.includes(id)).map(s => name(state,s, lang)).join(' · ')}</small></div></div>)}</div> : <p className="muted">{t('noRelationships')}</p>}</article>;
     })}</div></section>;
 }
 function Analysis({

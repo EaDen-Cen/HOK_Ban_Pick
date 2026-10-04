@@ -1,4 +1,4 @@
-import heroes from '../components/HeroList';
+import { heroForState } from './heroData';
 import { displaySides, historyForTeam } from './draftRules';
 import { translator } from './i18n';
 import type { MatchState } from './types';
@@ -14,7 +14,7 @@ export function DraftHistory({ state, compact = false }: { state: MatchState; co
         return <div key={side} className={`history-team ${side} display-${position === 0 ? 'left' : 'right'}`}>
           {!compact && <strong>{entry?.team.name}</strong>}
           <div className="history-heroes">{entry?.assignments.map((id, index) => {
-            const hero = heroes.find(h => h.id === id);
+            const hero = heroForState(state, id);
             const name = state.language === 'zh' ? hero?.chineseName : hero?.englishName;
             return <img key={index} src={hero?.imageLink} alt={name} title={`${name} · ${entry.team.players[index] || t('playerNumber', { number: index + 1 })}`} />;
           })}</div>
