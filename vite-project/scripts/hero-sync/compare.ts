@@ -71,7 +71,7 @@ export function compareLocalHeroes(matches: MatchResult[]): LocalHeroDifference[
       });
     }
 
-    if (normalizeName(local.englishName) !== normalizeName(remote.englishName)) {
+    if (!namesForHero(local).includes(normalizeName(remote.englishName))) {
       differences.push({
         localId: local.id,
         campId: remote.campId,
