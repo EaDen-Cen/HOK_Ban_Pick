@@ -91,6 +91,7 @@ export interface MatchState {
   firstPickSide: Side;
   sideSwapMode: SideSwapMode;
   draftRuleMode: DraftRuleMode;
+  flowbornFormsIndependent: boolean;
   draftHistory: GameDraftRecord[];
   draftGameNumber: number | null;
   committedGameId: string | null;
@@ -118,6 +119,7 @@ export type MatchSettings = Pick<
   | 'stage'
   | 'draftMode'
   | 'draftRuleMode'
+  | 'flowbornFormsIndependent'
   | 'firstPickSide'
   | 'sideSwapMode'
   | 'language'
@@ -195,6 +197,7 @@ export const initialState = (): MatchState => ({
   firstPickSide: 'blue',
   sideSwapMode: 'moveTeams',
   draftRuleMode: 'normal',
+  flowbornFormsIndependent: true,
   draftHistory: [],
   draftGameNumber: null,
   committedGameId: null,
