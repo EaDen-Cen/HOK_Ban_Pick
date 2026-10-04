@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import heroes from '../components/HeroList';
+import { heroForState } from '../shared/heroData';
 import { Score } from '../shared/Score';
 import { HeroReveal } from './HeroReveal';
 import { PlayerPortrait } from '../shared/PlayerPortrait';
@@ -88,13 +89,13 @@ function HeroArtwork({ hero, alt, state }: { hero: (typeof heroes)[number]; alt:
 }
 function PickCard({ state, side, index, position }: { state: MatchState; side: Side; index: number; position: 'left' | 'right' }) {
   const t = translator(state.language), team = state[`${side}Team`];
-  const id = state[`${side}Assignments`][index] ?? undefined, hero = heroes.find(h => h.id === id);
+  const id = state[`${side}Assignments`][index] ?? undefined, hero = id ? heroForState(state, id) : undefined;
   const heroName = hero ? (state.language === 'zh' ? hero.chineseName : hero.englishName) : t('emptyPick');
   const player = team.players[index] || t('playerNumber', { number: index + 1 });
   const role = team.playerRoles[index];
   return <article className={`broadcast-card ${hero ? 'filled' : ''}`} data-slot={index} data-team-id={team.id}>
     <HeroReveal heroId={id} layout={state.overlayLayout} position={position} renderArt={shownId => {
-      const shown = heroes.find(h => h.id === shownId);
+      const shown = heroForState(state, shownId);
       return shown ? <HeroArtwork hero={shown} alt={state.language === 'zh' ? shown.chineseName : shown.englishName} state={state} /> :
         <PlayerPortrait key={team.playerPortraits[index] + team.logo} portrait={team.playerPortraits[index]} logo={team.logo} label={player} slot={index} />;
     }}
@@ -128,7 +129,7 @@ export function DraftOverlay({ state }: { state: MatchState }) {
         {Array.from({ length: state.draftMode === 'match' ? 4 : 2 }, (_, index) => {
           const value = state[`${side}Bans`][index];
           const skipped = value === null;
-          const hero = typeof value === 'number' ? heroes.find(h => h.id === value) : undefined;
+          const hero = typeof value === 'number' ? heroForState(state, value) : undefined;
           const label = skipped ? t('emptyBan') : hero ? (state.language === 'zh' ? hero.chineseName : hero.englishName) : t('ban');
           return <div className={`hero-slot ban ${skipped ? 'skipped-ban' : ''}`} key={index} title={label}>
             {hero ? <><img src={hero.imageLink} alt={label} /><b className="ban-mark">╱</b>{state.showHeroName && <span className="ban-name">{label}</span>}</>
