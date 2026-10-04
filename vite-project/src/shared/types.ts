@@ -10,6 +10,13 @@ export interface HeroArtOverride {
   panel?: HeroArtCrop;
   side?: HeroArtCrop;
 }
+export interface HeroDataOverride {
+  englishName?: string;
+  chineseName?: string;
+  occupation?: string;
+  altOccupation?: string;
+  aliases?: string[];
+}
 export type DraftRuleMode = 'normal' | 'player' | 'global';
 export type SideSwapMode = 'moveTeams' | 'colorsOnly';
 
@@ -77,6 +84,7 @@ export interface MatchState {
   showHeroName: boolean;
   artSourceMode: 'auto' | 'legacy';
   heroArtOverrides: Record<string, HeroArtOverride>;
+  heroDataOverrides: Record<string, HeroDataOverride>;
 
   draftMode: 'match' | 'normal';
   displayLeftSide: Side;
@@ -133,6 +141,8 @@ export type Action =
   | { type: 'settings'; settings: MatchSettings }
   | { type: 'hero_art_override'; heroId: number; override: HeroArtOverride }
   | { type: 'reset_hero_art_override'; heroId: number; layout?: HeroArtLayout }
+  | { type: 'hero_data_override'; heroId: number; override: HeroDataOverride }
+  | { type: 'reset_hero_data_override'; heroId: number }
   | { type: 'delay'; seconds: number };
 
 export type Role = 'control' | 'caster' | 'overlay';
@@ -178,6 +188,7 @@ export const initialState = (): MatchState => ({
   showHeroName: true,
   artSourceMode: 'auto',
   heroArtOverrides: {},
+  heroDataOverrides: {},
 
   draftMode: 'match',
   displayLeftSide: 'blue',
