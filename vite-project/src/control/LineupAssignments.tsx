@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import heroes from '../components/HeroList';
+import { heroForState } from '../shared/heroData';
 import type { Action, MatchState, Side } from '../shared/types';
 
 interface Region { x:number; y:number; width:number; height:number }
@@ -18,7 +18,6 @@ interface SolvedTeam {
 }
 
 const emptyRegions = () => Array.from({length:10},()=>({x:0,y:0,width:0,height:0}));
-const heroById = (id:number) => heroes.find(hero => hero.id === id);
 
 function permutations(values:number[]):number[][] {
   if (values.length <= 1) return [values];
@@ -46,7 +45,7 @@ function sameLineup(a:Array<number|null>, b:number[]) {
 
 function label(state:MatchState,id:number|null|undefined) {
   if (!id) return '—';
-  const hero=heroById(id);
+  const hero=heroForState(state,id);
   return state.language==='zh' ? hero?.chineseName ?? '—' : hero?.englishName ?? '—';
 }
 
