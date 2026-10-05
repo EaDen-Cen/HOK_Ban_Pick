@@ -1,0 +1,108 @@
+{
+  "checkedAt": "2026-10-05T19:19:30.489Z",
+  "mode": "update",
+  "sources": {
+    "catalog": "https://wiki.bittopup.com/hok",
+    "officialEnglishPattern": "https://world.honorofkings.com/zlkdatasys/ip/hero/en/{campId}.html",
+    "officialChinesePattern": "https://world.honorofkings.com/zlkdatasys/ip/hero/zh-Hant/{campId}.html"
+  },
+  "remoteCount": 118,
+  "additions": [],
+  "metadataOverrides": [],
+  "manualReview": [
+    "No high-resolution official key art was detected for local hero #117 Flowborn (Mage); overlay will keep using the local icon fallback.",
+    "No high-resolution official key art was detected for local hero #118 Flowborn (Assassin); overlay will keep using the local icon fallback.",
+    "No high-resolution official key art was detected for local hero #104 Flowborn (Marksman); overlay will keep using the local icon fallback.",
+    "No high-resolution official key art was detected for local hero #119 Flowborn (Roamer); overlay will keep using the local icon fallback.",
+    "No high-resolution official key art was detected for local hero #115 Florentino; overlay will keep using the local icon fallback.",
+    "No high-resolution official key art was detected for local hero #116 Lorion; overlay will keep using the local icon fallback.",
+    "No high-resolution official key art was detected for local hero #108 Annette; overlay will keep using the local icon fallback.",
+    "Official HOK CAMP pick rate could not be parsed for 118 matched heroes; existing values were kept and will be retried later.",
+    "Local lane differs from current auxiliary catalog for #82 Wuyan: Jungling → Clash Lane. Not auto-applied because lane metadata is not sourced from an authoritative tournament feed.",
+    "Local lane differs from current auxiliary catalog for #21 Dian Wei: Clash Lane → Jungling. Not auto-applied because lane metadata is not sourced from an authoritative tournament feed.",
+    "Local lane differs from current auxiliary catalog for #19 Dharma: Jungling → Clash Lane. Not auto-applied because lane metadata is not sourced from an authoritative tournament feed.",
+    "Local lane differs from current auxiliary catalog for #85 Yang Jian: Jungling → Clash Lane. Not auto-applied because lane metadata is not sourced from an authoritative tournament feed.",
+    "Local lane differs from current auxiliary catalog for #70 Nezha: Jungling → Clash Lane. Not auto-applied because lane metadata is not sourced from an authoritative tournament feed.",
+    "Local lane differs from current auxiliary catalog for #41 Kaizer: Jungling → Clash Lane. Not auto-applied because lane metadata is not sourced from an authoritative tournament feed.",
+    "Local lane differs from current auxiliary catalog for #63 Menki: Clash Lane → Jungling. Not auto-applied because lane metadata is not sourced from an authoritative tournament feed.",
+    "Local lane differs from current auxiliary catalog for #79 Sun Ce: Jungling → Clash Lane. Not auto-applied because lane metadata is not sourced from an authoritative tournament feed.",
+    "Local lane differs from current auxiliary catalog for #86 Yao: Clash Lane → Jungling. Not auto-applied because lane metadata is not sourced from an authoritative tournament feed."
+  ],
+  "missingLocalWarnings": [],
+  "sourceChanges": [],
+  "localDifferences": [
+    {
+      "localId": 82,
+      "campId": 117,
+      "field": "occupation",
+      "localValue": "Jungling",
+      "remoteValue": "Clash Lane",
+      "actionable": false
+    },
+    {
+      "localId": 21,
+      "campId": 129,
+      "field": "occupation",
+      "localValue": "Clash Lane",
+      "remoteValue": "Jungling",
+      "actionable": false
+    },
+    {
+      "localId": 19,
+      "campId": 134,
+      "field": "occupation",
+      "localValue": "Jungling",
+      "remoteValue": "Clash Lane",
+      "actionable": false
+    },
+    {
+      "localId": 85,
+      "campId": 178,
+      "field": "occupation",
+      "localValue": "Jungling",
+      "remoteValue": "Clash Lane",
+      "actionable": false
+    },
+    {
+      "localId": 70,
+      "campId": 180,
+      "field": "occupation",
+      "localValue": "Jungling",
+      "remoteValue": "Clash Lane",
+      "actionable": false
+    },
+    {
+      "localId": 41,
+      "campId": 193,
+      "field": "occupation",
+      "localValue": "Jungling",
+      "remoteValue": "Clash Lane",
+      "actionable": false
+    },
+    {
+      "localId": 63,
+      "campId": 198,
+      "field": "occupation",
+      "localValue": "Clash Lane",
+      "remoteValue": "Jungling",
+      "actionable": false
+    },
+    {
+      "localId": 79,
+      "campId": 510,
+      "field": "occupation",
+      "localValue": "Jungling",
+      "remoteValue": "Clash Lane",
+      "actionable": false
+    },
+    {
+      "localId": 86,
+      "campId": 522,
+      "field": "occupation",
+      "localValue": "Clash Lane",
+      "remoteValue": "Jungling",
+      "actionable": false
+    }
+  ],
+  "assets": []
+}
