@@ -9,7 +9,25 @@ test('fingerprint distance tolerates small stable-frame changes', () => {
   assert.equal(fingerprintDistance('0000000000000000','000000000000000f'),4);
 });
 
-test('empty ban waits through grace period, then requires three stable low-confidence frames', () => {
+test('low hero confidence alone can never become an empty ban',()=>{
+  let state=empty();
+  for(let scan=0;scan<6;scan++){
+    const result=detectEmptyBan(state,{
+      phaseKey:'1:0:blue:ban',
+      isBan:true,
+      fingerprint:'0000000000000000',
+      topConfidence:.20,
+      elapsedMs:EMPTY_BAN_GRACE_MS+5000,
+      lockCueDistance:2,
+    });
+    state=result.stability;
+    assert.equal(result.lockCueDetected,false);
+    assert.equal(result.suspected,false);
+    assert.equal(result.stability.count,0);
+  }
+});
+
+test('empty ban waits through grace period then requires lock cue plus three stable low-confidence frames', () => {
   let state=empty();
   const waiting=detectEmptyBan(state,{
     phaseKey:'1:0:blue:ban',
@@ -17,6 +35,7 @@ test('empty ban waits through grace period, then requires three stable low-confi
     fingerprint:'0000000000000000',
     topConfidence:.2,
     elapsedMs:EMPTY_BAN_GRACE_MS-1,
+    lockCueDistance:20,
   });
   assert.equal(waiting.suspected,false);
   assert.equal(waiting.waitingForGracePeriod,true);
@@ -30,8 +49,10 @@ test('empty ban waits through grace period, then requires three stable low-confi
       fingerprint:'0000000000000000',
       topConfidence:.2,
       elapsedMs:EMPTY_BAN_GRACE_MS+1000,
+      lockCueDistance:20,
     });
     state=result.stability;
+    assert.equal(result.lockCueDetected,true);
     assert.equal(result.suspected,scan===3);
   }
 
@@ -41,6 +62,7 @@ test('empty ban waits through grace period, then requires three stable low-confi
     fingerprint:'0000000000000000',
     topConfidence:.7,
     elapsedMs:EMPTY_BAN_GRACE_MS+2000,
+    lockCueDistance:20,
   });
   assert.equal(hero.suspected,false);
   assert.equal(hero.stability.count,0);
@@ -56,6 +78,7 @@ test('empty-ban prompt can be suppressed for the rest of a phase without affecti
       topConfidence:.1,
       elapsedMs:30000,
       suppressed:true,
+      lockCueDistance:20,
     },
   );
   assert.equal(suppressed.suspected,false);
@@ -67,6 +90,7 @@ test('empty-ban prompt can be suppressed for the rest of a phase without affecti
     fingerprint:'0000000000000000',
     topConfidence:.1,
     elapsedMs:30000,
+    lockCueDistance:20,
   });
   assert.equal(next.stability.count,1);
   assert.equal(next.suspected,false);
@@ -79,6 +103,7 @@ test('pick phases never trigger empty-ban detection', () => {
     fingerprint:'0000000000000000',
     topConfidence:.1,
     elapsedMs:30000,
+    lockCueDistance:20,
   });
   assert.equal(pick.suspected,false);
   assert.equal(pick.waitingForGracePeriod,false);
