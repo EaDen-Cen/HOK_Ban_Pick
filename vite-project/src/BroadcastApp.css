@@ -460,7 +460,7 @@
   color:#eff5fc;
   box-shadow:0 28px 90px #000b;
 }
-.team-settings-dialog::backdrop { background:#020611c7; backdrop-filter:blur(3px); }
+.team-settings-dialog::backdrop { background:#020611c7; backdrop-filter:blur(3px);}
 .team-settings-dialog-header {
   position:sticky;
   top:0;
