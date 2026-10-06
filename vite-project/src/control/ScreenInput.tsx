@@ -11,7 +11,7 @@ import {
   type CaptureSlots,
   type LegacyCaptureZones,
 } from './bpCaptureLayout';
-import { detectEmptyBan, EMPTY_BAN_GRACE_MS, type EmptyBanStability } from './emptyBanDetection';
+import { detectEmptyBan, EMPTY_BAN_GRACE_MS, fingerprintDistance, type EmptyBanStability } from './emptyBanDetection';
 import { updateHeroRecognitionStability, type HeroRecognitionStability } from './heroRecognitionStability';
 import { regionFromDrag, regionToPixels } from './windowCaptureGeometry';
 import { phaseName } from '../shared/display';
@@ -38,6 +38,7 @@ type RecognitionResponse = {
   candidates?: {heroId:number;confidence:number}[];
   preview:string;
   fingerprint?:string;
+  lockFingerprint?:string;
 };
 
 const freshEmptyStability = (): EmptyBanStability => ({ phaseKey:'', fingerprint:'', count:0 });
@@ -110,6 +111,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const heroStability=useRef<HeroRecognitionStability>(freshHeroStability());
   const phaseStartedAt=useRef(Date.now());
   const emptyPromptedPhase=useRef('');
+  const lockBaseline=useRef<{phaseKey:string;fingerprint:string}>({phaseKey:'',fingerprint:''});
 
   const phase=phases(state.draftMode,state.firstPickSide)[state.currentPhase];
   const phaseKey=`${state.draftGameNumber ?? state.gameNumber}:${state.currentPhase}:${phase?.team ?? 'done'}:${phase?.action ?? 'done'}`;
@@ -147,12 +149,29 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       if(stream) stream.getTracks().forEach(track=>track.stop());
     };
   },[]);
+  useEffect(()=>{
+    const preventZoomKeys=(event:KeyboardEvent)=>{
+      if(!(event.ctrlKey||event.metaKey)) return;
+      if(['+','=','-','0'].includes(event.key)) event.preventDefault();
+    };
+    const preventZoomWheel=(event:WheelEvent)=>{
+      if(event.ctrlKey||event.metaKey) event.preventDefault();
+    };
+    window.addEventListener('keydown',preventZoomKeys,{capture:true});
+    window.addEventListener('wheel',preventZoomWheel,{capture:true,passive:false});
+    return()=>{
+      window.removeEventListener('keydown',preventZoomKeys,{capture:true});
+      window.removeEventListener('wheel',preventZoomWheel,{capture:true});
+    };
+  },[]);
+
 
   useEffect(()=>{
     emptyStability.current=freshEmptyStability();
     heroStability.current=freshHeroStability();
     phaseStartedAt.current=Date.now();
     emptyPromptedPhase.current='';
+    lockBaseline.current={phaseKey,fingerprint:''};
     setResult(undefined);
     setMessage('');
     setCandidateStatus('');
@@ -271,6 +290,14 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       heroStability.current=heroEvidence.stability;
       const top=heroEvidence.top;
       const elapsedMs=Date.now()-phaseStartedAt.current;
+
+      if(phase.action==='ban' && data.lockFingerprint && !lockBaseline.current.fingerprint){
+        lockBaseline.current={phaseKey,fingerprint:data.lockFingerprint};
+      }
+      const lockCueDistance=phase.action==='ban' && data.lockFingerprint && lockBaseline.current.fingerprint
+        ? fingerprintDistance(lockBaseline.current.fingerprint,data.lockFingerprint)
+        : undefined;
+
       const empty=detectEmptyBan(emptyStability.current,{
         phaseKey,
         isBan:phase.action==='ban',
@@ -278,6 +305,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         topConfidence:top?.confidence,
         elapsedMs,
         suppressed:emptyPromptedPhase.current===phaseKey,
+        lockCueDistance,
       });
       emptyStability.current=empty.stability;
 
@@ -287,6 +315,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
           hero:label(top.heroId),
           confidence:Math.round(top.confidence*100),
           count:heroEvidence.stability.count,
+          required:heroEvidence.requiredScans,
         }));
         setResult({kind:'hero',candidates,preview:data.preview,at:Date.now()});
         return;
@@ -297,6 +326,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
           hero:label(top.heroId),
           confidence:Math.round(top.confidence*100),
           count:heroEvidence.stability.count,
+          required:heroEvidence.requiredScans || '—',
         }));
       }else{
         setCandidateStatus(t('captureNoCandidate'));
@@ -314,8 +344,10 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         setMessage(t('emptyBanGraceWaiting',{seconds:remaining}));
       }else if(phase.action==='ban'&&emptyPromptedPhase.current===phaseKey){
         setMessage(t('emptyBanSuppressed'));
-      }else if(phase.action==='ban'&&(top?.confidence??0)<.35){
-        setMessage(t('emptyBanSuspected',{count:empty.stability.count}));
+      }else if(phase.action==='ban'&&empty.lockCueDetected&&(top?.confidence??0)<.34){
+        setMessage(t('emptyBanLockCueWaiting',{count:empty.stability.count}));
+      }else if(phase.action==='ban'){
+        setMessage(t('emptyBanAwaitLockCue'));
       }else{
         setMessage(t('captureWaitingForStableHero'));
       }
@@ -434,6 +466,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
 
       <div
         className={`window-capture-preview ${videoReady?'ready':''} ${calibratingSlot?'calibrating':''}`}
+        style={videoReady&&windowInfo?.width&&windowInfo?.height?{aspectRatio:`${windowInfo.width}/${windowInfo.height}`}:undefined}
         onPointerDown={pointerDown}
         onPointerMove={pointerMove}
         onPointerUp={pointerUp}

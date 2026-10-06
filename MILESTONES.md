@@ -590,19 +590,37 @@ docs/research/
 
 ## M16 — Desktop Director App
 
-**状态：💡 可选未来方向**
+**状态：🚧 已启动**
 
-当前 Windows 一键启动已经覆盖大部分“桌面程序”的实用价值，因此桌面打包不是当前必要任务。
+Auto BP 实测暴露出普通浏览器环境的几个问题：浏览器缩放、普通标签页布局变化和窗口采集交互都会影响导播校准稳定性，因此桌面化现在提前进入实施阶段。
 
-如果未来希望让其他赛事组织者无需安装 Node / npm / cloudflared 即可使用，可以考虑：
+第一阶段已经采用轻量 Director App Window：
+
+```text
+start-broadcast.bat
+      ↓
+open-director.ps1
+      ↓
+Edge / Chrome --app
+      ↓
+独立本地浏览器 Profile
+      ↓
+固定 Control 工作窗口
+```
+
+这一阶段不引入新的赛事状态模型，也不改变 Caster / Overlay / Server API，只先解决导播端浏览器标签页和历史缩放配置带来的干扰。
+
+下一阶段目标仍是正式可分发：
 
 ```text
 HOK Broadcast Director.exe
 ```
 
-潜在功能：
+计划采用 Electron 作为优先候选，并逐步接管：
 
 - Start / Stop Server
+- 原生窗口选择 / Capture Source
+- 固定 100% UI Scale
 - Tunnel Status
 - Public URL
 - Copy Caster URL
@@ -612,9 +630,7 @@ HOK Broadcast Director.exe
 - Backup / Restore
 - App Update
 
-当前技术栈以 Node.js 为核心，因此若进入桌面化阶段，Electron 是较直接的候选方案。
-
-在真实赛事工作流稳定之前，不建议把桌面打包作为最高优先级。
+正式 Electron 打包应继续复用现有 Node/WebSocket authoritative server，避免桌面化过程中重写已经验证过的比赛状态逻辑。
 
 ---
 
@@ -669,5 +685,5 @@ HOK Broadcast System
 | M13 | 固定公网部署 | 📋 |
 | M14 | Hero Database 持续维护 | 🔁 |
 | M15 | Production Reliability | 📋 |
-| M16 | Desktop Director App | 💡 |
+| M16 | Desktop Director App | 🚧 |
 
