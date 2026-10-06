@@ -531,7 +531,7 @@ https://<fixed-domain>/overlay/draft
 **状态：🔁 长期任务；自动检查框架已实现**
 
 <!-- HERO-SYNC:M14:START -->
-当前自动同步基线：**2026-10-04**；程序内 **118** 个有效英雄条目，最近远端目录返回 **118** 条。README 英雄池和相关 Hero Sync 文档会随候选同步 PR 自动刷新。
+当前自动同步基线：**2026-10-05**；程序内 **118** 个有效英雄条目，最近远端目录返回 **118** 条。README 英雄池和相关 Hero Sync 文档会随候选同步 PR 自动刷新。
 <!-- HERO-SYNC:M14:END -->
 
 英雄数据已经经过一次较大的 Global roster 补齐和审计，并新增独立的 Hero Data Synchronizer：

@@ -3,7 +3,7 @@
 [文档索引](../README.md)
 
 <!-- HERO-SYNC:INDEX:START -->
-- 当前 Hero Sync 基线：**2026-10-04**，程序内 **118** 个有效英雄；最近远端目录 **118** 条。
+- 当前 Hero Sync 基线：**2026-10-05**，程序内 **118** 个有效英雄；最近远端目录 **118** 条。
 - [英雄数据自动同步](hero-sync.md)：每周检查国际服名单、自动刷新相关文档、生成审计记录并通过 PR 提交候选更新。
 <!-- HERO-SYNC:INDEX:END -->
 - [同步前名单差异](../../research/hero-roster-comparison.json)
