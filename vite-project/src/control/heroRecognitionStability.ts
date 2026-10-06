@@ -14,11 +14,19 @@ export interface StableHeroResult {
   accepted:boolean;
   top?:HeroCandidate;
   margin:number;
+  requiredScans:number;
 }
 
-export const HERO_MIN_CONFIDENCE=.55;
-export const HERO_MIN_MARGIN=.035;
-export const HERO_STABLE_SCANS=2;
+export const HERO_HIGH_CONFIDENCE=.55;
+export const HERO_MEDIUM_CONFIDENCE=.40;
+export const HERO_LOW_CONFIDENCE=.28;
+
+function requiredScans(confidence:number, margin:number) {
+  if(confidence>=HERO_HIGH_CONFIDENCE && margin>=.035) return 2;
+  if(confidence>=HERO_MEDIUM_CONFIDENCE && margin>=.050) return 3;
+  if(confidence>=HERO_LOW_CONFIDENCE && margin>=.080) return 4;
+  return 0;
+}
 
 export function updateHeroRecognitionStability(
   previous:HeroRecognitionStability,
@@ -28,25 +36,30 @@ export function updateHeroRecognitionStability(
   const top=candidates[0];
   const second=candidates[1];
   const margin=top ? top.confidence-(second?.confidence ?? 0) : 0;
-  const strong=!!top&&top.confidence>=HERO_MIN_CONFIDENCE&&margin>=HERO_MIN_MARGIN;
-  if(!strong) {
+  const required=top ? requiredScans(top.confidence,margin) : 0;
+
+  if(!top || required===0) {
     return {
       stability:{phaseKey,heroId:null,count:0},
       accepted:false,
       top,
       margin,
+      requiredScans:0,
     };
   }
+
   const same=previous.phaseKey===phaseKey&&previous.heroId===top.heroId;
   const stability={
     phaseKey,
     heroId:top.heroId,
     count:same?previous.count+1:1,
   };
+
   return {
     stability,
-    accepted:stability.count>=HERO_STABLE_SCANS,
+    accepted:stability.count>=required,
     top,
     margin,
+    requiredScans:required,
   };
 }
