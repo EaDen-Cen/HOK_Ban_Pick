@@ -4,12 +4,13 @@ import { updateHeroRecognitionStability } from '../src/control/heroRecognitionSt
 
 const fresh={phaseKey:'',heroId:null,count:0};
 
-test('hero review requires the same separated candidate for two scans',()=>{
+test('high-confidence hero review requires two stable scans',()=>{
   const first=updateHeroRecognitionStability(fresh,'g1:p4',[
     {heroId:10,confidence:.72},
     {heroId:11,confidence:.61},
   ]);
   assert.equal(first.accepted,false);
+  assert.equal(first.requiredScans,2);
   assert.equal(first.stability.count,1);
 
   const second=updateHeroRecognitionStability(first.stability,'g1:p4',[
@@ -20,12 +21,40 @@ test('hero review requires the same separated candidate for two scans',()=>{
   assert.equal(second.stability.count,2);
 });
 
+test('persistent imperfect crops can stabilize at lower confidence instead of resetting forever',()=>{
+  let state=fresh;
+  for(let scan=1;scan<=4;scan++){
+    const result=updateHeroRecognitionStability(state,'g1:p4',[
+      {heroId:26,confidence:.37},
+      {heroId:10,confidence:.27},
+    ]);
+    state=result.stability;
+    assert.equal(result.requiredScans,4);
+    assert.equal(result.stability.count,scan);
+    assert.equal(result.accepted,scan===4);
+  }
+});
+
+test('medium-confidence separated candidates require three scans',()=>{
+  let state=fresh;
+  for(let scan=1;scan<=3;scan++){
+    const result=updateHeroRecognitionStability(state,'g1:p4',[
+      {heroId:26,confidence:.47},
+      {heroId:10,confidence:.36},
+    ]);
+    state=result.stability;
+    assert.equal(result.requiredScans,3);
+    assert.equal(result.accepted,scan===3);
+  }
+});
+
 test('ambiguous candidates and phase changes reset stable hero evidence',()=>{
   const ambiguous=updateHeroRecognitionStability(fresh,'g1:p4',[
     {heroId:10,confidence:.70},
     {heroId:11,confidence:.68},
   ]);
   assert.equal(ambiguous.accepted,false);
+  assert.equal(ambiguous.requiredScans,0);
   assert.equal(ambiguous.stability.count,0);
 
   const previous={phaseKey:'g1:p4',heroId:10,count:1};
@@ -34,5 +63,6 @@ test('ambiguous candidates and phase changes reset stable hero evidence',()=>{
     {heroId:11,confidence:.50},
   ]);
   assert.equal(nextPhase.accepted,false);
+  assert.equal(nextPhase.requiredScans,2);
   assert.equal(nextPhase.stability.count,1);
 });
