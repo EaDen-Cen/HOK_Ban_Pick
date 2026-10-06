@@ -8,9 +8,11 @@ export interface EmptyBanDetection {
   stability: EmptyBanStability;
   suspected: boolean;
   waitingForGracePeriod: boolean;
+  lockCueDetected: boolean;
 }
 
 export const EMPTY_BAN_GRACE_MS = 10000;
+export const EMPTY_BAN_LOCK_DISTANCE = 10;
 
 export function fingerprintDistance(a: string, b: string) {
   if (!a || !b || a.length !== b.length) return Number.POSITIVE_INFINITY;
@@ -23,14 +25,13 @@ export function fingerprintDistance(a: string, b: string) {
 }
 
 /**
- * Empty-ban detection is intentionally conservative:
- * - it only applies to Ban phases;
- * - the phase must first survive a grace period, because players often think
- *   for several seconds before banning;
- * - a recognizable hero clears empty-ban stability immediately;
- * - the same low-confidence frame must then remain stable for 3 scans;
- * - a caller can suppress the prompt for the rest of the current phase after
- *   the director rejects it.
+ * Empty-ban detection is deliberately based on two independent signals:
+ * 1) no trustworthy hero match, and
+ * 2) the lower-right "locked/confirmed" cue changed from the start-of-phase baseline.
+ *
+ * A static empty portrait is therefore not enough to produce an empty-ban prompt,
+ * and a random low-confidence hero such as Kongming cannot by itself become an
+ * empty ban.
  */
 export function detectEmptyBan(
   previous: EmptyBanStability,
@@ -42,13 +43,17 @@ export function detectEmptyBan(
     elapsedMs?: number;
     suppressed?: boolean;
     graceMs?: number;
+    lockCueDistance?: number;
+    lockCueThreshold?: number;
   },
 ): EmptyBanDetection {
   const fingerprint = input.fingerprint || '';
-  const lowConfidence = (input.topConfidence ?? 0) < .35;
+  const lowConfidence = (input.topConfidence ?? 0) < .34;
   const graceMs = input.graceMs ?? EMPTY_BAN_GRACE_MS;
   const elapsedMs = input.elapsedMs ?? 0;
   const waitingForGracePeriod = input.isBan && elapsedMs < graceMs;
+  const lockCueDetected = Number.isFinite(input.lockCueDistance)
+    && (input.lockCueDistance ?? 0) >= (input.lockCueThreshold ?? EMPTY_BAN_LOCK_DISTANCE);
 
   if (
     !input.isBan
@@ -56,11 +61,13 @@ export function detectEmptyBan(
     || waitingForGracePeriod
     || !fingerprint
     || !lowConfidence
+    || !lockCueDetected
   ) {
     return {
       stability: { phaseKey: input.phaseKey, fingerprint: '', count: 0 },
       suspected: false,
       waitingForGracePeriod,
+      lockCueDetected,
     };
   }
 
@@ -68,5 +75,10 @@ export function detectEmptyBan(
   const stableFrame = samePhase && previous.fingerprint && fingerprintDistance(previous.fingerprint, fingerprint) <= 8;
   const count = stableFrame ? previous.count + 1 : 1;
   const stability = { phaseKey: input.phaseKey, fingerprint, count };
-  return { stability, suspected: count >= 3, waitingForGracePeriod: false };
+  return {
+    stability,
+    suspected: count >= 3,
+    waitingForGracePeriod: false,
+    lockCueDetected,
+  };
 }
