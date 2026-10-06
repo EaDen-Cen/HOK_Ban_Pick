@@ -90,8 +90,12 @@ exit /b 1
 >>"artifacts\current-public-url.txt" echo !PUBLIC_URL!/caster
 >>"artifacts\current-public-url.txt" echo !PUBLIC_URL!/overlay/draft
 
-echo [6/6] Opening local Control...
-start "" "http://127.0.0.1:3001/control"
+echo [6/6] Opening local Director window...
+if exist "open-director.ps1" (
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0open-director.ps1" -Url "http://127.0.0.1:3001/control"
+) else (
+  start "" "http://127.0.0.1:3001/control"
+)
 echo.
 echo ==========================================
 echo   HOK Broadcast is READY
