@@ -578,3 +578,19 @@
   .explicit-slot-calibration-heading > button { width:100%; }
   .explicit-slot-groups { grid-template-columns:1fr; }
 }
+
+
+/* Keep capture geometry tied to the actual video coordinate space.
+   Browser zoom may scale the whole stage, but it no longer changes where a
+   normalized BP box lands inside the captured 16:9 frame. */
+.window-capture-preview.ready {
+  min-height:0;
+}
+.window-capture-preview.ready video {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  max-height:none;
+  object-fit:contain;
+}
