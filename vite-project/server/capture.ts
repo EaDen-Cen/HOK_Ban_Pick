@@ -10,21 +10,85 @@ async function features(source: string | Buffer) {
   const values=Array.from(pixels,n=>n-mean), norm=Math.sqrt(values.reduce((sum,n)=>sum+n*n,0));
   return values.map(n=>n/Math.max(norm,1));
 }
-export async function frameFingerprint(source: Buffer) {
-  const pixels: Buffer = await sharp(source).resize(8,8,{fit:'fill'}).greyscale().raw().toBuffer();
+
+async function perceptualFingerprint(source: Buffer, region?: {left:number;top:number;width:number;height:number}) {
+  let image=sharp(source);
+  if(region) image=image.extract(region);
+  const pixels: Buffer = await image.resize(8,8,{fit:'fill'}).greyscale().raw().toBuffer();
   const mean = pixels.reduce((sum,n)=>sum+n,0) / pixels.length;
   let bits = '';
   for (const pixel of pixels) bits += pixel >= mean ? '1' : '0';
   return Array.from({length:16},(_,index)=>parseInt(bits.slice(index*4,index*4+4),2).toString(16)).join('');
 }
+
+export async function frameFingerprint(source: Buffer) {
+  return perceptualFingerprint(source);
+}
+
+export async function lockCueFingerprint(source: Buffer) {
+  const meta=await sharp(source).metadata();
+  const width=meta.width||0, height=meta.height||0;
+  if(width<8||height<8) return '';
+  // In the live HOK draft UI the locked/confirmed marker sits in the lower-right
+  // corner of a Ban portrait. Use a compact cue crop so empty-ban detection does
+  // not depend on the hero matcher accidentally returning a low-confidence hero.
+  const cueWidth=Math.max(8,Math.floor(width*.42));
+  const cueHeight=Math.max(8,Math.floor(height*.42));
+  return perceptualFingerprint(source,{
+    left:Math.max(0,width-cueWidth),
+    top:Math.max(0,height-cueHeight),
+    width:cueWidth,
+    height:cueHeight,
+  });
+}
+
+async function captureFeatureVariants(source: Buffer) {
+  const meta=await sharp(source).metadata();
+  const width=meta.width||0, height=meta.height||0;
+  if(width<8||height<8) return [await features(source)];
+
+  const minSide=Math.min(width,height);
+  const specs:{scale:number;dx:number;dy:number}[]=[
+    {scale:1,dx:0,dy:0},
+    {scale:.90,dx:0,dy:0},
+    {scale:.82,dx:0,dy:0},
+    {scale:.74,dx:0,dy:0},
+    {scale:.82,dx:-.12,dy:0},
+    {scale:.82,dx:.12,dy:0},
+    {scale:.82,dx:0,dy:-.12},
+    {scale:.82,dx:0,dy:.12},
+    {scale:.74,dx:-.14,dy:-.08},
+    {scale:.74,dx:.14,dy:-.08},
+    {scale:.74,dx:-.14,dy:.08},
+    {scale:.74,dx:.14,dy:.08},
+  ];
+  const variants:number[][]=[];
+  for(const spec of specs){
+    const side=Math.max(8,Math.min(minSide,Math.floor(minSide*spec.scale)));
+    const centerX=width/2 + spec.dx*Math.max(0,width-side);
+    const centerY=height/2 + spec.dy*Math.max(0,height-side);
+    const left=Math.max(0,Math.min(width-side,Math.round(centerX-side/2)));
+    const top=Math.max(0,Math.min(height-side,Math.round(centerY-side/2)));
+    variants.push(await features(await sharp(source).extract({left,top,width:side,height:side}).toBuffer()));
+  }
+  return variants;
+}
+
 let templates: Promise<{heroId:number; values:number[]}[]> | undefined;
 export async function recognizeImage(buffer: Buffer, allowedHeroIds?: number[]) {
   templates ??= Promise.all(heroes.map(async h=>({heroId:h.id,values:await features(fileURLToPath(new URL(`../public${h.imageLink}`,import.meta.url)))}))).catch(error=>{templates=undefined;throw error;});
-  const values=await features(buffer);
+  const variants=await captureFeatureVariants(buffer);
   const allowed = allowedHeroIds?.length ? new Set(allowedHeroIds) : undefined;
   return (await templates)
     .filter(hero => !allowed || allowed.has(hero.heroId))
-    .map(h=>({heroId:h.heroId,confidence:Math.max(0,Math.min(1,h.values.reduce((sum,n,i)=>sum+n*values[i],0))) }))
+    .map(hero=>{
+      let confidence=0;
+      for(const values of variants){
+        const score=hero.values.reduce((sum,n,i)=>sum+n*values[i],0);
+        if(score>confidence) confidence=score;
+      }
+      return {heroId:hero.heroId,confidence:Math.max(0,Math.min(1,confidence))};
+    })
     .sort((a,b)=>b.confidence-a.confidence)
     .slice(0,3);
 }
@@ -68,6 +132,7 @@ export async function recognizeScreen(region: ReturnType<typeof captureRegion>) 
     return {
       preview: frame.preview,
       fingerprint: await frameFingerprint(buffer),
+      lockFingerprint: await lockCueFingerprint(buffer),
       candidates: await recognizeImage(buffer),
     };
   } finally { busy = false; }
@@ -105,6 +170,7 @@ export async function recognizeClientFrame(value: unknown) {
   return {
     preview:value as string,
     fingerprint:await frameFingerprint(buffer),
+    lockFingerprint:await lockCueFingerprint(buffer),
     candidates:await recognizeImage(buffer),
   };
 }
