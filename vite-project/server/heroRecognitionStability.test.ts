@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { updateHeroRecognitionStability } from '../src/control/heroRecognitionStability.js';
+import { updateHeroRecognitionStability, type HeroRecognitionStability } from '../src/control/heroRecognitionStability.js';
 
-const fresh={phaseKey:'',heroId:null,count:0};
+const fresh:HeroRecognitionStability={phaseKey:'',heroId:null,count:0};
 
 test('high-confidence hero review requires two stable scans',()=>{
   const first=updateHeroRecognitionStability(fresh,'g1:p4',[
@@ -22,7 +22,7 @@ test('high-confidence hero review requires two stable scans',()=>{
 });
 
 test('persistent imperfect crops can stabilize at lower confidence instead of resetting forever',()=>{
-  let state=fresh;
+  let state:HeroRecognitionStability=fresh;
   for(let scan=1;scan<=4;scan++){
     const result=updateHeroRecognitionStability(state,'g1:p4',[
       {heroId:26,confidence:.37},
@@ -36,7 +36,7 @@ test('persistent imperfect crops can stabilize at lower confidence instead of re
 });
 
 test('medium-confidence separated candidates require three scans',()=>{
-  let state=fresh;
+  let state:HeroRecognitionStability=fresh;
   for(let scan=1;scan<=3;scan++){
     const result=updateHeroRecognitionStability(state,'g1:p4',[
       {heroId:26,confidence:.47},
