@@ -14,10 +14,25 @@ It will:
 5. start a Cloudflare Quick Tunnel;
 6. capture the new `trycloudflare.com` address;
 7. save the public, Control, Caster, and Overlay URLs to `artifacts/current-public-url.txt`;
-8. open the local Control page automatically.
+8. open the local Control in a dedicated Director app window (Edge/Chrome app mode with its own local profile).
 
 Keep the server and tunnel windows running during the event. Double-click `stop-broadcast.bat` when finished.
 
 The local operator intentionally uses `http://127.0.0.1:3001/control`; remote Caster/Overlay clients use the generated HTTPS URL.
 
 If startup fails, inspect `artifacts/cloudflared.log` and the `HOK Broadcast Server` window.
+
+
+## Director app window
+
+`start-broadcast.bat` now calls `vite-project/open-director.ps1` for the local operator.
+
+The launcher prefers Microsoft Edge, then Chrome, and opens Control with `--app=` rather than as a normal browser tab. A dedicated profile is stored under:
+
+```text
+vite-project/data/director-browser-profile/
+```
+
+This keeps Control isolated from the operator's normal browser profile and avoids inheriting a saved per-site zoom level. The Auto BP calibration UI also blocks Ctrl/Cmd zoom shortcuts and Ctrl+wheel while it is mounted.
+
+This is the first desktopization step, not the final distributable EXE. It deliberately reuses the existing server and browser engine while the Auto BP workflow is still being validated. The planned Electron package can later bundle the same Control UI, server lifecycle, tunnel status and logs without changing match-state APIs.
