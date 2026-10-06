@@ -149,6 +149,22 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       if(stream) stream.getTracks().forEach(track=>track.stop());
     };
   },[]);
+  useEffect(()=>{
+    const preventZoomKeys=(event:KeyboardEvent)=>{
+      if(!(event.ctrlKey||event.metaKey)) return;
+      if(['+','=','-','0'].includes(event.key)) event.preventDefault();
+    };
+    const preventZoomWheel=(event:WheelEvent)=>{
+      if(event.ctrlKey||event.metaKey) event.preventDefault();
+    };
+    window.addEventListener('keydown',preventZoomKeys,{capture:true});
+    window.addEventListener('wheel',preventZoomWheel,{capture:true,passive:false});
+    return()=>{
+      window.removeEventListener('keydown',preventZoomKeys,{capture:true});
+      window.removeEventListener('wheel',preventZoomWheel,{capture:true});
+    };
+  },[]);
+
 
   useEffect(()=>{
     emptyStability.current=freshEmptyStability();
