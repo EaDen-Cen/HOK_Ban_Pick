@@ -636,6 +636,17 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
           entry.item.key,
           entry.evidence.top!.heroId,
         ]));
+        const heroIds=scanned.map(entry=>entry.evidence.top!.heroId);
+        const autoSubmit=state.screenAutoSubmitEnabled
+          && scanned.every(entry=>(entry.evidence.top?.confidence??0)>=state.screenAutoSubmitConfidence);
+        if(autoSubmit){
+          setGroupSelected(selections);
+          setMessage(zh
+            ? `高置信度自动录入 · ${heroIds.map((heroId,index)=>`${label(heroId)} ${Math.round((scanned[index].evidence.top?.confidence??0)*100)}%`).join(' + ')}`
+            : `High-confidence auto-submit · ${heroIds.map((heroId,index)=>`${label(heroId)} ${Math.round((scanned[index].evidence.top?.confidence??0)*100)}%`).join(' + ')}`);
+          send({type:'draft_pick_group',team:phase.team,heroIds});
+          return;
+        }
         setGroupSelected(selections);
         setResult({
           kind:'pick-group',
@@ -701,6 +712,13 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
           count:heroEvidence.stability.count,
           required:heroEvidence.requiredScans,
         }));
+        if(state.screenAutoSubmitEnabled&&top.confidence>=state.screenAutoSubmitConfidence){
+          setMessage(zh
+            ? `高置信度自动录入 · ${label(top.heroId)} ${Math.round(top.confidence*100)}%`
+            : `High-confidence auto-submit · ${label(top.heroId)} ${Math.round(top.confidence*100)}%`);
+          send({type:'draft_action',heroId:top.heroId,team:phase.team,action:phase.action});
+          return;
+        }
         setResult({kind:'hero',candidates,preview:data.preview,at:Date.now()});
         return;
       }
@@ -754,7 +772,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       busyRef.current=false;
       if(mounted.current) setBusy(false);
     }
-  },[captureSlotLabel,disabled,label,nextOpponentPickProbe,phase,phaseKey,pickToBanBoundary,recognizeWindowRegion,state.committedGameId,t,target,turnTargets,useHighlightRelease,zh]);
+  },[captureSlotLabel,disabled,label,nextOpponentPickProbe,phase,phaseKey,pickToBanBoundary,recognizeWindowRegion,send,state.committedGameId,state.screenAutoSubmitConfidence,state.screenAutoSubmitEnabled,t,target,turnTargets,useHighlightRelease,zh]);
 
   useEffect(()=>{
     if(!autoWatch||result||disabled||!phase||state.committedGameId||busy||!videoReady) return;
