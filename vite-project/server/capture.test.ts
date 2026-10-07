@@ -22,12 +22,12 @@ test('capture rejects remote, tunnel and cross-origin requests even with loopbac
   assert.ok(!localCaptureRequest(request({host:'example.com'})));
   assert.ok(!localCaptureRequest(request({host:'127.0.0.1:3001'},'192.168.1.10')));
 });
-test('input and score settings are authoritative, validated, undoable and delayed',()=>{
+test('input/presentation settings are live to caster while gameplay remains authoritative and undoable',()=>{
   let now=0;const store=new Store(undefined,()=>now);
   const settings={...store.data.state,scoreDisplay:'boxes',bpInputMode:'screen'} as MatchSettings;
   store.apply('settings-001',0,{type:'settings',settings});
   assert.equal(store.snapshot('overlay').state.scoreDisplay,'boxes');
-  assert.equal(store.snapshot('caster').state.bpInputMode,'manual');
+  assert.equal(store.snapshot('caster').state.bpInputMode,'screen');
   now=180000; assert.equal(store.snapshot('caster').state.bpInputMode,'screen');
   assert.throws(()=>store.apply('settings-002',1,{type:'settings',settings:{...settings,bpInputMode:'bad'} as unknown as MatchSettings}));
   assert.equal(store.data.revision,1);

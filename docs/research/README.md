@@ -12,3 +12,6 @@
 - [中文名称来源](../../research/new-hero-chinese-names.json)
 
 JSON 证据保留根目录 `research/` 原路径；文件内记录的素材路径及来源不改写。新增研究应标明核查日期、来源和覆盖限制。
+
+
+- [HOK / LoL 功能对照审计（2026-10-06）](lol-feature-parity-audit-2026-10-06.md)：只比较功能、可靠性与导播工作流；记录哪些 LoL 优化已移植到 HOK、哪些应保持游戏专属。

@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { phases } from '../src/shared/types.js';
+import { completedSimulatorSlots, simulatorSlotForPhase, simulatorSlotKey } from '../src/simulator/bpSimulatorModel.js';
+
+test('simulator match mode follows the production 18-phase HOK draft order', () => {
+  const sequence=phases('match','blue');
+  assert.equal(sequence.length,18);
+  const keys=sequence.map((_,index)=>simulatorSlotKey(simulatorSlotForPhase('match','blue',index)!));
+  assert.deepEqual(keys,[
+    'blueBan1','redBan1','blueBan2','redBan2',
+    'bluePick1','redPick1','redPick2','bluePick2','bluePick3','redPick3',
+    'redBan3','blueBan3','redBan4','blueBan4',
+    'redPick4','bluePick4','bluePick5','redPick5',
+  ]);
+});
+
+test('simulator mirrors team ownership when red has first pick', () => {
+  assert.equal(simulatorSlotKey(simulatorSlotForPhase('match','red',0)!),'redBan1');
+  assert.equal(simulatorSlotKey(simulatorSlotForPhase('match','red',4)!),'redPick1');
+  assert.equal(simulatorSlotKey(simulatorSlotForPhase('match','red',17)!),'bluePick5');
+});
+
+test('normal mode exposes only the production normal-mode slots', () => {
+  const sequence=phases('normal','blue');
+  const slots=completedSimulatorSlots('normal','blue',sequence.length);
+  assert.equal(slots.length,sequence.length);
+  assert.equal(slots.filter(slot=>slot.action==='pick').length,10);
+  assert.equal(slots.filter(slot=>slot.action==='ban').length,4);
+  assert.equal(slots.some(slot=>slot.action==='ban'&&slot.slotIndex>1),false);
+});
