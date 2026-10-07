@@ -13,7 +13,8 @@ import {
 } from './bpCaptureLayout';
 import { detectEmptyBan, EMPTY_BAN_GRACE_MS, fingerprintDistance, type EmptyBanStability } from './emptyBanDetection';
 import { updateHeroRecognitionStability, type HeroRecognitionStability } from './heroRecognitionStability';
-import { regionFromDrag, regionToPixels } from './windowCaptureGeometry';
+import { regionFromDrag, regionToPixels, type NormalizedCaptureRegion } from './windowCaptureGeometry';
+import { nextCaptureSlotKey, nudgeCaptureRegion, type CalibrationDelta } from './precisionCalibration';
 import { phaseName } from '../shared/display';
 import { translator } from '../shared/i18n';
 import { phases, type Action, type MatchState } from '../shared/types';
@@ -100,9 +101,13 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const [windowInfo,setWindowInfo]=useState<WindowInfo>();
   const [calibratingSlot,setCalibratingSlot]=useState<CaptureSlotKey>();
   const [videoReady,setVideoReady]=useState(false);
+  const [precisionMode,setPrecisionMode]=useState(false);
+  const [calibrationZoom,setCalibrationZoom]=useState(2);
+  const [calibrationPreview,setCalibrationPreview]=useState('');
 
   const dialog=useRef<HTMLDialogElement>(null);
   const videoRef=useRef<HTMLVideoElement>(null);
+  const precisionWorkspace=useRef<HTMLDivElement>(null);
   const streamRef=useRef<MediaStream>();
   const mounted=useRef(true);
   const busyRef=useRef(false);
@@ -130,6 +135,69 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       number:meta.index+1,
     });
   },[t]);
+
+  const buildCalibrationPreview=useCallback((region:NormalizedCaptureRegion)=>{
+    const video=videoRef.current;
+    if(!videoReady||!video||!video.videoWidth||!video.videoHeight) return '';
+    const pixels=regionToPixels(region,video.videoWidth,video.videoHeight);
+    const maxSide=260;
+    const scale=Math.min(1,maxSide/Math.max(pixels.width,pixels.height));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(pixels.width*scale));
+    canvas.height=Math.max(1,Math.round(pixels.height*scale));
+    const context=canvas.getContext('2d');
+    if(!context) return '';
+    context.imageSmoothingEnabled=false;
+    context.drawImage(video,pixels.x,pixels.y,pixels.width,pixels.height,0,0,canvas.width,canvas.height);
+    return canvas.toDataURL('image/png');
+  },[videoReady]);
+
+  const persistCalibrationSlot=useCallback((key:CaptureSlotKey,region:NormalizedCaptureRegion)=>{
+    const updated={...slots,[key]:region};
+    setSlots(updated);
+    localStorage.setItem(SLOTS_STORAGE,JSON.stringify(updated));
+    setCalibrationPreview(buildCalibrationPreview(region));
+    return updated;
+  },[buildCalibrationPreview,slots]);
+
+  const selectCalibrationSlot=useCallback((key:CaptureSlotKey)=>{
+    setCalibratingSlot(key);
+    setCalibrationPreview(buildCalibrationPreview(slots[key]));
+  },[buildCalibrationPreview,slots]);
+
+  const enterPrecisionCalibration=useCallback(async()=>{
+    if(!videoReady) return;
+    const key=calibratingSlot??target?.key??captureSlotKeys[0];
+    selectCalibrationSlot(key);
+    setCalibrationZoom(2);
+    setPrecisionMode(true);
+    try{
+      const workspace=precisionWorkspace.current;
+      if(workspace?.requestFullscreen&&document.fullscreenElement!==workspace) await workspace.requestFullscreen();
+    }catch{
+      // The fixed-position precision workspace still works when Fullscreen API is unavailable.
+    }
+  },[calibratingSlot,selectCalibrationSlot,target?.key,videoReady]);
+
+  const exitPrecisionCalibration=useCallback(async()=>{
+    setPrecisionMode(false);
+    if(document.fullscreenElement===precisionWorkspace.current){
+      try{ await document.exitFullscreen(); }catch{ /* already leaving fullscreen */ }
+    }
+  },[]);
+
+  const adjustCalibration=useCallback((delta:CalibrationDelta)=>{
+    const key=calibratingSlot;
+    const video=videoRef.current;
+    if(!key||!videoReady||!video?.videoWidth||!video.videoHeight) return;
+    const region=nudgeCaptureRegion(slots[key],video.videoWidth,video.videoHeight,delta);
+    persistCalibrationSlot(key,region);
+  },[calibratingSlot,persistCalibrationSlot,slots,videoReady]);
+
+  const moveCalibrationSelection=useCallback((direction:1|-1)=>{
+    const current=calibratingSlot??target?.key??captureSlotKeys[0];
+    selectCalibrationSlot(nextCaptureSlotKey(current,direction));
+  },[calibratingSlot,selectCalibrationSlot,target?.key]);
 
   const stopWindowCapture=useCallback(()=>{
     const stream=streamRef.current;
@@ -164,6 +232,69 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       window.removeEventListener('wheel',preventZoomWheel,{capture:true});
     };
   },[]);
+
+  useEffect(()=>{
+    const onFullscreenChange=()=>{
+      if(document.fullscreenElement!==precisionWorkspace.current&&precisionMode) setPrecisionMode(false);
+    };
+    document.addEventListener('fullscreenchange',onFullscreenChange);
+    return()=>document.removeEventListener('fullscreenchange',onFullscreenChange);
+  },[precisionMode]);
+
+  useEffect(()=>{
+    if(!precisionMode) return;
+    const onKeyDown=(event:KeyboardEvent)=>{
+      const element=event.target;
+      if(element instanceof HTMLInputElement||element instanceof HTMLSelectElement||element instanceof HTMLTextAreaElement) return;
+
+      if(event.key==='Escape'){
+        event.preventDefault();
+        void exitPrecisionCalibration();
+        return;
+      }
+      if(event.key==='Enter'){
+        event.preventDefault();
+        moveCalibrationSelection(1);
+        return;
+      }
+      if(event.key==='['){
+        event.preventDefault();
+        moveCalibrationSelection(-1);
+        return;
+      }
+      if(event.key===']'){
+        event.preventDefault();
+        moveCalibrationSelection(1);
+        return;
+      }
+      if(event.key==='+'||event.key==='='){
+        event.preventDefault();
+        setCalibrationZoom(value=>Math.min(4,Math.round((value+.25)*100)/100));
+        return;
+      }
+      if(event.key==='-'){
+        event.preventDefault();
+        setCalibrationZoom(value=>Math.max(1,Math.round((value-.25)*100)/100));
+        return;
+      }
+
+      if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+      event.preventDefault();
+      if(event.shiftKey){
+        if(event.key==='ArrowLeft') adjustCalibration({dw:-1});
+        if(event.key==='ArrowRight') adjustCalibration({dw:1});
+        if(event.key==='ArrowUp') adjustCalibration({dh:-1});
+        if(event.key==='ArrowDown') adjustCalibration({dh:1});
+      }else{
+        if(event.key==='ArrowLeft') adjustCalibration({dx:-1});
+        if(event.key==='ArrowRight') adjustCalibration({dx:1});
+        if(event.key==='ArrowUp') adjustCalibration({dy:-1});
+        if(event.key==='ArrowDown') adjustCalibration({dy:1});
+      }
+    };
+    window.addEventListener('keydown',onKeyDown);
+    return()=>window.removeEventListener('keydown',onKeyDown);
+  },[adjustCalibration,exitPrecisionCalibration,moveCalibrationSelection,precisionMode]);
 
 
   useEffect(()=>{
@@ -392,11 +523,9 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     if(!calibratingSlot||!dragStart.current) return;
     const next=regionFromDrag(dragStart.current,pointInElement(event));
     dragStart.current=null;
-    const updated={...slots,[calibratingSlot]:next};
-    setSlots(updated);
-    localStorage.setItem(SLOTS_STORAGE,JSON.stringify(updated));
+    persistCalibrationSlot(calibratingSlot,next);
     setMessage(t('captureExplicitSlotSaved',{slot:captureSlotLabel(calibratingSlot)}));
-    setCalibratingSlot(undefined);
+    if(!precisionMode) setCalibratingSlot(undefined);
   };
 
   const closeReview=()=>{
@@ -439,7 +568,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
             calibratingSlot===key?'selected':'',
             target?.key===key?'active':'',
           ].filter(Boolean).join(' ')}
-          onClick={()=>setCalibratingSlot(current=>current===key?undefined:key)}
+          onClick={()=>calibratingSlot===key&&!precisionMode?setCalibratingSlot(undefined):selectCalibrationSlot(key)}
         >{action==='ban'?'B':'P'}{index+1}</button>;
       })}</div>
     </div>;
@@ -464,21 +593,64 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         <span className={videoReady?'window-capture-status connected':'window-capture-status'}>{videoReady?'●':'○'} {windowInfo?.label||t('windowCaptureDisconnected')}</span>
       </div>
 
-      <div
-        className={`window-capture-preview ${videoReady?'ready':''} ${calibratingSlot?'calibrating':''}`}
-        style={videoReady&&windowInfo?.width&&windowInfo?.height?{aspectRatio:`${windowInfo.width}/${windowInfo.height}`}:undefined}
-        onPointerDown={pointerDown}
-        onPointerMove={pointerMove}
-        onPointerUp={pointerUp}
-        onPointerCancel={()=>{dragStart.current=null;}}
-      >
-        <video ref={videoRef} playsInline muted />
-        {videoReady&&captureSlotKeys.map(key=><div
-          key={key}
-          className={`capture-explicit-slot ${key.startsWith('blue')?'blue':'red'} ${key.includes('Ban')?'ban':'pick'} ${target?.key===key?'active':''} ${calibratingSlot===key?'editing':''}`}
-          style={percentageStyle(slots[key])}
-        ><span>{captureSlotLabel(key)}</span></div>)}
-        {!videoReady&&<div className="window-capture-placeholder">{t('windowCaptureChooseHint')}</div>}
+      <div ref={precisionWorkspace} className={`precision-calibration-workspace ${precisionMode?'active':''}`}>
+        {precisionMode&&<div className="precision-calibration-toolbar">
+          <div className="precision-calibration-title">
+            <span>{t('precisionCalibrationTitle')}</span>
+            <strong>{calibratingSlot?captureSlotLabel(calibratingSlot):t('captureNoActiveSlot')}</strong>
+          </div>
+          <div className="precision-zoom-controls" role="group" aria-label={t('precisionZoom')}>
+            <button type="button" onClick={()=>setCalibrationZoom(value=>Math.max(1,Math.round((value-.25)*100)/100))}>−</button>
+            <button type="button" onClick={()=>setCalibrationZoom(1)}>{t('precisionFit')}</button>
+            {[1.5,2,3,4].map(value=><button type="button" key={value} className={calibrationZoom===value?'selected':''} onClick={()=>setCalibrationZoom(value)}>{Math.round(value*100)}%</button>)}
+            <button type="button" onClick={()=>setCalibrationZoom(value=>Math.min(4,Math.round((value+.25)*100)/100))}>+</button>
+          </div>
+          <div className="precision-calibration-nav">
+            <button type="button" onClick={()=>moveCalibrationSelection(-1)}>← {t('precisionPreviousSlot')}</button>
+            <button type="button" className="primary" onClick={()=>moveCalibrationSelection(1)}>{t('precisionNextSlot')} →</button>
+            <button type="button" onClick={()=>void exitPrecisionCalibration()}>{t('precisionExit')}</button>
+          </div>
+        </div>}
+
+        <div className="precision-preview-scroll">
+          <div
+            className={`window-capture-preview ${videoReady?'ready':''} ${calibratingSlot?'calibrating':''}`}
+            style={{
+              ...(videoReady&&windowInfo?.width&&windowInfo?.height?{aspectRatio:`${windowInfo.width}/${windowInfo.height}`}:{}),
+              ...(precisionMode?{width:`${calibrationZoom*100}%`}:{}),
+            }}
+            onPointerDown={pointerDown}
+            onPointerMove={pointerMove}
+            onPointerUp={pointerUp}
+            onPointerCancel={()=>{dragStart.current=null;}}
+          >
+            <video ref={videoRef} playsInline muted />
+            {videoReady&&captureSlotKeys.map(key=><div
+              key={key}
+              className={`capture-explicit-slot ${key.startsWith('blue')?'blue':'red'} ${key.includes('Ban')?'ban':'pick'} ${target?.key===key?'active':''} ${calibratingSlot===key?'editing':''}`}
+              style={percentageStyle(slots[key])}
+            ><span>{captureSlotLabel(key)}</span></div>)}
+            {!videoReady&&<div className="window-capture-placeholder">{t('windowCaptureChooseHint')}</div>}
+          </div>
+        </div>
+
+        {precisionMode&&<div className="precision-calibration-footer">
+          <div className="precision-slot-strip">
+            {captureSlotKeys.map(key=><button
+              type="button"
+              key={key}
+              className={[calibratingSlot===key?'selected':'',target?.key===key?'active':''].filter(Boolean).join(' ')}
+              onClick={()=>selectCalibrationSlot(key)}
+            >{captureSlotLabel(key)}</button>)}
+          </div>
+          <div className="precision-calibration-help">
+            <span>{t('precisionKeyboardHint')}</span>
+            {calibrationPreview&&<figure className="precision-crop-preview">
+              <figcaption>{t('precisionActualInput')}</figcaption>
+              <img src={calibrationPreview} alt={t('precisionActualInput')} />
+            </figure>}
+          </div>
+        </div>}
       </div>
 
       <div className="explicit-slot-calibration">
@@ -487,13 +659,17 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
             <strong>{t('captureCalibrateExplicitSlots')}</strong>
             <p className="muted">{calibratingSlot?t('captureDragSelectedSlot',{slot:captureSlotLabel(calibratingSlot)}):t('captureExplicitCalibrationHint')}</p>
           </div>
-          <button type="button" disabled={!videoReady} onClick={()=>{
-            const next=normalizeCaptureSlots(defaultCaptureSlots);
-            setSlots(next);
-            localStorage.setItem(SLOTS_STORAGE,JSON.stringify(next));
-            setCalibratingSlot(undefined);
-            setMessage(t('captureExplicitSlotsReset'));
-          }}>{t('captureResetAllSlots')}</button>
+          <div className="explicit-slot-calibration-actions">
+            <button type="button" className="primary" disabled={!videoReady} onClick={()=>void enterPrecisionCalibration()}>{t('precisionOpenFullscreen')}</button>
+            <button type="button" disabled={!videoReady} onClick={()=>{
+              const next=normalizeCaptureSlots(defaultCaptureSlots);
+              setSlots(next);
+              localStorage.setItem(SLOTS_STORAGE,JSON.stringify(next));
+              setCalibratingSlot(undefined);
+              setCalibrationPreview('');
+              setMessage(t('captureExplicitSlotsReset'));
+            }}>{t('captureResetAllSlots')}</button>
+          </div>
         </div>
 
         <div className="explicit-slot-groups">
