@@ -22,10 +22,15 @@ const bearerToken = (req:Parameters<typeof localTrustedRequest>[0]) =>
   typeof req.headers.authorization==='string' ? req.headers.authorization.replace(/^Bearer\s+/i,'') : '';
 const roleForRequest = (req:Parameters<typeof localTrustedRequest>[0],forcedRole?:Role):Role|undefined => {
   const hinted=forcedRole??roleHint(req.headers['x-hok-role']);
-  if(localTrustedRequest(req)) return hinted;
   const token=bearerToken(req);
-  if(hinted&&access.verify(hinted,token)) return hinted;
-  return access.roleForPassword(token);
+  // An explicitly supplied credential always keeps its real role, even on
+  // loopback. Passwordless local trust applies only when no credential is sent.
+  if(token){
+    if(hinted&&access.verify(hinted,token)) return hinted;
+    return access.roleForPassword(token);
+  }
+  if(localTrustedRequest(req)) return hinted;
+  return undefined;
 };
 const presets = new TeamPresetStore(resolve(dirname(dataFile), 'team-presets.json'));
 const store = new Store(dataFile, Date.now, presets);
@@ -228,9 +233,13 @@ wss.on('connection', (ws, req) => {
       if (!c.role) {
         if(message.type==='auth'){
           const requested=roleHint(message.role);
-          if(localTrustedRequest(req)) c.role=requested;
-          else if(requested&&access.verify(requested,typeof message.token==='string'?message.token:'')) c.role=requested;
-          else if(typeof message.token==='string') c.role=access.roleForPassword(message.token);
+          const supplied=typeof message.token==='string'?message.token:'';
+          if(supplied){
+            if(requested&&access.verify(requested,supplied)) c.role=requested;
+            else c.role=access.roleForPassword(supplied);
+          }else if(localTrustedRequest(req)){
+            c.role=requested;
+          }
         }
         if (!c.role) { ws.close(1008, access.configured(roleHint(message.role)) ? '访问口令无效' : '远程访问密码尚未配置'); return; }
         clearTimeout(authTimeout); update(ws, true); return;
