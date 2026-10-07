@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { draftTurnAtPhase, nextDraftTurn, previousDraftTurnStart } from '../src/shared/draftTurns.js';
+import { draftTurnAtPhase, immediateNextTurnIsBan, nextDraftTurn, previousDraftTurnStart } from '../src/shared/draftTurns.js';
 
 test('match BP groups simultaneous same-team picks but keeps bans atomic',()=>{
   assert.deepEqual(draftTurnAtPhase('match','blue',0)?.phaseIndexes,[0]);
@@ -25,4 +25,14 @@ test('next and previous turn helpers jump over simultaneous groups',()=>{
   assert.equal(nextDraftTurn('match','blue',15)?.startPhase,17);
   assert.equal(previousDraftTurnStart('match','blue',7),5);
   assert.equal(previousDraftTurnStart('match','blue',15),14);
+});
+
+
+test('red second Pick turn is a Pick-to-Ban boundary in Match BP',()=>{
+  assert.equal(draftTurnAtPhase('match','blue',9)?.team,'red');
+  assert.equal(draftTurnAtPhase('match','blue',9)?.action,'pick');
+  assert.equal(nextDraftTurn('match','blue',9)?.team,'red');
+  assert.equal(nextDraftTurn('match','blue',9)?.action,'ban');
+  assert.equal(immediateNextTurnIsBan('match','blue',9),true);
+  assert.equal(immediateNextTurnIsBan('match','blue',7),false);
 });
