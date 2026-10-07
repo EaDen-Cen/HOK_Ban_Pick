@@ -97,6 +97,10 @@ export function normalizeState(raw: MatchState): MatchState {
     artSourceMode: raw.artSourceMode ?? 'auto',
     heroArtOverrides: raw.heroArtOverrides ?? {},
     heroDataOverrides: raw.heroDataOverrides ?? {},
+    screenAutoSubmitEnabled: raw.screenAutoSubmitEnabled ?? false,
+    screenAutoSubmitConfidence: typeof raw.screenAutoSubmitConfidence === 'number' && Number.isFinite(raw.screenAutoSubmitConfidence)
+      ? Math.max(.5, Math.min(1, raw.screenAutoSubmitConfidence))
+      : .9,
     draftHistory: (raw.draftHistory ?? []).map(record => ({ ...record,
       firstPickSide: record.firstPickSide ?? 'blue',
       blueTeam: normalizeTeam(record.blueTeam, 'blue'), redTeam: normalizeTeam(record.redTeam, 'red'),
