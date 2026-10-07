@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import type { IncomingMessage } from 'node:http';
 import heroes from '../src/components/HeroList.js';
@@ -68,60 +69,123 @@ export async function lockCueFingerprint(source: Buffer) {
   });
 }
 
-async function captureFeatureVariants(source: Buffer, shape:MatchShape='square') {
-  const meta=await sharp(source).metadata();
+interface VariantSpec { scale:number; dx:number; dy:number }
+
+const primaryVariantSpecs:VariantSpec[]=[
+  {scale:1,dx:0,dy:0},
+  {scale:.90,dx:0,dy:0},
+  {scale:.82,dx:0,dy:0},
+  {scale:.74,dx:0,dy:0},
+];
+
+const fallbackVariantSpecs:VariantSpec[]=[
+  {scale:.82,dx:-.12,dy:0},
+  {scale:.82,dx:.12,dy:0},
+  {scale:.82,dx:0,dy:-.12},
+  {scale:.82,dx:0,dy:.12},
+  {scale:.74,dx:-.14,dy:-.08},
+  {scale:.74,dx:.14,dy:-.08},
+  {scale:.74,dx:-.14,dy:.08},
+  {scale:.74,dx:.14,dy:.08},
+];
+
+async function captureFeatureVariants(
+  source:Buffer,
+  specs:VariantSpec[],
+  shape:MatchShape='square',
+  metadata?:{width?:number;height?:number},
+) {
+  const meta=metadata??await sharp(source).metadata();
   const width=meta.width||0, height=meta.height||0;
   if(width<8||height<8) return [await features(source,shape)];
 
   const minSide=Math.min(width,height);
-  const specs:{scale:number;dx:number;dy:number}[]=[
-    {scale:1,dx:0,dy:0},
-    {scale:.90,dx:0,dy:0},
-    {scale:.82,dx:0,dy:0},
-    {scale:.74,dx:0,dy:0},
-    {scale:.82,dx:-.12,dy:0},
-    {scale:.82,dx:.12,dy:0},
-    {scale:.82,dx:0,dy:-.12},
-    {scale:.82,dx:0,dy:.12},
-    {scale:.74,dx:-.14,dy:-.08},
-    {scale:.74,dx:.14,dy:-.08},
-    {scale:.74,dx:-.14,dy:.08},
-    {scale:.74,dx:.14,dy:.08},
-  ];
-  const variants:number[][]=[];
-  for(const spec of specs){
+  return await Promise.all(specs.map(async spec=>{
     const side=Math.max(8,Math.min(minSide,Math.floor(minSide*spec.scale)));
     const centerX=width/2 + spec.dx*Math.max(0,width-side);
     const centerY=height/2 + spec.dy*Math.max(0,height-side);
     const left=Math.max(0,Math.min(width-side,Math.round(centerX-side/2)));
     const top=Math.max(0,Math.min(height-side,Math.round(centerY-side/2)));
-    variants.push(await features(await sharp(source).extract({left,top,width:side,height:side}).toBuffer(),shape));
-  }
-  return variants;
+    const cropped=await sharp(source,{sequentialRead:true})
+      .extract({left,top,width:side,height:side})
+      .toBuffer();
+    return await features(cropped,shape);
+  }));
 }
 
 let templates: Promise<{heroId:number; square:number[]; circle:number[]}[]> | undefined;
+const recognitionCache=new Map<string,{at:number;candidates:Array<{heroId:number;confidence:number}>}>();
+const RECOGNITION_CACHE_TTL_MS=1800;
+const RECOGNITION_CACHE_MAX=160;
+
+function cacheKey(buffer:Buffer,allowedHeroIds:number[]|undefined,shape:MatchShape) {
+  const digest=createHash('sha1').update(buffer).digest('base64url');
+  const allowed=allowedHeroIds?.length?[...allowedHeroIds].sort((a,b)=>a-b).join(','):'*';
+  return `${shape}:${allowed}:${digest}`;
+}
+
+function trimRecognitionCache(now=Date.now()) {
+  for(const [key,value] of recognitionCache){
+    if(now-value.at>RECOGNITION_CACHE_TTL_MS) recognitionCache.delete(key);
+  }
+  while(recognitionCache.size>RECOGNITION_CACHE_MAX){
+    const first=recognitionCache.keys().next().value as string|undefined;
+    if(!first) break;
+    recognitionCache.delete(first);
+  }
+}
+
+function scoreRecognition(
+  heroTemplates:Array<{heroId:number;square:number[];circle:number[]}>,
+  variants:number[][],
+  shape:MatchShape,
+) {
+  return heroTemplates.map(hero=>{
+    let confidence=0;
+    const template=shape==='circle'?hero.circle:hero.square;
+    for(const values of variants){
+      let score=0;
+      for(let index=0;index<template.length;index++) score+=template[index]*values[index];
+      if(score>confidence) confidence=score;
+    }
+    return {heroId:hero.heroId,confidence:Math.max(0,Math.min(1,confidence))};
+  }).sort((a,b)=>b.confidence-a.confidence);
+}
+
 export async function recognizeImage(buffer: Buffer, allowedHeroIds?: number[], shape:MatchShape='square') {
+  const key=cacheKey(buffer,allowedHeroIds,shape);
+  const now=Date.now();
+  const cached=recognitionCache.get(key);
+  if(cached&&now-cached.at<=RECOGNITION_CACHE_TTL_MS){
+    recognitionCache.delete(key);
+    recognitionCache.set(key,cached);
+    return cached.candidates.map(candidate=>({...candidate}));
+  }
+
   templates ??= Promise.all(heroes.map(async h=>{
     const source=fileURLToPath(new URL(`../public${h.imageLink}`,import.meta.url));
     const [square,circle]=await Promise.all([features(source,'square'),features(source,'circle')]);
     return {heroId:h.id,square,circle};
   })).catch(error=>{templates=undefined;throw error;});
-  const variants=await captureFeatureVariants(buffer,shape);
+
   const allowed = allowedHeroIds?.length ? new Set(allowedHeroIds) : undefined;
-  return (await templates)
-    .filter(hero => !allowed || allowed.has(hero.heroId))
-    .map(hero=>{
-      let confidence=0;
-      const template=shape==='circle'?hero.circle:hero.square;
-      for(const values of variants){
-        const score=template.reduce((sum,n,i)=>sum+n*values[i],0);
-        if(score>confidence) confidence=score;
-      }
-      return {heroId:hero.heroId,confidence:Math.max(0,Math.min(1,confidence))};
-    })
-    .sort((a,b)=>b.confidence-a.confidence)
-    .slice(0,5);
+  const heroTemplates=(await templates).filter(hero => !allowed || allowed.has(hero.heroId));
+  const metadata=await sharp(buffer,{sequentialRead:true}).metadata();
+
+  // Most well-calibrated slots now match >=85%. Start with centered scale
+  // variants only; the offset search is reserved for harder crops.
+  const primary=await captureFeatureVariants(buffer,primaryVariantSpecs,shape,metadata);
+  let scored=scoreRecognition(heroTemplates,primary,shape);
+  const fastAccept=shape==='circle'?.78:.82;
+  if((scored[0]?.confidence??0)<fastAccept){
+    const fallback=await captureFeatureVariants(buffer,fallbackVariantSpecs,shape,metadata);
+    scored=scoreRecognition(heroTemplates,[...primary,...fallback],shape);
+  }
+
+  const candidates=scored.slice(0,5);
+  recognitionCache.set(key,{at:now,candidates});
+  trimRecognitionCache(now);
+  return candidates.map(candidate=>({...candidate}));
 }
 
 export function localCaptureRequest(req: Pick<IncomingMessage, 'headers' | 'socket'>) {
@@ -197,17 +261,52 @@ export function decodeClientCapture(value: unknown) {
   return buffer;
 }
 
+const clientAnalysisCache=new Map<string,{at:number;fingerprint:string;lockFingerprint:string;meanLuma:number;candidates:Array<{heroId:number;confidence:number}>}>();
+const CLIENT_ANALYSIS_TTL_MS=900;
+const CLIENT_ANALYSIS_CACHE_MAX=96;
+
 export async function recognizeClientFrame(value: unknown, allowedHeroIds?: unknown, shape:unknown='square') {
   const buffer=decodeClientCapture(value);
   const allowed=Array.isArray(allowedHeroIds)
     ? allowedHeroIds.filter((id):id is number=>Number.isInteger(id)&&heroes.some(hero=>hero.id===id)).slice(0,10)
     : undefined;
   const matchShape:MatchShape=shape==='circle'?'circle':'square';
+  const key=cacheKey(buffer,allowed,matchShape);
+  const now=Date.now();
+  const cached=clientAnalysisCache.get(key);
+  if(cached&&now-cached.at<=CLIENT_ANALYSIS_TTL_MS){
+    clientAnalysisCache.delete(key);
+    clientAnalysisCache.set(key,cached);
+    return {
+      preview:value as string,
+      fingerprint:cached.fingerprint,
+      lockFingerprint:cached.lockFingerprint,
+      meanLuma:cached.meanLuma,
+      candidates:cached.candidates.map(candidate=>({...candidate})),
+    };
+  }
+
+  const [fingerprint,lockFingerprint,meanLuma,candidates]=await Promise.all([
+    frameFingerprint(buffer),
+    lockCueFingerprint(buffer),
+    frameMeanLuma(buffer),
+    recognizeImage(buffer,allowed,matchShape),
+  ]);
+  const analysis={at:now,fingerprint,lockFingerprint,meanLuma,candidates};
+  clientAnalysisCache.set(key,analysis);
+  for(const [cacheKey,value] of clientAnalysisCache){
+    if(now-value.at>CLIENT_ANALYSIS_TTL_MS) clientAnalysisCache.delete(cacheKey);
+  }
+  while(clientAnalysisCache.size>CLIENT_ANALYSIS_CACHE_MAX){
+    const first=clientAnalysisCache.keys().next().value as string|undefined;
+    if(!first) break;
+    clientAnalysisCache.delete(first);
+  }
   return {
     preview:value as string,
-    fingerprint:await frameFingerprint(buffer),
-    lockFingerprint:await lockCueFingerprint(buffer),
-    meanLuma:await frameMeanLuma(buffer),
-    candidates:await recognizeImage(buffer,allowed,matchShape),
+    fingerprint,
+    lockFingerprint,
+    meanLuma,
+    candidates:candidates.map(candidate=>({...candidate})),
   };
 }
