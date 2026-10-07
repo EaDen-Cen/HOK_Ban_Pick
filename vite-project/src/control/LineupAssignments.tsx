@@ -249,7 +249,7 @@ export function LineupAssignments({
     return()=>clearInterval(timer);
   },[auto,disabled,scan,state.bpInputMode,state.committedGameId,state.draftComplete,videoReady]);
 
-  if(!state.draftComplete||state.committedGameId) return <video ref={videoRef} className="lineup-capture-video" playsInline muted />;
+  const draftReady=state.draftComplete&&!state.committedGameId;
 
   const current=(side:Side)=>state[`${side}Assignments`] as Array<number|null>;
   const picked=(side:Side)=>state[`${side}Picks`];
@@ -267,6 +267,7 @@ export function LineupAssignments({
 
   return <section className="panel lineup-sync">
     <video ref={videoRef} className="lineup-capture-video" playsInline muted />
+    {draftReady&&<>
     <div className="lineup-sync-head">
       <div>
         <h2>{zh?'最终阵容归属 / 换英雄检测':'Final lineup ownership / hero-swap detection'}</h2>
@@ -309,5 +310,6 @@ export function LineupAssignments({
       </p>
       <p className="muted">{zh?'换英雄检测直接复用 Auto BP 的蓝/红 P1–P5 校准框，不再使用 Windows 物理坐标兼容模式。':'Hero-swap detection reuses the calibrated blue/red P1–P5 boxes from Auto BP; the old Windows physical-coordinate compatibility path is no longer used.'}</p>
     </div>}
+    </>}
   </section>;
 }
