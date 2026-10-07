@@ -1,4 +1,4 @@
-import { fingerprintDistance } from './emptyBanDetection';
+import { fingerprintDistance } from './emptyBanDetection.js';
 
 export interface HeroLockStability {
   phaseKey:string;
