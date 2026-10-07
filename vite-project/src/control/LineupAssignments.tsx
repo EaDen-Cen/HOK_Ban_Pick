@@ -106,7 +106,7 @@ export function LineupAssignments({
   const videoRef=useRef<HTMLVideoElement>(null);
   const streamRef=useRef<MediaStream>();
   const mounted=useRef(true);
-  const applying=useRef('');
+  const applying=useRef<{signature:string;at:number}>({signature:'',at:0});
   const stableRef=useRef({signature:'',count:0});
   const busyRef=useRef(false);
 
@@ -224,16 +224,21 @@ export function LineupAssignments({
       const count=previous.signature===signature?previous.count+1:1;
       stableRef.current={signature,count};
       const changed=!sameLineup(state.blueAssignments,blue.heroes)||!sameLineup(state.redAssignments,red.heroes);
-      const highConfidence=blue.minimum>=.62&&red.minimum>=.62&&blue.average>=.75&&red.average>=.75;
+      const highConfidence=blue.minimum>=.50&&red.minimum>=.50&&blue.average>=.65&&red.average>=.65;
 
       setMessage(zh
         ? `换英雄检测运行中 · 蓝均值/最低 ${Math.round(blue.average*100)}%/${Math.round(blue.minimum*100)}% · 红均值/最低 ${Math.round(red.average*100)}%/${Math.round(red.minimum*100)}% · 稳定 ${count}/2${changed?' · 检测到阵容变化':''}${changed&&!highConfidence?' · 但置信度不足，暂不自动应用':''}`
         : `Hero-swap detection active · blue avg/min ${Math.round(blue.average*100)}%/${Math.round(blue.minimum*100)}% · red avg/min ${Math.round(red.average*100)}%/${Math.round(red.minimum*100)}% · stable ${count}/2${changed?' · lineup change detected':''}${changed&&!highConfidence?' · confidence too low to auto-apply':''}`);
 
       const shouldApply=changed&&highConfidence&&(forceApply||(auto&&count>=2));
-      if(shouldApply&&applying.current!==signature){
-        applying.current=signature;
+      const now=Date.now();
+      const recentlyTried=applying.current.signature===signature&&now-applying.current.at<2500;
+      if(shouldApply&&!recentlyTried){
+        applying.current={signature,at:now};
         applyLineups(blue.heroes,red.heroes);
+        setMessage(zh
+          ? `已检测到换英雄并发送自动同步 · 蓝 ${Math.round(blue.average*100)}% · 红 ${Math.round(red.average*100)}%`
+          : `Hero swap detected; automatic lineup sync sent · blue ${Math.round(blue.average*100)}% · red ${Math.round(red.average*100)}%`);
       }
     } catch(error) {
       if(mounted.current) setMessage(error instanceof Error?error.message:'Capture failed');
@@ -242,6 +247,11 @@ export function LineupAssignments({
       if(mounted.current) setBusy(false);
     }
   },[applyLineups,auto,disabled,recognizeSlot,state,videoReady,zh]);
+
+  useEffect(()=>{
+    const currentSignature=`${state.blueAssignments.join(',')}|${state.redAssignments.join(',')}`;
+    if(applying.current.signature===currentSignature) applying.current={signature:'',at:0};
+  },[state.blueAssignments,state.redAssignments]);
 
   useEffect(()=>{
     if(!auto||!videoReady||state.bpInputMode!=='screen'||!state.draftComplete||state.committedGameId||disabled) return;
@@ -309,7 +319,6 @@ export function LineupAssignments({
             ? (zh?`已复用 BP 屏幕采集：${streamLabel||'窗口'}。阵容变化连续稳定 2 次后自动更新。`:`Reusing BP capture: ${streamLabel||'window'}. A changed lineup auto-applies after 2 stable scans.`)
             : (zh?'尚未连接 BP 窗口。若上方 Auto BP 已连接，会自动复用同一采集流；否则可在这里连接。':'No BP window connected. The existing Auto BP stream is reused automatically, or connect one here.'))}
         </p>
-        <p className="muted">{zh?'换英雄检测直接复用 Auto BP 的蓝/红 P1–P5 校准框，不再使用 Windows 物理坐标兼容模式。':'Hero-swap detection reuses the calibrated blue/red P1–P5 boxes from Auto BP; the old Windows physical-coordinate compatibility path is no longer used.'}</p>
       </div>}
     </section>}
   </>;
