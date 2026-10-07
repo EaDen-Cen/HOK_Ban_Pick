@@ -439,6 +439,12 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     setBusy(true);
     setMessage('');
     try{
+      if(captureMode==='native'&&phase.action==='pick'){
+        setMessage(zh
+          ? 'Pick 锁定改为通过“下一轮开始选人”判断，因此 Pick 自动识别请使用浏览器窗口采集模式。'
+          : 'Pick locking now relies on next-turn activity, so automatic Pick recognition requires browser window capture.');
+        return;
+      }
       if(captureMode==='window'&&phase.action==='pick'){
         const responses=await Promise.all(turnTargets.map(item=>recognizeWindowRegion(item.region)));
         if(!mounted.current) return;
