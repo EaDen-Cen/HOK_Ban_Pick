@@ -211,6 +211,21 @@ export function HeroArtEditorDialog({
 
       <div className="hero-art-editor-body">
         <aside className="hero-art-editor-controls">
+          <label>{t('heroStudioSearch')}
+            <input
+              value={heroQuery}
+              placeholder={t('heroStudioSearchHint')}
+              onChange={event => setHeroQuery(event.target.value)}
+              onKeyDown={event => {
+                if (event.key !== 'Enter' || event.nativeEvent.isComposing || !filteredHeroes.length) return;
+                event.preventDefault();
+                const nextId = filteredHeroes[0].id;
+                setHeroId(nextId);
+                setDraft(makeDraft(nextId));
+                setDataDraft(makeDataDraft(nextId));
+              }}
+            />
+          </label>
           <label>{t('chooseHeroToEdit')}
             <select value={hero.id} onChange={event => {
               const nextId = Number(event.target.value);
@@ -220,6 +235,7 @@ export function HeroArtEditorDialog({
             }}>
               {effectiveHeroes.map(item => <option key={item.id} value={item.id}>{state.language === 'zh' ? item.chineseName : item.englishName}</option>)}
             </select>
+            {heroQuery && <small>{t('heroStudioSearchResult',{count:filteredHeroes.length})}{filteredHeroes[0] ? ' · ' + (state.language === 'zh' ? filteredHeroes[0].chineseName : filteredHeroes[0].englishName) : ''}</small>}
           </label>
 
           <fieldset className="hero-data-editor">
@@ -229,9 +245,11 @@ export function HeroArtEditorDialog({
             <label>{t('heroPrimaryLane')}<select value={dataDraft.occupation ?? ''} onChange={event => setDataDraft(previous => ({ ...previous, occupation: event.target.value }))}>{['Clash Lane','Jungling','Mid Lane','Farm Lane','Roaming'].map(lane => <option key={lane} value={lane}>{lane}</option>)}</select></label>
             <label>{t('heroSecondaryLane')}<select value={dataDraft.altOccupation ?? ''} onChange={event => setDataDraft(previous => ({ ...previous, altOccupation: event.target.value }))}><option value="">{t('noSecondaryLane')}</option>{['Clash Lane','Jungling','Mid Lane','Farm Lane','Roaming'].map(lane => <option key={lane} value={lane}>{lane}</option>)}</select></label>
             <label>{t('heroAliases')}<input maxLength={500} value={(dataDraft.aliases ?? []).join(', ')} onChange={event => setDataDraft(previous => ({ ...previous, aliases: event.target.value.split(',').map(value => value.trim()).filter(Boolean) }))} /><small>{t('heroAliasesHint')}</small></label>
+            <label>{t('heroPortraitOverride')}<input maxLength={1000} value={dataDraft.imageLink ?? ''} onChange={event => setDataDraft(previous => ({ ...previous, imageLink: event.target.value }))} /><small>{t('heroSourceOverrideHint')}</small></label>
+            <label>{t('heroFullArtOverride')}<input maxLength={1000} value={dataDraft.artLink ?? ''} onChange={event => setDataDraft(previous => ({ ...previous, artLink: event.target.value }))} /><small>{t('heroSourceOverrideHint')}</small></label>
             <div className="art-editor-actions">
               <button type="button" className="primary" disabled={disabled} onClick={() => send({ type: 'hero_data_override', heroId: hero.id, override: dataDraft })}>{t('saveHeroData')}</button>
-              <button type="button" disabled={disabled} onClick={() => { send({ type: 'reset_hero_data_override', heroId: hero.id }); const base = heroes.find(item => item.id === hero.id); if (base) setDataDraft({ englishName: base.englishName, chineseName: base.chineseName, occupation: base.occupation, altOccupation: base.altOccupation ?? '', aliases: base.aliases ?? [] }); }}>{t('resetHeroData')}</button>
+              <button type="button" disabled={disabled} onClick={() => { send({ type: 'reset_hero_data_override', heroId: hero.id }); const base = heroes.find(item => item.id === hero.id); if (base) setDataDraft({ englishName: base.englishName, chineseName: base.chineseName, occupation: base.occupation, altOccupation: base.altOccupation ?? '', aliases: base.aliases ?? [], imageLink: base.imageLink, artLink: base.artLink ?? '' }); }}>{t('resetHeroData')}</button>
             </div>
           </fieldset>
 
