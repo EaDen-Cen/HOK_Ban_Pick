@@ -54,6 +54,30 @@ export function nextDraftTurn(
   return current ? draftTurnAtPhase(mode,firstPickSide,current.endPhaseExclusive) : undefined;
 }
 
+
+export function nextOpponentPickTurn(
+  mode:MatchState['draftMode'],
+  firstPickSide:Side,
+  phaseIndex:number,
+) {
+  const current=draftTurnAtPhase(mode,firstPickSide,phaseIndex);
+  if(!current||current.action!=='pick') return undefined;
+  const sequence=phases(mode,firstPickSide);
+  for(let cursor=current.endPhaseExclusive;cursor<sequence.length;cursor++){
+    const phase=sequence[cursor];
+    if(phase.action==='pick'&&phase.team!==current.team) return draftTurnAtPhase(mode,firstPickSide,cursor);
+  }
+  return undefined;
+}
+
+export function immediateNextTurnIsBan(
+  mode:MatchState['draftMode'],
+  firstPickSide:Side,
+  phaseIndex:number,
+) {
+  return nextDraftTurn(mode,firstPickSide,phaseIndex)?.action==='ban';
+}
+
 export function previousDraftTurnStart(
   mode:MatchState['draftMode'],
   firstPickSide:Side,

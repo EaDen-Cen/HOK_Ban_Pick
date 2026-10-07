@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { heroForState } from '../shared/heroData';
 import {
-  captureProbeForNextTurn,
+  captureProbeForNextOpponentPick,
   captureSlotKeys,
   captureTargetForState,
   captureTargetsForCurrentTurn,
@@ -16,12 +16,15 @@ import {
 import { detectEmptyBan, EMPTY_BAN_GRACE_MS, fingerprintDistance, type EmptyBanStability } from './emptyBanDetection';
 import { updateHeroRecognitionStability, type HeroRecognitionStability } from './heroRecognitionStability';
 import { freshHeroLockStability, updateHeroLockStability, type HeroLockStability } from './heroLockDetection';
+import { freshPickSlotActivationState, updatePickSlotActivation, type PickSlotActivationState } from './pickSlotActivation';
+import { getSharedWindowCaptureStream, setSharedWindowCaptureStream } from './sharedWindowCapture';
 import { freshPickTurnDimState, updatePickTurnDimState, type PickTurnDimState } from './pickTurnDimDetection';
 import { regionFromDrag, regionToPixels, type NormalizedCaptureRegion } from './windowCaptureGeometry';
 import { nextCaptureSlotKey, nudgeCaptureRegion, type CalibrationDelta } from './precisionCalibration';
 import { phaseName } from '../shared/display';
 import { translator } from '../shared/i18n';
 import { phases, type Action, type MatchState } from '../shared/types';
+import { immediateNextTurnIsBan } from '../shared/draftTurns';
 
 type HeroCandidate = { heroId:number; confidence:number };
 
@@ -45,8 +48,6 @@ type PickGroupCaptureResult = {
 
 type CaptureResult = SingleCaptureResult | PickGroupCaptureResult;
 
-type CaptureMode = 'window' | 'native';
-
 type WindowInfo = {
   label:string;
   surface:string;
@@ -64,7 +65,6 @@ type RecognitionResponse = {
 
 const freshEmptyStability = (): EmptyBanStability => ({ phaseKey:'', fingerprint:'', count:0 });
 const freshHeroStability = (): HeroRecognitionStability => ({ phaseKey:'', heroId:null, count:0 });
-const nativeDefault = {x:0,y:0,width:100,height:100};
 const SLOTS_STORAGE='hok-window-capture-slots-v3';
 const LEGACY_ZONES_STORAGE='hok-window-capture-zones-v2';
 
@@ -104,13 +104,6 @@ function percentageStyle(region:{x:number;y:number;width:number;height:number}) 
 export function ScreenInput({ state, revision, token, disabled, send }: { state:MatchState; revision:number; token:string; disabled:boolean; send:(action:Action)=>void }) {
   const zh=state.language==='zh';
   const t=translator(state.language);
-  const [captureMode,setCaptureMode]=useState<CaptureMode>(()=>{
-    const saved=localStorage.getItem('hok-capture-mode');
-    return saved==='native'?'native':'window';
-  });
-  const [nativeRegion,setNativeRegion]=useState(()=>{
-    try { return JSON.parse(localStorage.getItem('hok-capture-region')||'null')||nativeDefault; } catch { return nativeDefault; }
-  });
   const [slots,setSlots]=useState<CaptureSlots>(readCaptureSlots);
   const [autoWatch,setAutoWatch]=useState(()=>localStorage.getItem('hok-capture-auto-watch')==='1');
   const [busy,setBusy]=useState(false);
@@ -137,7 +130,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const heroStability=useRef<HeroRecognitionStability>(freshHeroStability());
   const heroLockStability=useRef<HeroLockStability>(freshHeroLockStability());
   const pickSlotStability=useRef<Record<string,HeroRecognitionStability>>({});
-  const nextTurnStability=useRef<HeroRecognitionStability>(freshHeroStability());
+  const nextPickActivation=useRef<PickSlotActivationState>(freshPickSlotActivationState());
   const pickTurnDimState=useRef<PickTurnDimState>(freshPickTurnDimState());
   const phaseStartedAt=useRef(Date.now());
   const emptyPromptedPhase=useRef('');
@@ -147,7 +140,9 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const phaseKey=`${state.draftGameNumber ?? state.gameNumber}:${state.currentPhase}:${phase?.team ?? 'done'}:${phase?.action ?? 'done'}`;
   const target=useMemo(()=>captureTargetForState(state,slots),[state,slots]);
   const turnTargets=useMemo(()=>captureTargetsForCurrentTurn(state,slots),[state,slots]);
-  const nextTurnProbe=useMemo(()=>captureProbeForNextTurn(state,slots),[state,slots]);
+  const nextOpponentPickProbe=useMemo(()=>captureProbeForNextOpponentPick(state,slots),[state,slots]);
+  const manualBoundaryPick=phase?.action==='pick'&&immediateNextTurnIsBan(state.draftMode,state.firstPickSide,state.currentPhase);
+  const useHighlightRelease=phase?.action==='pick'&&!nextOpponentPickProbe;
   const activeTargetKeys=useMemo(()=>new Set(turnTargets.map(item=>item.key)),[turnTargets]);
 
   const label=useCallback((id:number)=>{
@@ -230,6 +225,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const stopWindowCapture=useCallback(()=>{
     const stream=streamRef.current;
     streamRef.current=undefined;
+    if(getSharedWindowCaptureStream()===stream) setSharedWindowCaptureStream(undefined);
     if(stream) stream.getTracks().forEach(track=>track.stop());
     if(videoRef.current) videoRef.current.srcObject=null;
     setVideoReady(false);
@@ -330,7 +326,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     heroStability.current=freshHeroStability();
     heroLockStability.current=freshHeroLockStability();
     pickSlotStability.current={};
-    nextTurnStability.current=freshHeroStability();
+    nextPickActivation.current=freshPickSlotActivationState();
     pickTurnDimState.current=freshPickTurnDimState();
     phaseStartedAt.current=Date.now();
     emptyPromptedPhase.current='';
@@ -360,6 +356,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         return;
       }
       streamRef.current=stream;
+      setSharedWindowCaptureStream(stream);
       const video=videoRef.current;
       if(!video) throw new Error('Preview unavailable');
       video.srcObject=stream;
@@ -383,6 +380,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       track.addEventListener('ended',()=>{
         if(!mounted.current) return;
         streamRef.current=undefined;
+        if(getSharedWindowCaptureStream()===stream) setSharedWindowCaptureStream(undefined);
         setVideoReady(false);
         setWindowInfo(undefined);
         setCalibratingSlot(undefined);
@@ -420,12 +418,20 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     return canvas.toDataURL('image/png');
   },[target?.region,t,videoReady]);
 
-  const recognizeWindowRegion=useCallback(async(region:NormalizedCaptureRegion)=>{
+  const recognizeWindowRegion=useCallback(async(
+    region:NormalizedCaptureRegion,
+    options?:{allowedHeroIds?:number[];shape?:'square'|'circle'},
+  )=>{
     const image=captureWindowFrame(region);
     const response=await fetch('/api/recognize-frame',{
       method:'POST',
       headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({image,revision}),
+      body:JSON.stringify({
+        image,
+        revision,
+        allowedHeroIds:options?.allowedHeroIds,
+        shape:options?.shape??'square',
+      }),
       signal:AbortSignal.timeout(25000),
     });
     const data:RecognitionResponse=await response.json();
@@ -439,15 +445,24 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     setBusy(true);
     setMessage('');
     try{
-      if(captureMode==='native'&&phase.action==='pick'){
-        setMessage(zh
-          ? 'Pick 锁定改为通过“下一轮开始选人”判断，因此 Pick 自动识别请使用浏览器窗口采集模式。'
-          : 'Pick locking now relies on next-turn activity, so automatic Pick recognition requires browser window capture.');
-        return;
-      }
-      if(captureMode==='window'&&phase.action==='pick'){
-        const responses=await Promise.all(turnTargets.map(item=>recognizeWindowRegion(item.region)));
+      if(phase.action==='pick'){
+        const responses=await Promise.all(turnTargets.map(item=>recognizeWindowRegion(item.region,{shape:'square'})));
         if(!mounted.current) return;
+
+        let probeData:RecognitionResponse|undefined;
+        let probeActivation;
+        if(!useHighlightRelease&&nextOpponentPickProbe){
+          probeData=await recognizeWindowRegion(nextOpponentPickProbe.region,{shape:'square'});
+          const probeTop=probeData.candidates?.[0];
+          probeActivation=updatePickSlotActivation(nextPickActivation.current,{
+            phaseKey,
+            slotKey:nextOpponentPickProbe.key,
+            fingerprint:probeData.fingerprint,
+            heroId:probeTop?.heroId,
+            confidence:probeTop?.confidence,
+          });
+          nextPickActivation.current=probeActivation.state;
+        }
 
         const scanned=turnTargets.map((item,index)=>{
           const data=responses[index];
@@ -467,12 +482,13 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         const distinctHeroes=heroIds.length===scanned.length&&new Set(heroIds).size===heroIds.length;
         const lumas=scanned.map(entry=>entry.data.meanLuma??0);
 
-        const dim=updatePickTurnDimState(pickTurnDimState.current,{
+        const highlightRelease=updatePickTurnDimState(pickTurnDimState.current,{
           phaseKey,
           meanLumas:lumas,
           candidatesStable:allStable&&distinctHeroes,
+          dropRatio:.08,
         });
-        pickTurnDimState.current=dim.state;
+        pickTurnDimState.current=highlightRelease.state;
 
         const status=scanned.map(entry=>{
           const top=entry.evidence.top;
@@ -495,29 +511,26 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
           return;
         }
 
-        let turnAdvanced=false;
-        if(nextTurnProbe){
-          const probeData=await recognizeWindowRegion(nextTurnProbe.region);
-          const probeEvidence=updateHeroRecognitionStability(
-            nextTurnStability.current,
-            `${phaseKey}:next:${nextTurnProbe.key}`,
-            probeData.candidates??[],
-          );
-          nextTurnStability.current=probeEvidence.stability;
-          turnAdvanced=probeEvidence.accepted&&(probeEvidence.top?.confidence??0)>=.45;
-          if(!turnAdvanced){
-            const nextTop=probeEvidence.top;
+        if(manualBoundaryPick){
+          setMessage(zh
+            ? '当前 Pick 组已经稳定，但这一手之后立即进入第二轮 Ban，没有“下一个对手 Pick 位”可以立刻作为唯一锁定信号。为避免误判，本轮不自动确认；请使用右侧手动英雄选择完成这一手。'
+            : 'Current Pick group is stable, but the draft immediately enters the second Ban round, so there is no opponent Pick slot available as the sole immediate lock signal. Auto-confirm is disabled here; record this Pick manually.');
+          return;
+        }
+
+        if(useHighlightRelease){
+          if(!highlightRelease.locked){
             setMessage(zh
-              ? `当前 Pick 组已稳定，等待下一轮 ${captureSlotLabel(nextTurnProbe.key)} 开始预选${nextTop?`（当前 ${Math.round(nextTop.confidence*100)}%）`:''}。`
-              : `Current pick group is stable; waiting for ${captureSlotLabel(nextTurnProbe.key)} to begin preselecting${nextTop?` (${Math.round(nextTop.confidence*100)}%)`:''}.`);
+              ? `当前 Pick 已稳定；此处后续没有可立即观察的对手 Pick，等待选手行从选角高亮恢复到正常亮度（当前亮度回落 ${Math.round(highlightRelease.dropRatio*100)}%）。`
+              : `Current pick is stable. No opponent Pick becomes active immediately here, so waiting for the active-row highlight to return to normal (current luma drop ${Math.round(highlightRelease.dropRatio*100)}%).`);
             return;
           }
         }else{
-          turnAdvanced=dim.locked;
-          if(!turnAdvanced){
+          if(!nextOpponentPickProbe||!probeActivation?.active){
+            const nextTop=probeData?.candidates?.[0];
             setMessage(zh
-              ? `最后一个 Pick 已稳定，等待锁定后的画面变暗（亮度下降 ${Math.round(dim.dropRatio*100)}%）。`
-              : `Final pick is stable; waiting for the post-lock dim transition (luma drop ${Math.round(dim.dropRatio*100)}%).`);
+              ? `当前 Pick 组已稳定；只等待对手下一个 Pick 位 ${nextOpponentPickProbe?captureSlotLabel(nextOpponentPickProbe.key):'—'} 真正出现预选英雄。空槽的英雄相似匹配不会触发锁定${nextTop?`（当前候选 ${label(nextTop.heroId)} ${Math.round(nextTop.confidence*100)}%）`:''}。`
+              : `Current pick group is stable. Waiting only for the opponent's next Pick slot ${nextOpponentPickProbe?captureSlotLabel(nextOpponentPickProbe.key):'—'} to visibly begin preselecting. Hero-like matches on an empty slot cannot lock the turn${nextTop?` (candidate ${label(nextTop.heroId)} ${Math.round(nextTop.confidence*100)}%)`:''}.`);
             return;
           }
         }
@@ -538,33 +551,13 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
           at:Date.now(),
         });
         setMessage(zh
-          ? (nextTurnProbe?'检测到下一轮已经开始，当前 Pick 组视为已锁定。':'检测到最后 Pick 锁定后的画面变暗。')
-          : (nextTurnProbe?'Next turn activity detected; current pick group is treated as locked.':'Final-pick dim transition detected.'));
+          ? (useHighlightRelease?'检测到选角高亮已经恢复，当前 Pick 组视为锁定。':'检测到对手下一个 Pick 位真正开始预选，当前 Pick 组视为锁定。')
+          : (useHighlightRelease?'Active Pick highlight returned to normal; current Pick group is locked.':'The opponent next Pick slot visibly started preselecting; current Pick group is locked.'));
         return;
       }
 
-      let data:RecognitionResponse;
-      if(captureMode==='window'){
-        const image=captureWindowFrame();
-        const response=await fetch('/api/recognize-frame',{
-          method:'POST',
-          headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-          body:JSON.stringify({image,revision}),
-          signal:AbortSignal.timeout(25000),
-        });
-        data=await response.json();
-        if(!response.ok) throw new Error(t('windowCaptureRecognitionFailed'));
-      }else{
-        localStorage.setItem('hok-capture-region',JSON.stringify(nativeRegion));
-        const response=await fetch('/api/capture',{
-          method:'POST',
-          headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-          body:JSON.stringify({region:nativeRegion,revision}),
-          signal:AbortSignal.timeout(25000),
-        });
-        data=await response.json();
-        if(!response.ok) throw new Error(zh?'识别不可用：请使用 Windows 本机控制台、启用采集并检查区域。可继续手动选择。':'Capture unavailable: use the enabled Windows local console and check the region. Manual selection remains available.');
-      }
+      if(!target) throw new Error(t('captureNoActiveSlot'));
+      const data=await recognizeWindowRegion(target.region,{shape:'circle'});
       if(!mounted.current) return;
 
       const candidates=data.candidates??[];
@@ -656,29 +649,13 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       busyRef.current=false;
       if(mounted.current) setBusy(false);
     }
-  },[captureMode,captureSlotLabel,captureWindowFrame,disabled,label,nativeRegion,nextTurnProbe,phase,phaseKey,recognizeWindowRegion,revision,state.committedGameId,t,token,turnTargets,zh]);
+  },[captureSlotLabel,disabled,label,manualBoundaryPick,nextOpponentPickProbe,phase,phaseKey,recognizeWindowRegion,state.committedGameId,t,target,turnTargets,useHighlightRelease,zh]);
 
   useEffect(()=>{
-    if(!autoWatch||result||disabled||!phase||state.committedGameId||busy) return;
-    if(captureMode==='window'&&!videoReady) return;
+    if(!autoWatch||result||disabled||!phase||state.committedGameId||busy||!videoReady) return;
     const timer=setTimeout(()=>{void capture();},350);
     return()=>clearTimeout(timer);
-  },[autoWatch,busy,capture,captureMode,disabled,phase,result,state.committedGameId,videoReady]);
-
-  const setMode=(mode:CaptureMode)=>{
-    setCaptureMode(mode);
-    localStorage.setItem('hok-capture-mode',mode);
-    emptyStability.current=freshEmptyStability();
-    heroStability.current=freshHeroStability();
-    heroLockStability.current=freshHeroLockStability();
-    pickSlotStability.current={};
-    nextTurnStability.current=freshHeroStability();
-    pickTurnDimState.current=freshPickTurnDimState();
-    setResult(undefined);
-    setGroupSelected({});
-    setMessage('');
-    setCandidateStatus('');
-  };
+  },[autoWatch,busy,capture,disabled,phase,result,state.committedGameId,videoReady]);
 
   const pointerDown=(event:React.PointerEvent<HTMLDivElement>)=>{
     if(!calibratingSlot||!videoReady) return;
@@ -765,13 +742,9 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         <h2>{zh?'自动 BP · 屏幕识别':'Auto BP · screen recognition'}</h2>
         <p>{t('captureExplicitSlotsHint')}</p>
       </div>
-      <div className="capture-mode-switch" role="group" aria-label={t('captureSource')}>
-        <button type="button" className={captureMode==='window'?'selected':''} onClick={()=>setMode('window')}>{t('windowCaptureMode')}</button>
-        <button type="button" className={captureMode==='native'?'selected':''} onClick={()=>setMode('native')}>{t('nativeCaptureMode')}</button>
-      </div>
     </div>
 
-    {captureMode==='window'?<div className="window-capture">
+    <div className="window-capture">
       <div className="window-capture-toolbar">
         <button type="button" className="primary" disabled={disabled} onClick={()=>void connectWindow()}>{videoReady?t('windowCaptureChange'):t('windowCaptureChoose')}</button>
         {videoReady&&<button type="button" onClick={stopWindowCapture}>{t('windowCaptureDisconnect')}</button>}
@@ -866,11 +839,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       </div>
 
       <p className="muted">{videoReady&&windowInfo?`${windowInfo.width}×${windowInfo.height} · ${windowInfo.surface} · ${t('windowCaptureRelativeHint')}`:t('windowCaptureRelativeHint')}</p>
-    </div>:<details className="native-capture-settings" open>
-      <summary>{t('nativeCaptureAdvanced')}</summary>
-      <p className="muted">{t('nativeCaptureHint')}</p>
-      <div className="capture-region">{(['x','y','width','height'] as const).map(key=><label key={key}>{key}<input type="number" value={nativeRegion[key]} onChange={event=>setNativeRegion({...nativeRegion,[key]:Number(event.target.value)})}/></label>)}</div>
-    </details>}
+    </div>
 
     <div className="capture-live-status">
       <div><span>{t('capturePhaseLabel')}</span><strong>{phaseName(state)}</strong></div>
@@ -886,14 +855,14 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     </div>
 
     <div className="screen-input-actions">
-      <button disabled={disabled||busy||!phase||!!state.committedGameId||(captureMode==='window'&&!videoReady)} onClick={()=>void capture()}>{busy?(zh?'正在识别…':'Recognizing…'):t('captureNow')}</button>
+      <button disabled={disabled||busy||!phase||!!state.committedGameId||!videoReady} onClick={()=>void capture()}>{busy?(zh?'正在识别…':'Recognizing…'):t('captureNow')}</button>
       {phase?.action==='ban'&&<button className="empty-ban-button" disabled={disabled||!!state.committedGameId} onClick={()=>send({type:'skip_ban',team:phase.team})}>{t('emptyBanButton')}</button>}
       <label className="auto-watch-toggle"><input type="checkbox" checked={autoWatch} onChange={event=>{
         setAutoWatch(event.target.checked);
         localStorage.setItem('hok-capture-auto-watch',event.target.checked?'1':'0');
       }}/>{t('autoCaptureWatch')}</label>
     </div>
-    <small>{captureMode==='window'?t('captureExplicitAutoHint'):t('autoCaptureWatchHint')}</small>
+    <small>{t('captureExplicitAutoHint')}</small>
     <p role="status">{message}</p>
 
     {result&&<dialog ref={dialog} className="library-dialog capture-review" aria-label={result.kind==='empty-ban'?t('emptyBanReviewTitle'):(zh?'确认识别结果':'Review recognition')} onCancel={event=>{event.preventDefault();closeReview();}}>
@@ -904,7 +873,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         <img src={result.preview} alt={zh?'当前槽位截图':'Current slot capture'}/>
       </>:result.kind==='pick-group'?<>
         <h2>{zh?(result.entries.length>1?'确认同时选人结果':'确认 Pick 结果'):(result.entries.length>1?'Review simultaneous picks':'Review pick')}</h2>
-        <p>{zh?'检测到下一轮已经开始（或最后一手已变暗），因此当前 Pick 组视为已锁定。':'The next turn started (or the final slot dimmed), so the current pick turn is treated as locked.'}</p>
+        <p>{zh?'普通 Pick 只在检测到对手下一个 Pick 位真正出现预选英雄后视为锁定；轮次边界和最后一手则检测选角高亮恢复到正常亮度。':'Normal Picks lock only after the opponent next Pick slot visibly starts preselecting; round boundaries and the final pick use the active-row highlight returning to normal.'}</p>
         <div className="pick-group-review">
           {result.entries.map(entry=><div className="pick-group-review-entry" key={entry.key}>
             <strong>{captureSlotLabel(entry.key)}</strong>

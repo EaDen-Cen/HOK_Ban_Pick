@@ -279,7 +279,7 @@ export function BpSimulatorControl() {
         <button onClick={randomizeCurrent} disabled={!activeKeys.length||activeLocked}>随机当前组预选</button>
         <button onClick={randomizeAll}>随机全部英雄</button>
       </div>
-      <p className="sim-control-note">双选阶段会同时显示两个可编辑 Pick 位。Pick 锁定后不再显示锁图标，而是让已锁定槽位整体变暗；点击“让下一轮开始选人”后，下一个 Pick/Ban 位会出现预选英雄，Auto BP 应据此判断上一组已经锁定。</p>
+      <p className="sim-control-note">双选阶段会同时显示两个可编辑 Pick 位。当前选手行在选角时会发亮；点击“锁定当前组”后只会恢复到普通亮度，不会额外变暗。普通 Pick 的 Auto BP 只应在对手下一个 Pick 位真正出现预选英雄后确认上一组锁定；轮次边界和最后一手则测试“高亮恢复”。</p>
     </section>
 
     <section className="sim-control-panel">

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   captureSlotKeys,
+  captureProbeForNextOpponentPick,
   captureProbeForNextTurn,
   captureTargetForState,
   captureTargetsForCurrentTurn,
@@ -82,4 +83,25 @@ test('final pick has no next-turn probe',()=>{
   const state={draftMode:'match' as const,firstPickSide:'blue' as const,currentPhase:17};
   assert.deepEqual(captureTargetsForCurrentTurn(state,defaultCaptureSlots).map(target=>target.key),['redPick5']);
   assert.equal(captureProbeForNextTurn(state,defaultCaptureSlots),undefined);
+});
+
+
+test('Pick lock probe targets the next opponent Pick, never an empty immediate Ban slot',()=>{
+  const blueOpening={draftMode:'match' as const,firstPickSide:'blue' as const,currentPhase:4};
+  assert.equal(captureProbeForNextOpponentPick(blueOpening,defaultCaptureSlots)?.key,'redPick1');
+
+  const redDouble={...blueOpening,currentPhase:5};
+  assert.equal(captureProbeForNextOpponentPick(redDouble,defaultCaptureSlots)?.key,'bluePick2');
+
+  const blueDouble={...blueOpening,currentPhase:7};
+  assert.equal(captureProbeForNextOpponentPick(blueDouble,defaultCaptureSlots)?.key,'redPick3');
+
+  // Red P3 ends the first Pick round. The immediate next turn is Ban, but the
+  // opponent-Pick probe deliberately skips those Ban slots.
+  const redRoundEnd={...blueOpening,currentPhase:9};
+  assert.equal(captureProbeForNextTurn(redRoundEnd,defaultCaptureSlots)?.key,'redBan3');
+  assert.equal(captureProbeForNextOpponentPick(redRoundEnd,defaultCaptureSlots)?.key,'bluePick4');
+
+  const finalRedPick={...blueOpening,currentPhase:17};
+  assert.equal(captureProbeForNextOpponentPick(finalRedPick,defaultCaptureSlots),undefined);
 });

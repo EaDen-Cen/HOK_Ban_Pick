@@ -1,5 +1,5 @@
 import { phases, type MatchState, type Side } from '../shared/types.js';
-import { draftTurnAtPhase, nextDraftTurn } from '../shared/draftTurns.js';
+import { draftTurnAtPhase, nextDraftTurn, nextOpponentPickTurn } from '../shared/draftTurns.js';
 import { normalizeCaptureRegion, type NormalizedCaptureRegion } from './windowCaptureGeometry.js';
 
 export type CaptureSlotKey =
@@ -169,5 +169,14 @@ export function captureProbeForNextTurn(
   slots:CaptureSlots,
 ):CaptureTarget|undefined {
   const turn=nextDraftTurn(state.draftMode,state.firstPickSide,state.currentPhase);
+  return turn ? captureTargetForPhaseIndex(state,slots,turn.startPhase) : undefined;
+}
+
+
+export function captureProbeForNextOpponentPick(
+  state:Pick<MatchState,'draftMode'|'firstPickSide'|'currentPhase'>,
+  slots:CaptureSlots,
+):CaptureTarget|undefined {
+  const turn=nextOpponentPickTurn(state.draftMode,state.firstPickSide,state.currentPhase);
   return turn ? captureTargetForPhaseIndex(state,slots,turn.startPhase) : undefined;
 }
