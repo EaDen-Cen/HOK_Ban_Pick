@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   captureSlotKeys,
+  captureProbeForNextTurn,
   captureTargetForState,
+  captureTargetsForCurrentTurn,
   defaultCaptureSlots,
   normalizeCaptureSlots,
   slotMeta,
@@ -57,4 +59,27 @@ test('normal BP uses only B1/B2 while keeping all 18 calibration boxes available
 test('slot metadata is explicit and stable',()=>{
   assert.deepEqual(slotMeta('blueBan4'),{side:'blue',action:'ban',index:3});
   assert.deepEqual(slotMeta('redPick5'),{side:'red',action:'pick',index:4});
+});
+
+
+test('simultaneous pick turns expose both active capture slots',()=>{
+  const state={draftMode:'match' as const,firstPickSide:'blue' as const,currentPhase:5};
+  assert.deepEqual(
+    captureTargetsForCurrentTurn(state,defaultCaptureSlots).map(target=>target.key),
+    ['redPick1','redPick2'],
+  );
+  assert.equal(captureProbeForNextTurn(state,defaultCaptureSlots)?.key,'bluePick2');
+
+  const blueDouble={...state,currentPhase:7};
+  assert.deepEqual(
+    captureTargetsForCurrentTurn(blueDouble,defaultCaptureSlots).map(target=>target.key),
+    ['bluePick2','bluePick3'],
+  );
+  assert.equal(captureProbeForNextTurn(blueDouble,defaultCaptureSlots)?.key,'redPick3');
+});
+
+test('final pick has no next-turn probe',()=>{
+  const state={draftMode:'match' as const,firstPickSide:'blue' as const,currentPhase:17};
+  assert.deepEqual(captureTargetsForCurrentTurn(state,defaultCaptureSlots).map(target=>target.key),['redPick5']);
+  assert.equal(captureProbeForNextTurn(state,defaultCaptureSlots),undefined);
 });
