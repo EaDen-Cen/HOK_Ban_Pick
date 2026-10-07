@@ -15,7 +15,8 @@
     "hero:art-audit": "tsx scripts/hero-sync/auditArt.ts",
     "hero:sync": "tsx scripts/hero-sync/sync.ts --update",
     "hero:validate": "tsx scripts/hero-sync/validate.ts",
-    "simulator": "vite --open /tools/bp-simulator"
+    "simulator": "vite --open /tools/bp-simulator-control",
+    "simulator:stage": "vite --open /tools/bp-simulator"
   },
   "dependencies": {
     "react": "^18.3.1",

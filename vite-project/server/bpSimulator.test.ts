@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { phases } from '../src/shared/types.js';
-import { completedSimulatorSlots, simulatorSlotForPhase, simulatorSlotKey } from '../src/simulator/bpSimulatorModel.js';
+import { completedSimulatorSlots, simulatorBanVisualKeys, simulatorSlotForPhase, simulatorSlotKey, swapSimulatorPickHeroes } from '../src/simulator/bpSimulatorModel.js';
 
 test('simulator match mode follows the production 18-phase HOK draft order', () => {
   const sequence=phases('match','blue');
@@ -28,4 +28,24 @@ test('normal mode exposes only the production normal-mode slots', () => {
   assert.equal(slots.filter(slot=>slot.action==='pick').length,10);
   assert.equal(slots.filter(slot=>slot.action==='ban').length,4);
   assert.equal(slots.some(slot=>slot.action==='ban'&&slot.slotIndex>1),false);
+});
+
+
+test('ban slots are axis-mirrored on the red side',()=>{
+  assert.deepEqual(simulatorBanVisualKeys('blue'),['blueBan1','blueBan2','blueBan3','blueBan4']);
+  assert.deepEqual(simulatorBanVisualKeys('red'),['redBan4','redBan3','redBan2','redBan1']);
+});
+
+test('player hero swap exchanges pick portraits without touching other slots',()=>{
+  const before={
+    bluePick1:11,
+    bluePick2:22,
+    bluePick3:33,
+    redPick1:44,
+  };
+  const after=swapSimulatorPickHeroes(before,'blue',0,2);
+  assert.equal(after.bluePick1,33);
+  assert.equal(after.bluePick3,11);
+  assert.equal(after.bluePick2,22);
+  assert.equal(after.redPick1,44);
 });
