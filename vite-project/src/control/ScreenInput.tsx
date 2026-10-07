@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { heroForState } from '../shared/heroData';
 import {
-  captureProbeForNextTurn,
+  captureProbeForNextOpponentPick,
   captureSlotKeys,
   captureTargetForState,
   captureTargetsForCurrentTurn,
@@ -16,12 +16,15 @@ import {
 import { detectEmptyBan, EMPTY_BAN_GRACE_MS, fingerprintDistance, type EmptyBanStability } from './emptyBanDetection';
 import { updateHeroRecognitionStability, type HeroRecognitionStability } from './heroRecognitionStability';
 import { freshHeroLockStability, updateHeroLockStability, type HeroLockStability } from './heroLockDetection';
+import { freshPickSlotActivationState, updatePickSlotActivation, type PickSlotActivationState } from './pickSlotActivation';
+import { getSharedWindowCaptureStream, setSharedWindowCaptureStream } from './sharedWindowCapture';
 import { freshPickTurnDimState, updatePickTurnDimState, type PickTurnDimState } from './pickTurnDimDetection';
 import { regionFromDrag, regionToPixels, type NormalizedCaptureRegion } from './windowCaptureGeometry';
 import { nextCaptureSlotKey, nudgeCaptureRegion, type CalibrationDelta } from './precisionCalibration';
 import { phaseName } from '../shared/display';
 import { translator } from '../shared/i18n';
 import { phases, type Action, type MatchState } from '../shared/types';
+import { immediateNextTurnIsBan } from '../shared/draftTurns';
 
 type HeroCandidate = { heroId:number; confidence:number };
 
@@ -45,8 +48,6 @@ type PickGroupCaptureResult = {
 
 type CaptureResult = SingleCaptureResult | PickGroupCaptureResult;
 
-type CaptureMode = 'window' | 'native';
-
 type WindowInfo = {
   label:string;
   surface:string;
@@ -64,7 +65,6 @@ type RecognitionResponse = {
 
 const freshEmptyStability = (): EmptyBanStability => ({ phaseKey:'', fingerprint:'', count:0 });
 const freshHeroStability = (): HeroRecognitionStability => ({ phaseKey:'', heroId:null, count:0 });
-const nativeDefault = {x:0,y:0,width:100,height:100};
 const SLOTS_STORAGE='hok-window-capture-slots-v3';
 const LEGACY_ZONES_STORAGE='hok-window-capture-zones-v2';
 
@@ -104,13 +104,6 @@ function percentageStyle(region:{x:number;y:number;width:number;height:number}) 
 export function ScreenInput({ state, revision, token, disabled, send }: { state:MatchState; revision:number; token:string; disabled:boolean; send:(action:Action)=>void }) {
   const zh=state.language==='zh';
   const t=translator(state.language);
-  const [captureMode,setCaptureMode]=useState<CaptureMode>(()=>{
-    const saved=localStorage.getItem('hok-capture-mode');
-    return saved==='native'?'native':'window';
-  });
-  const [nativeRegion,setNativeRegion]=useState(()=>{
-    try { return JSON.parse(localStorage.getItem('hok-capture-region')||'null')||nativeDefault; } catch { return nativeDefault; }
-  });
   const [slots,setSlots]=useState<CaptureSlots>(readCaptureSlots);
   const [autoWatch,setAutoWatch]=useState(()=>localStorage.getItem('hok-capture-auto-watch')==='1');
   const [busy,setBusy]=useState(false);
@@ -137,7 +130,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const heroStability=useRef<HeroRecognitionStability>(freshHeroStability());
   const heroLockStability=useRef<HeroLockStability>(freshHeroLockStability());
   const pickSlotStability=useRef<Record<string,HeroRecognitionStability>>({});
-  const nextTurnStability=useRef<HeroRecognitionStability>(freshHeroStability());
+  const nextPickActivation=useRef<PickSlotActivationState>(freshPickSlotActivationState());
   const pickTurnDimState=useRef<PickTurnDimState>(freshPickTurnDimState());
   const phaseStartedAt=useRef(Date.now());
   const emptyPromptedPhase=useRef('');
@@ -147,7 +140,8 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const phaseKey=`${state.draftGameNumber ?? state.gameNumber}:${state.currentPhase}:${phase?.team ?? 'done'}:${phase?.action ?? 'done'}`;
   const target=useMemo(()=>captureTargetForState(state,slots),[state,slots]);
   const turnTargets=useMemo(()=>captureTargetsForCurrentTurn(state,slots),[state,slots]);
-  const nextTurnProbe=useMemo(()=>captureProbeForNextTurn(state,slots),[state,slots]);
+  const nextOpponentPickProbe=useMemo(()=>captureProbeForNextOpponentPick(state,slots),[state,slots]);
+  const useHighlightRelease=phase?.action==='pick'&&(!nextOpponentPickProbe||immediateNextTurnIsBan(state.draftMode,state.firstPickSide,state.currentPhase));
   const activeTargetKeys=useMemo(()=>new Set(turnTargets.map(item=>item.key)),[turnTargets]);
 
   const label=useCallback((id:number)=>{
@@ -330,7 +324,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     heroStability.current=freshHeroStability();
     heroLockStability.current=freshHeroLockStability();
     pickSlotStability.current={};
-    nextTurnStability.current=freshHeroStability();
+    nextPickActivation.current=freshPickSlotActivationState();
     pickTurnDimState.current=freshPickTurnDimState();
     phaseStartedAt.current=Date.now();
     emptyPromptedPhase.current='';
