@@ -179,7 +179,7 @@ export async function recognizeImage(buffer: Buffer, allowedHeroIds?: number[], 
   // variants only; the offset search is reserved for harder crops.
   const primary=await captureFeatureVariants(buffer,primaryVariantSpecs,shape,metadata);
   let scored=scoreRecognition(heroTemplates,primary,shape);
-  const fastAccept=shape==='circle'?.78:.82;
+  const fastAccept=shape==='circle' ? .78 : .82;
   if((scored[0]?.confidence??0)<fastAccept){
     const fallback=await captureFeatureVariants(buffer,fallbackVariantSpecs,shape,metadata);
     scored=scoreRecognition(heroTemplates,[...primary,...fallback],shape);
