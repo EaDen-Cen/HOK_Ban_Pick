@@ -13,7 +13,8 @@ import {
 } from './bpCaptureLayout';
 import { detectEmptyBan, EMPTY_BAN_GRACE_MS, fingerprintDistance, type EmptyBanStability } from './emptyBanDetection';
 import { updateHeroRecognitionStability, type HeroRecognitionStability } from './heroRecognitionStability';
-import { regionFromDrag, regionToPixels } from './windowCaptureGeometry';
+import { regionFromDrag, regionToPixels, type NormalizedCaptureRegion } from './windowCaptureGeometry';
+import { nextCaptureSlotKey, nudgeCaptureRegion, type CalibrationDelta } from './precisionCalibration';
 import { phaseName } from '../shared/display';
 import { translator } from '../shared/i18n';
 import { phases, type Action, type MatchState } from '../shared/types';
@@ -100,9 +101,13 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const [windowInfo,setWindowInfo]=useState<WindowInfo>();
   const [calibratingSlot,setCalibratingSlot]=useState<CaptureSlotKey>();
   const [videoReady,setVideoReady]=useState(false);
+  const [precisionMode,setPrecisionMode]=useState(false);
+  const [calibrationZoom,setCalibrationZoom]=useState(2);
+  const [calibrationPreview,setCalibrationPreview]=useState('');
 
   const dialog=useRef<HTMLDialogElement>(null);
   const videoRef=useRef<HTMLVideoElement>(null);
+  const precisionWorkspace=useRef<HTMLDivElement>(null);
   const streamRef=useRef<MediaStream>();
   const mounted=useRef(true);
   const busyRef=useRef(false);
