@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Action, Role, Snapshot } from './types';
 const api = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 const wsURL = import.meta.env.VITE_WS_URL || `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws`;
+const localTrustedBrowser=['localhost','127.0.0.1','::1'].includes(location.hostname);
 export function useMatch(role: Role, token: string) {
   const [snapshot, setSnapshot] = useState<Snapshot>();
   const [status, setStatus] = useState('Connecting');
@@ -21,12 +22,14 @@ export function useMatch(role: Role, token: string) {
     setSnapshot(undefined); setAcknowledged(undefined);
     function clearPending() { pendingAction.current = undefined; pendingID.current = undefined; clearTimeout(pendingTimer.current); setPending(false); }
     async function connect() {
-      if (stopped || !token) { setStatus('Access token required'); return; }
+      if (stopped || (!token && !localTrustedBrowser)) { setStatus('Access token required'); return; }
       setStatus('Connecting');
       abort = new AbortController();
       const timeout = setTimeout(() => abort.abort(), 8000);
       try {
-        const response = await fetch(`${api}/api/match`, { headers: { Authorization: `Bearer ${token}` }, signal: abort.signal, cache: 'no-store' });
+        const headers:Record<string,string>={'X-HOK-Role':role};
+        if(token) headers.Authorization=`Bearer ${token}`;
+        const response = await fetch(`${api}/api/match`, { headers, signal: abort.signal, cache: 'no-store' });
         if (response.status === 401) { setStatus('Invalid token'); return; }
         if (!response.ok) throw new Error('暂时无法连接服务器');
         const initial: Snapshot = await response.json();
@@ -40,7 +43,7 @@ export function useMatch(role: Role, token: string) {
           else if (authenticated && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
         }, 5000);
         const connectTimeout = setTimeout(() => ws.close(), 8000);
-        ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', token }));
+        ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', role, token }));
         ws.onmessage = event => {
           if (stopped) return;
           lastReceived = Date.now();
