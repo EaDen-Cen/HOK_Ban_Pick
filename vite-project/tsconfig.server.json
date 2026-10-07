@@ -18,6 +18,7 @@
     "server/**/*.ts",
     "scripts/hero-sync/**/*.ts",
     "src/shared/types.ts",
+    "src/shared/draftTurns.ts",
     "src/components/HeroList.tsx",
     "src/data/**/*.ts"
   ]
