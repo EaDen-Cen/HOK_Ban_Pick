@@ -102,7 +102,7 @@ function captureFrame(video:HTMLVideoElement,region:NormalizedCaptureRegion) {
   context.imageSmoothingEnabled=true;
   context.imageSmoothingQuality='high';
   context.drawImage(video,pixels.x,pixels.y,pixels.width,pixels.height,0,0,canvas.width,canvas.height);
-  return canvas.toDataURL('image/png');
+  return canvas.toDataURL('image/jpeg',.94);
 }
 
 export function LineupAssignments({
