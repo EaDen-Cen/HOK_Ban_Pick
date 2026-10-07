@@ -51,7 +51,7 @@ const server = createServer(async (req, res) => {
         }
         const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
         if(input.revision!==store.data.revision){ json(409,{error:'Stale capture'}); return; }
-        const result=await recognizeClientFrame(input.image);
+        const result=await recognizeClientFrame(input.image,input.allowedHeroIds,input.shape);
         if(input.revision!==store.data.revision){ json(409,{error:'State changed during capture'}); return; }
         json(200,result);
       } catch {
