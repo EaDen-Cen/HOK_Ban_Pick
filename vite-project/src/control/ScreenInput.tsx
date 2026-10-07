@@ -659,13 +659,17 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
             <strong>{t('captureCalibrateExplicitSlots')}</strong>
             <p className="muted">{calibratingSlot?t('captureDragSelectedSlot',{slot:captureSlotLabel(calibratingSlot)}):t('captureExplicitCalibrationHint')}</p>
           </div>
-          <button type="button" disabled={!videoReady} onClick={()=>{
-            const next=normalizeCaptureSlots(defaultCaptureSlots);
-            setSlots(next);
-            localStorage.setItem(SLOTS_STORAGE,JSON.stringify(next));
-            setCalibratingSlot(undefined);
-            setMessage(t('captureExplicitSlotsReset'));
-          }}>{t('captureResetAllSlots')}</button>
+          <div className="explicit-slot-calibration-actions">
+            <button type="button" className="primary" disabled={!videoReady} onClick={()=>void enterPrecisionCalibration()}>{t('precisionOpenFullscreen')}</button>
+            <button type="button" disabled={!videoReady} onClick={()=>{
+              const next=normalizeCaptureSlots(defaultCaptureSlots);
+              setSlots(next);
+              localStorage.setItem(SLOTS_STORAGE,JSON.stringify(next));
+              setCalibratingSlot(undefined);
+              setCalibrationPreview('');
+              setMessage(t('captureExplicitSlotsReset'));
+            }}>{t('captureResetAllSlots')}</button>
+          </div>
         </div>
 
         <div className="explicit-slot-groups">
