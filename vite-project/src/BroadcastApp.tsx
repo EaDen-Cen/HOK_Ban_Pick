@@ -220,6 +220,7 @@ export default function BroadcastApp() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTeamSettings, setShowTeamSettings] = useState(false);
   const [showHeroArtEditor, setShowHeroArtEditor] = useState(false);
+  const [manualFallbackOpen, setManualFallbackOpen] = useState(false);
   const [delayInput, setDelayInput] = useState(180);
   const [lastLanguage, setLastLanguage] = useState<Language>(() => sessionStorage.getItem(`hok-language-${role}`) === 'eng' ? 'eng' : 'zh');
   const { snapshot, status, error, pending, send, acknowledged } = useMatch(role, token);
@@ -291,10 +292,10 @@ export default function BroadcastApp() {
           {state.bpInputMode === 'screen'
             ? <div className="screen-recognition-workspace">
                 <ScreenInput state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />
-                <details className="manual-picker-fallback">
+                <details className="manual-picker-fallback" onToggle={event=>setManualFallbackOpen(event.currentTarget.open)}>
                   <summary>{t('manualFallbackTitle')}</summary>
                   <p className="muted">{t('manualFallbackHint')}</p>
-                  <ControlHeroPicker state={state} disabled={disabled} active={!showSettings && !showTeamSettings && !showHeroArtEditor} send={send} acknowledged={acknowledged} />
+                  <ControlHeroPicker state={state} disabled={disabled} active={manualFallbackOpen && !showSettings && !showTeamSettings && !showHeroArtEditor} send={send} acknowledged={acknowledged} />
                 </details>
               </div>
             : <ControlHeroPicker state={state} disabled={disabled} active={!showSettings && !showTeamSettings && !showHeroArtEditor} send={send} acknowledged={acknowledged} />}
