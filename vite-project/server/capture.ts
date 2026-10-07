@@ -25,6 +25,11 @@ export async function frameFingerprint(source: Buffer) {
   return perceptualFingerprint(source);
 }
 
+export async function frameMeanLuma(source: Buffer) {
+  const stats=await sharp(source).greyscale().stats();
+  return stats.channels[0]?.mean ?? 0;
+}
+
 export async function lockCueFingerprint(source: Buffer) {
   const meta=await sharp(source).metadata();
   const width=meta.width||0, height=meta.height||0;
@@ -133,6 +138,7 @@ export async function recognizeScreen(region: ReturnType<typeof captureRegion>) 
       preview: frame.preview,
       fingerprint: await frameFingerprint(buffer),
       lockFingerprint: await lockCueFingerprint(buffer),
+      meanLuma: await frameMeanLuma(buffer),
       candidates: await recognizeImage(buffer),
     };
   } finally { busy = false; }
@@ -171,6 +177,7 @@ export async function recognizeClientFrame(value: unknown) {
     preview:value as string,
     fingerprint:await frameFingerprint(buffer),
     lockFingerprint:await lockCueFingerprint(buffer),
+    meanLuma:await frameMeanLuma(buffer),
     candidates:await recognizeImage(buffer),
   };
 }
