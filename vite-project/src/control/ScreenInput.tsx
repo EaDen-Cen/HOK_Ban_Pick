@@ -523,11 +523,9 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     if(!calibratingSlot||!dragStart.current) return;
     const next=regionFromDrag(dragStart.current,pointInElement(event));
     dragStart.current=null;
-    const updated={...slots,[calibratingSlot]:next};
-    setSlots(updated);
-    localStorage.setItem(SLOTS_STORAGE,JSON.stringify(updated));
+    persistCalibrationSlot(calibratingSlot,next);
     setMessage(t('captureExplicitSlotSaved',{slot:captureSlotLabel(calibratingSlot)}));
-    setCalibratingSlot(undefined);
+    if(!precisionMode) setCalibratingSlot(undefined);
   };
 
   const closeReview=()=>{
@@ -570,7 +568,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
             calibratingSlot===key?'selected':'',
             target?.key===key?'active':'',
           ].filter(Boolean).join(' ')}
-          onClick={()=>setCalibratingSlot(current=>current===key?undefined:key)}
+          onClick={()=>calibratingSlot===key&&!precisionMode?setCalibratingSlot(undefined):selectCalibrationSlot(key)}
         >{action==='ban'?'B':'P'}{index+1}</button>;
       })}</div>
     </div>;
