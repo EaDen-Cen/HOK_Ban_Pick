@@ -19,7 +19,6 @@ async function features(source: string | Buffer, shape:MatchShape='square') {
   }
   const mean=included.reduce((sum,n)=>sum+n,0)/Math.max(included.length,1);
   const values:number[]=[];
-  let cursor=0;
   for(let y=0;y<size;y++) for(let x=0;x<size;x++) {
     const dx=(x+.5-size/2)/(size/2);
     const dy=(y+.5-size/2)/(size/2);
@@ -27,7 +26,6 @@ async function features(source: string | Buffer, shape:MatchShape='square') {
     const base=(y*size+x)*3;
     for(let channel=0;channel<3;channel++) {
       values.push(inside ? pixels[base+channel]-mean : 0);
-      if(inside) cursor++;
     }
   }
   const norm=Math.sqrt(values.reduce((sum,n)=>sum+n*n,0));
