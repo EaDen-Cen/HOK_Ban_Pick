@@ -117,6 +117,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const [message,setMessage]=useState('');
   const [candidateStatus,setCandidateStatus]=useState('');
   const [result,setResult]=useState<CaptureResult>();
+  const [manualResult,setManualResult]=useState<CaptureResult>();
   const [selected,setSelected]=useState(0);
   const [groupSelected,setGroupSelected]=useState<Record<string,number>>({});
   const [windowInfo,setWindowInfo]=useState<WindowInfo>();
@@ -422,6 +423,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     emptyPromptedPhase.current='';
     lockBaseline.current={phaseKey,fingerprint:''};
     setResult(undefined);
+    setManualResult(undefined);
     setGroupSelected({});
     setMessage('');
     setCandidateStatus('');
@@ -571,6 +573,18 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         const heroIds=scanned.map(entry=>entry.evidence.top?.heroId).filter((id):id is number=>id!==undefined);
         const distinctHeroes=heroIds.length===scanned.length&&new Set(heroIds).size===heroIds.length;
         const lumas=scanned.map(entry=>entry.data.meanLuma??0);
+        if(scanned.length>0&&scanned.every(entry=>entry.candidates[0])) {
+          setManualResult({
+            kind:'pick-group',
+            team:phase.team,
+            entries:scanned.map(entry=>({
+              key:entry.item.key,
+              candidates:entry.candidates,
+              preview:entry.data.preview,
+            })),
+            at:Date.now(),
+          });
+        }
 
         const highlightRelease=updatePickTurnDimState(pickTurnDimState.current,{
           phaseKey,
@@ -665,6 +679,9 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         : undefined;
 
       const trustedBanHero=(top?.confidence??0)>=.60;
+      if(top&&(top.confidence??0)>=.50) {
+        setManualResult({kind:'hero',candidates,preview:data.preview,at:Date.now()});
+      }
       const empty=detectEmptyBan(emptyStability.current,{
         phaseKey,
         isBan:phase.action==='ban',
@@ -769,6 +786,21 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const closeReview=()=>{
     if(dialog.current?.open) dialog.current.close();
     setResult(undefined);
+  };
+
+  const openManualCandidateReview=()=>{
+    if(!manualResult||!phase||disabled) return;
+    if(manualResult.kind==='pick-group'){
+      setGroupSelected(Object.fromEntries(manualResult.entries.flatMap(entry=>{
+        const top=entry.candidates[0];
+        return top?[[entry.key,top.heroId]]:[];
+      })));
+    }else if(manualResult.kind==='hero'){
+      const top=manualResult.candidates[0];
+      if(top) setSelected(top.heroId);
+    }
+    setResult({...manualResult,at:Date.now()});
+    setMessage(t('captureManualCandidateOpened'));
   };
 
   const submitReview=()=>{
@@ -917,6 +949,12 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
 
         <div className="screen-input-actions">
           <button className="primary capture-now-button" disabled={disabled||busy||!phase||!!state.committedGameId||!videoReady} onClick={()=>void capture()}>{busy?(zh?'正在识别…':'Recognizing…'):t('captureNow')}</button>
+          <button
+            className="manual-candidate-button"
+            disabled={disabled||busy||!phase||!!state.committedGameId||!manualResult}
+            onClick={openManualCandidateReview}
+            title={t('captureManualCandidateHint')}
+          >{t('captureManualCandidate')}</button>
           {phase?.action==='ban'
             ? <button className="empty-ban-button" disabled={disabled||!!state.committedGameId} onClick={()=>send({type:'skip_ban',team:phase.team})}>{t('emptyBanButton')}</button>
             : <span className="empty-ban-action-placeholder" aria-hidden="true" />}
