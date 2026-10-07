@@ -468,14 +468,14 @@ docs/
 
 v1.0.0 最终加固以 PR #36 为当前验证基线。
 
-GitHub Actions run #105 已完成：
+GitHub Actions run #109 已完成：
 
 - Hero data validation：通过；
 - TypeScript / Server TypeScript / Vite production build：通过；
-- Node/server/unit tests：137 total，136 passed，1 skipped，0 failed；
+- Node/server/unit tests：138 total，137 passed，1 skipped，0 failed；
 - ESLint：0 errors，0 warnings。
 
-当前自动测试覆盖既有 BP 状态机、Normal / Player / Global、蓝红先手、延迟、Undo、存储、队伍资料库，以及新增的远程密码/本机信任、Simulator 合法随机 BP 和 Auto BP 识别相关回归。
+当前自动测试覆盖既有 BP 状态机、Normal / Player / Global、蓝红先手、延迟、Undo、存储、队伍资料库，以及新增的远程密码/本机信任、Simulator 合法随机 BP、Auto BP 设置与代表英雄 square/circle 识别回归。
 
 仍必须实机验证：
 
