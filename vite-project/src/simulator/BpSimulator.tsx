@@ -1,3 +1,4 @@
+import { ViewportCanvas } from '../shared/ViewportCanvas';
 import { useEffect, useMemo } from 'react';
 import heroes from '../components/HeroList';
 import { phases, type Side } from '../shared/types';
@@ -111,7 +112,7 @@ export function BpSimulator() {
   const actionLabel=active?.action==='ban'?'Ban':active?.action==='pick'?'Pick':'Complete';
 
   return <main className="bp-simulator-stage-page" aria-label="HOK BP capture simulator">
-    <section className="bp-simulator-stage">
+    <ViewportCanvas width={1600} height={900} className="bp-simulator-stage">
       <div className="sim-side-wash blue" />
       <div className="sim-side-wash red" />
 
@@ -164,6 +165,6 @@ export function BpSimulator() {
         <strong>{activeLocked?'LOCKED / TRANSITIONED':'PRESELECT'}</strong>
         <small>F: FULLSCREEN · C: CONTROL</small>
       </div>
-    </section>
+    </ViewportCanvas>
   </main>;
 }

@@ -8,8 +8,10 @@ export const ruleLocked = (state: MatchState) => state.currentPhase > 0 || state
 export const currentGame = (state: MatchState) => state.draftGameNumber ?? state.gameNumber;
 export const displaySides = (state: MatchState): [Side, Side] => [state.displayLeftSide, state.displayLeftSide === 'blue' ? 'red' : 'blue'];
 
+const heroById = new Map(heroes.map(hero => [hero.id, hero]));
+
 export function draftHeroGroupKey(state: Pick<MatchState, 'flowbornFormsIndependent'>, heroId: number) {
-  const hero = heroes.find(item => item.id === heroId);
+  const hero = heroById.get(heroId);
   if (!state.flowbornFormsIndependent && hero?.variantGroup === 'flowborn') return 'variant:flowborn';
   return `hero:${heroId}`;
 }

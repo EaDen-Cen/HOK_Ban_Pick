@@ -1,3 +1,5 @@
+import heroes from '../components/HeroList.js';
+import { draftHeroUsed, draftRestriction } from '../shared/draftRules.js';
 import { phases, type MatchState, type Side } from '../shared/types.js';
 import { draftTurnAtPhase, previousDraftTurnStart } from '../shared/draftTurns.js';
 
@@ -109,4 +111,30 @@ export function completedSimulatorSlots(
     .slice(0,Math.max(0,phaseIndex))
     .map((_,index)=>simulatorSlotForPhase(mode,firstPickSide,index)!)
     .filter(Boolean);
+}
+
+/** Walk draft order, using the same restrictions as Control. Future slots do not consume heroes. */
+export function randomizeSimulatorSlots(
+  assignments:Record<string,number>,
+  mode:MatchState['draftMode'], firstPickSide:Side,
+  rules:MatchState, keys:ReadonlySet<string>, emptyBans:readonly string[]=[],
+  random:()=>number=Math.random,
+) {
+  const draft:MatchState={...rules,blueBans:[],redBans:[],bluePicks:[],redPicks:[],currentPhase:0};
+  const output={...assignments};
+  for(let index=0;index<phases(mode,firstPickSide).length;index++) {
+    const slot=simulatorSlotForPhase(mode,firstPickSide,index)!;
+    const key=simulatorSlotKey(slot);
+    if(emptyBans.includes(key)&&slot.action==='ban') { draft[`${slot.side}Bans`].push(null); continue; }
+    if(keys.has(key)) {
+      const pool=heroes.filter(hero=>!draftHeroUsed(draft,hero.id)&&!draftRestriction(draft,slot.side,slot.action,hero.id));
+      if(!pool.length) throw new Error(`No legal hero for ${key}; check player IDs and BP history`);
+      output[key]=pool[Math.min(pool.length-1,Math.floor(random()*pool.length))].id;
+    }
+    // Only earlier selections matter when randomizing the current turn.
+    const id=output[key];
+    if(id!==undefined) draft[`${slot.side}${slot.action==='ban'?'Bans':'Picks'}`].push(id);
+    draft.currentPhase++;
+  }
+  return output;
 }

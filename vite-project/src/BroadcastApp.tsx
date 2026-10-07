@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import './broadcast.css';
 import './BroadcastApp.css';
 import { heroForState } from './shared/heroData';
@@ -11,6 +11,9 @@ import {
   type Role,
   type Side,
 } from './shared/types';
+import { ViewportCanvas } from './shared/ViewportCanvas';
+import { useAccess } from './shared/access';
+import { AccessSettings } from './control/AccessSettings';
 import { useMatch } from './shared/useMatch';
 import { connectionLabel, phaseName, seriesName, stageName, teamName, draftRuleName } from './shared/display';
 import { translator } from './shared/i18n';
@@ -22,8 +25,8 @@ import { ControlHeroPicker } from './control/ControlHeroPicker';
 import { ControlDraftWorkspace } from './control/ControlDraftWorkspace';
 import { SettingsDialog } from './control/SettingsDialog';
 import { TeamSettingsDialog } from './control/TeamSettingsDialog';
-import { ScreenInput } from './control/ScreenInput';
-import { HeroArtEditorDialog } from './control/HeroArtEditorDialog';
+const ScreenInput=lazy(()=>import('./control/ScreenInput').then(module=>({default:module.ScreenInput})));
+const HeroArtEditorDialog=lazy(()=>import('./control/HeroArtEditorDialog').then(module=>({default:module.HeroArtEditorDialog})));
 import { LineupAssignments } from './control/LineupAssignments';
 import { Score } from './shared/Score';
 import { DraftHistory } from './shared/DraftHistory';
@@ -104,6 +107,8 @@ const settingsFromState = (state: MatchState): MatchSettings => ({
   overlayLayout: state.overlayLayout,
   scoreDisplay: state.scoreDisplay,
   bpInputMode: state.bpInputMode,
+  recognitionAutoAccept: state.recognitionAutoAccept ?? false,
+  recognitionThreshold: state.recognitionThreshold ?? 90,
   showHeroName: state.showHeroName,
   artSourceMode: state.artSourceMode,
 });
@@ -154,6 +159,11 @@ function MatchSettingsPanel({ state, send, disabled }: { state: MatchState; send
         </select><small>{t('languageHint')}</small></label>
         <label>{t('scoreDisplay')}<select value={form.scoreDisplay || 'number'} onChange={e => setForm({ ...form, scoreDisplay: e.target.value as MatchSettings['scoreDisplay'] })}><option value="number">{t('scoreNumber')}</option><option value="boxes">{t('scoreBoxes')}</option></select></label>
         <label>{t('bpInputMode')}<select value={form.bpInputMode || 'manual'} onChange={e => setForm({ ...form, bpInputMode: e.target.value as MatchSettings['bpInputMode'] })}><option value="manual">{t('manualInput')}</option><option value="screen">{t('screenInput')}</option></select></label>
+        {form.bpInputMode === 'screen' && <details className="advanced-options"><summary>{state.language === 'zh' ? '屏幕识别 · 高级选项' : 'Screen recognition · advanced'}</summary>
+          <label className="settings-checkbox"><span>{state.language === 'zh' ? '高相似度自动输入' : 'Automatically accept high similarity'}</span><input type="checkbox" checked={form.recognitionAutoAccept ?? false} onChange={e => setForm({...form, recognitionAutoAccept:e.target.checked})} /></label>
+          <label>{state.language === 'zh' ? '相似度阈值 (%)' : 'Similarity threshold (%)'}<input type="number" min={50} max={100} step={1} value={form.recognitionThreshold ?? 90} onChange={e => setForm({...form, recognitionThreshold:Number(e.target.value)})} /></label>
+          <small>{state.language === 'zh' ? '相似度不是准确率；仍需稳定帧和锁定证据。低于或等于阈值、空 Ban 均需审核。' : 'Similarity is not accuracy. Stable frames and lock evidence remain required. At or below the threshold, and empty bans, require review.'}</small>
+        </details>}
         <label>{t('overlayLayout')}<select value={form.overlayLayout} onChange={e => setForm({ ...form, overlayLayout: e.target.value as MatchSettings['overlayLayout'] })}>
           <option value="panel">{t('panelLayout')}</option><option value="side">{t('sideLayout')}</option>
         </select></label>
@@ -208,14 +218,10 @@ function TeamSettingsPanel({ state, send, disabled, token }: { state: MatchState
     <button disabled={disabled || uploads.size > 0} className="primary">{t('saveSettings')}</button>
   </form>;
 }
-function initialToken(role: Role) {
-  const fragment = new URLSearchParams(location.hash.slice(1)).get('token');
-  if (fragment) { sessionStorage.setItem(`hok-${role}`, fragment); history.replaceState(null, '', location.pathname); }
-  return fragment || sessionStorage.getItem(`hok-${role}`) || (import.meta.env.DEV ? `local-${role}` : '');
-}
 export default function BroadcastApp() {
   const role: Role = location.pathname === '/caster' ? 'caster' : location.pathname === '/overlay/draft' ? 'overlay' : 'control';
-  const [token, setToken] = useState(() => initialToken(role));
+  const {token,saveToken:setToken,local,checking,accessError,login}=useAccess(role);
+  const [showAccess,setShowAccess]=useState(false);
   const [tokenInput, setTokenInput] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showTeamSettings, setShowTeamSettings] = useState(false);
@@ -223,7 +229,7 @@ export default function BroadcastApp() {
   const [manualFallbackOpen, setManualFallbackOpen] = useState(false);
   const [delayInput, setDelayInput] = useState(180);
   const [lastLanguage, setLastLanguage] = useState<Language>(() => sessionStorage.getItem(`hok-language-${role}`) === 'eng' ? 'eng' : 'zh');
-  const { snapshot, status, error, pending, send, acknowledged } = useMatch(role, token);
+  const { snapshot, status, error, pending, send, acknowledged } = useMatch(role, token, setToken);
   const connected = status === 'Connected';
   const compatible = !!snapshot?.state && Array.isArray(snapshot.state.draftHistory) && !!snapshot.state.draftRuleMode && !!snapshot.state.firstPickSide && !!snapshot.state.sideSwapMode && !!snapshot.state.displayLeftSide && typeof snapshot.state.showHeroName === 'boolean' && !!snapshot.state.artSourceMode && !!snapshot.state.heroArtOverrides && typeof snapshot.state.flowbornFormsIndependent === 'boolean';
   const disabled = !connected || pending || !compatible;
@@ -236,27 +242,28 @@ export default function BroadcastApp() {
     sessionStorage.setItem(`hok-language-${role}`, lang);
     setLastLanguage(lang);
   }, [lang, role]);
-  if (role === 'overlay') {
-    return <main className="overlay">{state && <DraftOverlay state={state} />}</main>;
-  }
+  if (checking) return <main className="login panel">{t('connectingServer')}</main>;
   if (!token || status === 'Invalid token' || status === 'Access rejected') {
     return <main className="login panel">
-      <p>{t('appName')}</p><h1>{t(role === 'caster' ? 'casterLogin' : 'controlLogin')}</h1>
-      <form onSubmit={e => { e.preventDefault(); sessionStorage.setItem(`hok-${role}`, tokenInput); setToken(tokenInput); }}>
-        <label>{t('accessToken')}<input type="password" required value={tokenInput} onChange={e => setTokenInput(e.target.value)} /></label>
+      <p>{t('appName')}</p><h1>{role === 'overlay' ? (lang === 'zh' ? '直播画面登录' : 'Overlay login') : t(role === 'caster' ? 'casterLogin' : 'controlLogin')}</h1>
+      <form onSubmit={e => { e.preventDefault(); void login(tokenInput); }}>
+        <label>{lang === 'zh'?'访问密码 / Token':'Password / Token'}<input type="password" required value={tokenInput} onChange={e => setTokenInput(e.target.value)} /></label>
         <button className="primary">{t('connect')}</button>
-      </form><p>{connectionLabel(status, lang)}</p>
+      </form><p>{accessError || connectionLabel(status, lang)}</p>
     </main>;
   }
+  if (role === 'overlay') return <ViewportCanvas className="overlay">{state ? <DraftOverlay state={state} /> : <p className="notice">{connectionLabel(status,lang)}</p>}</ViewportCanvas>;
   return <main className={`workspace ${role === 'control' ? 'control-workspace' : ''}`}>
     <header className="topbar">
       <div><span className="eyebrow">{t(role === 'caster' ? 'casterEyebrow' : 'controlEyebrow')}</span><h1>{t('brandTitle')} <span>{t('brandSubtitle')}</span></h1></div>
       <div className="toolbar">
         <b className={connected ? 'status live' : 'status'}>{connectionLabel(status, lang)}</b>
         <span>{role === 'caster' ? t('delayedFeed', { seconds: snapshot?.casterDelaySeconds ?? '—' }) : t('controlRealtime')}</span>
-        <button onClick={() => { sessionStorage.removeItem(`hok-${role}`); setToken(''); }}>{t('logout')}</button>
+        {role === 'control' && <button onClick={()=>setShowAccess(value=>!value)}>{lang === 'zh'?'访问与网站设置':'Access and website settings'}</button>}
+        {!local && <button onClick={() => { sessionStorage.removeItem(`hok-${role}`); setToken(''); }}>{t('logout')}</button>}
       </div>
     </header>
+    {showAccess && role === 'control' && <SettingsDialog label={lang === 'zh'?'访问与网站设置':'Access and website settings'} closeLabel={t('hideSettings')} onClose={()=>setShowAccess(false)}><AccessSettings token={token} onToken={setToken} zh={lang === 'zh'} /></SettingsDialog>}
     {!connected && <p className="notice">{t('disconnectedNotice')}</p>}
     {connected && !compatible && <p className="notice">{t('backendUpgrade')}</p>}
     {error && <p role="alert" className="error">{errorMessage(error, lang)}</p>}
@@ -286,12 +293,12 @@ export default function BroadcastApp() {
           </section>
 
           <DraftLifecycle state={state} send={send} disabled={disabled} />
-          {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><MatchSettingsPanel key={JSON.stringify([state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode, state.showHeroName, state.artSourceMode])} state={state} send={send} disabled={disabled} /></SettingsDialog>}
+          {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><MatchSettingsPanel key={JSON.stringify([state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode, state.recognitionAutoAccept, state.recognitionThreshold, state.showHeroName, state.artSourceMode])} state={state} send={send} disabled={disabled} /></SettingsDialog>}
           <LineupAssignments state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />
         </>}>
           {state.bpInputMode === 'screen'
             ? <div className="screen-recognition-workspace">
-              <ScreenInput state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />
+              <Suspense fallback={<p>{t('connectingServer')}</p>}><ScreenInput state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} /></Suspense>
               <details className="manual-picker-fallback" onToggle={event=>setManualFallbackOpen(event.currentTarget.open)}>
                 <summary>{t('manualFallbackTitle')}</summary>
                 <p className="muted">{t('manualFallbackHint')}</p>
@@ -303,7 +310,7 @@ export default function BroadcastApp() {
         {showTeamSettings && <TeamSettingsDialog label={t('teamSettings')} closeLabel={t('closeTeamSettings')} onClose={() => setShowTeamSettings(false)}>
           <TeamSettingsPanel key={JSON.stringify([state.blueTeam, state.redTeam])} state={state} send={send} disabled={disabled} token={token} />
         </TeamSettingsDialog>}
-        {showHeroArtEditor && <HeroArtEditorDialog state={state} send={send} disabled={disabled} onClose={() => setShowHeroArtEditor(false)} />}
+        {showHeroArtEditor && <Suspense fallback={<p>{t('connectingServer')}</p>}><HeroArtEditorDialog state={state} send={send} disabled={disabled} onClose={() => setShowHeroArtEditor(false)} /></Suspense>}
       </>}
       <DraftHistory state={state} />
       <Analysis state={state} lang={lang} />

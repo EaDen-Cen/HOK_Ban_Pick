@@ -1,3 +1,4 @@
+import { shouldAutoAcceptRecognition } from './recognitionAcceptance';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { heroForState } from '../shared/heroData';
 import {
@@ -636,6 +637,10 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
           entry.item.key,
           entry.evidence.top!.heroId,
         ]));
+        if (shouldAutoAcceptRecognition(state.recognitionAutoAccept,state.recognitionThreshold,scanned.map(entry=>entry.evidence.top!.confidence))) {
+          send({type:'draft_pick_group', team:phase.team, heroIds:scanned.map(entry=>entry.evidence.top!.heroId)});
+          return;
+        }
         setGroupSelected(selections);
         setResult({
           kind:'pick-group',
@@ -694,6 +699,10 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       emptyStability.current=empty.stability;
 
       if(heroEvidence.accepted&&top&&trustedBanHero&&heroLock.locked){
+        if (shouldAutoAcceptRecognition(state.recognitionAutoAccept,state.recognitionThreshold,[top.confidence])) {
+          send({type:'draft_action', heroId:top.heroId, team:phase.team, action:phase.action});
+          return;
+        }
         setSelected(top.heroId);
         setCandidateStatus(t('captureHeroStable',{
           hero:label(top.heroId),
@@ -754,7 +763,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       busyRef.current=false;
       if(mounted.current) setBusy(false);
     }
-  },[captureSlotLabel,disabled,label,nextOpponentPickProbe,phase,phaseKey,pickToBanBoundary,recognizeWindowRegion,state.committedGameId,t,target,turnTargets,useHighlightRelease,zh]);
+  },[captureSlotLabel,disabled,label,nextOpponentPickProbe,phase,phaseKey,pickToBanBoundary,recognizeWindowRegion,state.committedGameId,state.recognitionAutoAccept,state.recognitionThreshold,send,t,target,turnTargets,useHighlightRelease,zh]);
 
   useEffect(()=>{
     if(!autoWatch||result||disabled||!phase||state.committedGameId||busy||!videoReady) return;

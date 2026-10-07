@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import type { IncomingMessage } from 'node:http';
@@ -6,9 +7,11 @@ import sharp from 'sharp';
 
 type MatchShape = 'square' | 'circle';
 
-async function features(source: string | Buffer, shape:MatchShape='square') {
+async function features(source: string | Buffer, shape:MatchShape='square', region?: {left:number;top:number;width:number;height:number}) {
   const size=32;
-  const pixels: Buffer = await sharp(source).resize(size,size,{fit:'fill'}).toColourspace('srgb').removeAlpha().raw().toBuffer();
+  let image=sharp(source);
+  if(region) image=image.extract(region);
+  const pixels: Buffer = await image.resize(size,size,{fit:'fill'}).toColourspace('srgb').removeAlpha().raw().toBuffer();
   const included:number[]=[];
   for(let y=0;y<size;y++) for(let x=0;x<size;x++) {
     const dx=(x+.5-size/2)/(size/2);
@@ -29,7 +32,7 @@ async function features(source: string | Buffer, shape:MatchShape='square') {
     }
   }
   const norm=Math.sqrt(values.reduce((sum,n)=>sum+n*n,0));
-  return values.map(n=>n/Math.max(norm,1));
+  return Float64Array.from(values,n=>n/Math.max(norm,1));
 }
 
 async function perceptualFingerprint(source: Buffer, region?: {left:number;top:number;width:number;height:number}) {
@@ -88,19 +91,23 @@ async function captureFeatureVariants(source: Buffer, shape:MatchShape='square')
     {scale:.74,dx:-.14,dy:.08},
     {scale:.74,dx:.14,dy:.08},
   ];
-  const variants:number[][]=[];
+  const variants:Float64Array[]=[];
+  const seen=new Set<string>();
   for(const spec of specs){
     const side=Math.max(8,Math.min(minSide,Math.floor(minSide*spec.scale)));
     const centerX=width/2 + spec.dx*Math.max(0,width-side);
     const centerY=height/2 + spec.dy*Math.max(0,height-side);
     const left=Math.max(0,Math.min(width-side,Math.round(centerX-side/2)));
     const top=Math.max(0,Math.min(height-side,Math.round(centerY-side/2)));
-    variants.push(await features(await sharp(source).extract({left,top,width:side,height:side}).toBuffer(),shape));
+    const key=`${left}:${top}:${side}`;
+    if(seen.has(key)) continue;
+    seen.add(key);
+    variants.push(await features(source,shape,{left,top,width:side,height:side}));
   }
   return variants;
 }
 
-let templates: Promise<{heroId:number; square:number[]; circle:number[]}[]> | undefined;
+let templates: Promise<{heroId:number; square:Float64Array; circle:Float64Array}[]> | undefined;
 export async function recognizeImage(buffer: Buffer, allowedHeroIds?: number[], shape:MatchShape='square') {
   templates ??= Promise.all(heroes.map(async h=>{
     const source=fileURLToPath(new URL(`../public${h.imageLink}`,import.meta.url));
@@ -108,14 +115,15 @@ export async function recognizeImage(buffer: Buffer, allowedHeroIds?: number[], 
     return {heroId:h.id,square,circle};
   })).catch(error=>{templates=undefined;throw error;});
   const variants=await captureFeatureVariants(buffer,shape);
-  const allowed = allowedHeroIds?.length ? new Set(allowedHeroIds) : undefined;
+  const allowed = allowedHeroIds === undefined ? undefined : new Set(allowedHeroIds);
   return (await templates)
     .filter(hero => !allowed || allowed.has(hero.heroId))
     .map(hero=>{
       let confidence=0;
       const template=shape==='circle'?hero.circle:hero.square;
       for(const values of variants){
-        const score=template.reduce((sum,n,i)=>sum+n*values[i],0);
+        let score=0;
+        for(let i=0;i<template.length;i++) score+=template[i]*values[i];
         if(score>confidence) confidence=score;
       }
       return {heroId:hero.heroId,confidence:Math.max(0,Math.min(1,confidence))};
@@ -197,17 +205,35 @@ export function decodeClientCapture(value: unknown) {
   return buffer;
 }
 
+const heroIDs=new Set(heroes.map(hero=>hero.id));
+type Evidence = {fingerprint:string;lockFingerprint:string;meanLuma:number;candidates:{heroId:number;confidence:number}[]};
+const evidenceCache=new Map<string,Promise<Evidence>>();
+let activeRecognitions=0;
 export async function recognizeClientFrame(value: unknown, allowedHeroIds?: unknown, shape:unknown='square') {
   const buffer=decodeClientCapture(value);
   const allowed=Array.isArray(allowedHeroIds)
-    ? allowedHeroIds.filter((id):id is number=>Number.isInteger(id)&&heroes.some(hero=>hero.id===id)).slice(0,10)
+    ? allowedHeroIds.filter((id):id is number=>Number.isInteger(id)&&heroIDs.has(id)).slice(0,heroes.length)
     : undefined;
   const matchShape:MatchShape=shape==='circle'?'circle':'square';
-  return {
-    preview:value as string,
-    fingerprint:await frameFingerprint(buffer),
-    lockFingerprint:await lockCueFingerprint(buffer),
-    meanLuma:await frameMeanLuma(buffer),
-    candidates:await recognizeImage(buffer,allowed,matchShape),
-  };
+  const key=createHash('sha256').update(buffer).update(JSON.stringify([matchShape,allowed?.slice().sort((a,b)=>a-b)])).digest('hex');
+  let evidence=evidenceCache.get(key);
+  if(evidence) { evidenceCache.delete(key); evidenceCache.set(key,evidence); }
+  else {
+    if(activeRecognitions>=4) throw new Error('Recognition busy');
+    activeRecognitions++;
+    evidence=(async()=>{
+      try {
+        const meta=await sharp(buffer).metadata();
+        if(!meta.width||!meta.height||meta.width*meta.height>4_000_000) throw new Error('Frame dimensions too large');
+        const [fingerprint,lockFingerprint,meanLuma,candidates]=await Promise.all([
+          frameFingerprint(buffer),lockCueFingerprint(buffer),frameMeanLuma(buffer),recognizeImage(buffer,allowed,matchShape),
+        ]);
+        return {fingerprint,lockFingerprint,meanLuma,candidates};
+      } finally {activeRecognitions--;}
+    })();
+    evidenceCache.set(key,evidence);
+    if(evidenceCache.size>64) evidenceCache.delete(evidenceCache.keys().next().value!);
+    evidence.catch(()=>{if(evidenceCache.get(key)===evidence) evidenceCache.delete(key);});
+  }
+  return {preview:value as string,...structuredClone(await evidence)};
 }

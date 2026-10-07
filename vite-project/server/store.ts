@@ -101,13 +101,22 @@ export class Store {
     this.data.history = this.data.history.map(normalizeState);
     this.data.events = this.data.events.map(event => ({ ...event, resultingState: normalizeState(event.resultingState) }));
   }
+  private delayedEvent() {
+    const cutoff = this.clock() - this.data.delay * 1000;
+    let low = 0, high = this.data.events.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (this.data.events[middle].timestamp <= cutoff) low = middle + 1;
+      else high = middle;
+    }
+    return this.data.events[low - 1];
+  }
+  snapshotVersion(role: Role) {
+    return `${this.data.revision}:${role === 'caster' ? this.delayedEvent()?.revision ?? 0 : 0}`;
+  }
   snapshot(role: Role): Snapshot {
     if (role === 'caster') {
-      const cutoff = this.clock() - this.data.delay * 1000;
-
-      const event = [...this.data.events]
-        .reverse()
-        .find(e => e.timestamp <= cutoff);
+      const event = this.delayedEvent();
 
       return {
         type: 'match_state_update',
@@ -311,6 +320,8 @@ export class Store {
       reset.overlayLayout = state.overlayLayout;
       reset.scoreDisplay = state.scoreDisplay;
       reset.bpInputMode = state.bpInputMode;
+      reset.recognitionAutoAccept = state.recognitionAutoAccept;
+      reset.recognitionThreshold = state.recognitionThreshold;
 
       reset.heroArtOverrides = copy(state.heroArtOverrides || {});
       reset.heroDataOverrides = copy(state.heroDataOverrides || {});
@@ -338,6 +349,8 @@ export class Store {
       ) {
         throw new Error('比赛设置无效，请检查赛制、语言和画面布局');
       }
+      if (s.recognitionAutoAccept !== undefined && typeof s.recognitionAutoAccept !== 'boolean') throw new Error('Invalid automatic recognition setting');
+      if (s.recognitionThreshold !== undefined) integer(s.recognitionThreshold, 50, 100);
       integer(s.blueScore, 0, 3); integer(s.redScore, 0, 3); integer(s.gameNumber, 1, 5);
       const wins = (Number(s.seriesFormat.slice(2)) + 1) / 2;
       if (s.blueScore > wins || s.redScore > wins || (s.blueScore === wins && s.redScore === wins) || s.gameNumber > Number(s.seriesFormat.slice(2))) throw new Error('比分或局数不符合当前赛制');
@@ -428,6 +441,8 @@ export class Store {
         overlayLayout: s.overlayLayout,
         scoreDisplay: s.scoreDisplay ?? state.scoreDisplay ?? 'number',
         bpInputMode: s.bpInputMode ?? state.bpInputMode ?? 'manual',
+        recognitionAutoAccept: s.recognitionAutoAccept ?? state.recognitionAutoAccept ?? false,
+        recognitionThreshold: s.recognitionThreshold ?? state.recognitionThreshold ?? 90,
         showHeroName: s.showHeroName ?? state.showHeroName ?? true,
         artSourceMode: s.artSourceMode ?? state.artSourceMode ?? 'auto',
 

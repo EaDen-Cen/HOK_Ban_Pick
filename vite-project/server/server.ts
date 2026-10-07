@@ -1,3 +1,5 @@
+import type { HeroRecognitionProvider } from './recognitionProvider.js';
+import { AccessStore } from './access.js';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname, dirname } from 'node:path';
@@ -10,16 +12,13 @@ import { Store } from './store.js';
 import { uploadPortrait, servePortrait } from './portraits.js';
 import { captureRegion, captureRegions, localCaptureRequest, recognizeClientFrame, recognizeLineup, recognizeScreen } from './capture.js';
 
+const recognitionProvider:HeroRecognitionProvider={id:'local-template-v1',recognize:input=>recognizeClientFrame(input.image,input.allowedHeroIds,input.shape)};
 const production = process.env.NODE_ENV === 'production';
-const tokens: Record<Role, string> = {
-  control: process.env.CONTROL_TOKEN || (production ? '' : 'local-control'),
-  caster: process.env.CASTER_TOKEN || (production ? '' : 'local-caster'),
-  overlay: process.env.OVERLAY_TOKEN || (production ? '' : 'local-overlay'),
-};
-if (Object.values(tokens).some(t => !t || (production && t.length < 24)) || new Set(Object.values(tokens)).size !== 3) throw new Error('Set three distinct tokens of at least 24 characters in production');
-const roleFor = (token: unknown): Role | undefined => (Object.keys(tokens) as Role[]).find(role => tokens[role] === token);
 const project = fileURLToPath(new URL('../', import.meta.url));
 const dataFile = resolve(process.env.DATA_FILE || resolve(project, 'data/match.json'));
+const access = new AccessStore(resolve(dirname(dataFile),'access.json'));
+const roleFor = (token: unknown) => access.role(token);
+const loginAttempts = new Map<string,{count:number;until:number}>();
 const presets = new TeamPresetStore(resolve(dirname(dataFile), 'team-presets.json'));
 const store = new Store(dataFile, Date.now, presets);
 const uploadDirectory = resolve(process.env.UPLOAD_DIR || resolve(dirname(dataFile), 'uploads/player-portraits'));
@@ -38,7 +37,41 @@ const server = createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
   try {
     const url = new URL(req.url || '/', 'http://localhost');
-    if (url.pathname === '/api/recognize-frame') {
+    if (url.pathname === '/api/access') {
+      const local = localCaptureRequest(req);
+      const currentRole = roleFor(req.headers.authorization?.replace(/^Bearer /,''));
+      const requestedRole = url.searchParams.get('role');
+      const role: Role = requestedRole === 'caster' || requestedRole === 'overlay' ? requestedRole : 'control';
+      if (req.method === 'GET') {
+        json(200, { local, configured:access.configured, ...(currentRole === 'control' ? {tokens:{control:access.token('control'),caster:access.token('caster'),overlay:access.token('overlay')}} : {}), ...(local ? {token:access.token(role)} : {}) });
+        return;
+      }
+      if (req.method !== 'POST' && req.method !== 'PUT') { json(405,{error:'Unsupported method'}); return; }
+      if (req.headers.origin && !allowedOrigins.includes(req.headers.origin) && req.headers.origin !== `http://${req.headers.host}` && req.headers.origin !== `https://${req.headers.host}`) { json(403,{error:'Origin rejected'}); req.resume(); return; }
+      if (req.method === 'PUT' && currentRole !== 'control') { json(403,{error:'Control only'}); req.resume(); return; }
+      const address=req.socket.remoteAddress ?? '';
+      const now=Date.now();
+      for (const [key,value] of loginAttempts) if (value.until<=now) loginAttempts.delete(key);
+      if (req.method === 'POST' && (loginAttempts.get(address)?.count ?? 0)>=10) { json(429,{error:'Too many attempts; retry in one minute'}); req.resume(); return; }
+      let body=''; req.setTimeout(10000,()=>req.destroy());
+      for await (const chunk of req) { body+=chunk; if(body.length>4096) { json(413,{error:'Request too large'}); return; } }
+      let input; try { input=JSON.parse(body); } catch { json(400,{error:'Invalid request'}); return; }
+      if (req.method === 'PUT') {
+        try { access.setPassword(input.password); } catch(error) { json(400,{error:error instanceof Error ? error.message : 'Could not save access settings'}); return; }
+        // Existing authenticated pages receive only their own role credential.
+        for (const [ws,client] of clients) if(client.role && ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify({type:'access_token_update',token:access.token(client.role)}));
+        json(200,{token:access.token('control'),configured:true});
+      } else {
+        if (roleFor(input.password)!==role && !access.verify(input.password)) {
+          if (!loginAttempts.has(address) && loginAttempts.size>=1000) loginAttempts.delete(loginAttempts.keys().next().value!);
+          const attempt=loginAttempts.get(address) ?? {count:0,until:now+60000}; attempt.count++; loginAttempts.set(address,attempt);
+          json(401,{error:'Password is missing or invalid'}); return;
+        }
+        loginAttempts.delete(address); json(200,{token:access.token(role)});
+      }
+      return;
+    }
+    if (url.pathname === '/api/recognize-frame' || url.pathname === '/api/v1/recognition/frame') {
       if (req.method !== 'POST') { json(405,{error:'POST required'}); return; }
       if (roleFor(req.headers.authorization?.replace(/^Bearer /,'')) !== 'control') { json(403,{error:'Control only'}); req.resume(); return; }
       if (store.data.state.bpInputMode !== 'screen') { json(409,{error:'Screen input is not enabled'}); req.resume(); return; }
@@ -51,7 +84,7 @@ const server = createServer(async (req, res) => {
         }
         const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
         if(input.revision!==store.data.revision){ json(409,{error:'Stale capture'}); return; }
-        const result=await recognizeClientFrame(input.image,input.allowedHeroIds,input.shape);
+        const result=await recognitionProvider.recognize(input);
         if(input.revision!==store.data.revision){ json(409,{error:'State changed during capture'}); return; }
         json(200,result);
       } catch {
@@ -139,12 +172,13 @@ const server = createServer(async (req, res) => {
       const role = roleFor(req.headers.authorization?.replace(/^Bearer /, ''));
       if (!role) { json(401, { error: '访问口令缺失或无效，请重新输入' }); return; }
       if (url.pathname === '/api/match') json(200, store.snapshot(role));
+      else if (url.pathname === '/api/v1/capabilities') json(200,{version:1,recognition:{provider:recognitionProvider.id,endpoint:'/api/v1/recognition/frame',confidence:'similarity',shapes:['square','circle'],revisionRequired:true}});
       else if (url.pathname === '/api/heroes') json(200, heroes);
       else json(404, { error: '找不到请求的内容' });
       return;
     }
     const root = resolve(project, 'dist');
-    const route = ['/', '/control', '/caster', '/overlay/draft'].includes(url.pathname);
+    const route = ['/', '/control', '/caster', '/overlay/draft', '/tools/bp-simulator', '/tools/bp-simulator-control'].includes(url.pathname);
     const file = resolve(root, route ? 'index.html' : `.${decodeURIComponent(url.pathname)}`);
     if (!file.startsWith(root + '/') && !file.startsWith(root + '\\')) { json(404, { error: '找不到请求的内容' }); return; }
     const mime: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
@@ -155,10 +189,14 @@ const server = createServer(async (req, res) => {
 const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 16384 });
 interface Client { role?: Role; last?: string; alive: boolean; count: number; window: number }
 const clients = new Map<WebSocket, Client>();
+const snapshotPayloads = new Map<Role,{version:string;payload:string}>();
 function update(ws: WebSocket, force = false) {
   const c = clients.get(ws);
   if (!c?.role || ws.readyState !== WebSocket.OPEN) return;
-  const payload = JSON.stringify(store.snapshot(c.role));
+  const version=store.snapshotVersion(c.role);
+  let cached=snapshotPayloads.get(c.role);
+  if(!cached || cached.version!==version) { cached={version,payload:JSON.stringify(store.snapshot(c.role))}; snapshotPayloads.set(c.role,cached); }
+  const payload=cached.payload;
   if (force || c.last !== payload) {
     if (ws.bufferedAmount > 1024 * 1024) { ws.terminate(); return; }
     ws.send(payload); c.last = payload;
@@ -166,7 +204,7 @@ function update(ws: WebSocket, force = false) {
 }
 wss.on('connection', (ws, req) => {
   const origin = req.headers.origin;
-  if (production && origin && !allowedOrigins.includes(origin)) { ws.close(1008, '此页面地址无权连接'); return; }
+  if (production && origin && !allowedOrigins.includes(origin) && !localCaptureRequest(req)) { ws.close(1008, '此页面地址无权连接'); return; }
   clients.set(ws, { alive: true, count: 0, window: Date.now() });
   const authTimeout = setTimeout(() => { if (!clients.get(ws)?.role) ws.close(1013, '身份验证超时，请重试'); }, 5000);
   ws.on('pong', () => { const c = clients.get(ws); if (c) c.alive = true; });

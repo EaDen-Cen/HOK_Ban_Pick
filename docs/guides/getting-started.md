@@ -17,15 +17,14 @@ npm run build
 npm run server
 ```
 
-打开以下本地地址。`#token=` 是本机开发凭据，生产环境必须更换：
+打开以下本地地址，无需添加 token：
 
-- 操作台：http://127.0.0.1:3001/control#token=local-control
-- 解说台：http://127.0.0.1:3001/caster#token=local-caster
-- OBS：http://127.0.0.1:3001/overlay/draft#token=local-overlay
+- 操作台：http://127.0.0.1:3001/control
+- 解说台：http://127.0.0.1:3001/caster
+- OBS：http://127.0.0.1:3001/overlay/draft
 
 开发热更新：另一个终端运行 `npm run dev`，打开 http://localhost:5173/control。
-Vite 转发 `/api` 与 `/ws` 到 3001 端口；开发模式前端自动使用上述本地凭据。
-生产构建不会内置这些凭据。前端默认同域连接，跨域地址可通过 `.env` 中的
+Vite 转发 `/api` 与 `/ws` 到 3001 端口。浏览器通过 `/api/access` 获取经服务器验证的本机角色凭据，前端不包含固定口令。前端默认同域连接，跨域地址可通过 `.env` 中的
 `VITE_API_URL` 与 `VITE_WS_URL` 配置，并在更改后重新构建。
 
 ## 三端操作
@@ -37,7 +36,7 @@ Vite 转发 `/api` 与 `/ws` 到 3001 端口；开发模式前端自动使用上
 3. 根据当前蓝/红方 Ban/Pick，点一次英雄。阶段、重复英雄与 ID 由服务器验证。
 4. 搜索支持中英文；位置过滤支持主/副位置。“界面语言”选择中文或英文并保存后，整套界面和英雄名称一起切换。英雄数据与图片设置使用可搜索头像网格选择英雄。
 5. Undo 撤销最后一次比赛操作，包括设置、选禁和重置；延迟设置不进入 Undo。
-6. Reset Draft 只清 BP；Reset Match 清队伍、比分与局数。两者都可以 Undo。
+6. Reset Draft 只清 BP；Reset Match 清当前比赛进度并保留比赛名称、赛制与规则等配置。两者都可以 Undo。
 7. 修改 Caster delay，支持直接输入 0–3600 秒及 ±1/5/10 秒微调。
 
 多个操作员同时操作时，服务器拒绝过期版本的指令并回传最新状态。
@@ -51,14 +50,14 @@ Synergy、Counter、Be Countered 和克制敌方推荐使用原仓库数据，�
 已 Ban 的英雄从分析隐藏，已 Pick 的相关英雄标记 ✓。关系数据未经当前游戏版本核验，供人工参考。
 
 解说端 REST 和 WS 由独立 token 限制为延迟状态，修改 URL 参数不会切换成实时状态。
-不要向解说分享 Control/Overlay 凭据或实时画面。
+不要向解说分享管理员密码、Control/Overlay 凭据或实时画面。
 
 ### /overlay/draft
 
-OBS Browser Source 尺寸设为 **1920 × 1080**，URL 使用 Overlay token。
+OBS Browser Source 尺寸设为 **1920 × 1080**。本机直接使用 `/overlay/draft`；公网使用角色分享链接或登录窗口。
 画布透明，可选择底部横排或左右竖排布局；中央保留游戏画面区域。
 选禁有短暂入场动画，当前行动方高亮。
-Overlay 不显示分析、后台错误或登录 UI。断线保留最后画面并自动重连；首次未授权保持透明。
+Overlay 首次未授权会显示登录窗口，可输入密码或该角色 token。断线保留最后画面并自动重连；1920×1080 设计画布会按窗口等比缩放。本机 OBS 无需密码。
 Logo 支持 HTTPS URL 或 `/teamLogo/xxx.png`，本地图片放 `public/teamLogo/` 后重新构建。
 同一路径的 Logo 不要在比赛中覆盖，换新文件名，以免历史时间轴显示新图片。
 
@@ -109,14 +108,14 @@ Production 通信不送入节目总线；最终节目声音也不要回送到解
 VPS 需要域名、80/443 端口和 Docker Compose。将域名解析到 VPS 后：
 
 1. 复制 `deploy/.env.example` 为 `deploy/.env`。
-2. 填写域名和三种不同的随机 token（每个至少 24 字符，建议 32 字节随机值）。
+2. 填写域名与初始 `ACCESS_PASSWORD`（8–256 字符）。服务器生成并保存独立的角色 token。
 3. 在 `deploy` 运行 `docker compose up -d --build`。
-4. 访问 `https://你的域名/control`，输入 Control token。
-5. 给解说 `/caster#token=解说token`，给 OBS `/overlay/draft#token=OverlayToken`。
+4. 访问 `https://你的域名/control`，输入初始访问密码；之后可在“访问与网站设置”更换密码。
+5. 在“访问与网站设置”填写公网网址，生成 Caster / Overlay 的只读分享链接。不要向只读使用者分享管理员密码。
 
 容器使用命名卷保存比赛数据，Caddy 提供 HTTPS/WSS。不要运行 `docker compose down -v`，
 它会删除持久化卷。备份卷和凭据，不要将 `.env` 提交到 Git。
-生产模式强制三种不同的长 token；`ALLOWED_ORIGINS` 填写前端完整 HTTPS origin。
+角色 token 自动生成，旧部署仍可显式配置环境变量 token；`ALLOWED_ORIGINS` 填写前端完整 HTTPS origin。密码修改后，已连接页面更新角色 token；离线页面需重新登录或使用新分享链接。
 token 经 Authorization 头和 WS 初始认证消息发送，分享链接使用 fragment，避免出现在 HTTP 请求 URL。
 
 ## 验证
@@ -143,7 +142,7 @@ Auto BP 已支持浏览器窗口采集、18 槽位校准/预设、Pick/Ban 识�
 
 ## 最后一步已完成：英雄名单与头像补齐
 
-默认采用每队 4 Ban / 5 Pick 的赛事模式。本轮新增 21 条英雄/形态记录及全部本地头像，
+默认采用每队 4 Ban / 5 Pick 的赛事模式。英雄名单与本地头像由同步器维护，
 当前英雄名单以根 README 自动生成的英雄池和 Hero Sync 校验结果为准，保留旧有效 ID 与旧名搜索别名。图标显示不依赖外部网站。
 未核实的新英雄关系保持“暂无数据”；Flowborn 形态及联动英雄以实际比赛房间为准。
 顺序和原则见 [WORKFLOW.md](../archive/planning/workflow-2026-09-17.md)，
