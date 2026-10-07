@@ -3,8 +3,11 @@ import heroes from '../components/HeroList';
 import { phases, type Side } from '../shared/types';
 import {
   simulatorAllSlotKeys,
+  simulatorNextTurnPhase,
+  simulatorPreviousTurnPhase,
   simulatorSlotForPhase,
   simulatorSlotKey,
+  simulatorSlotsForTurn,
   swapSimulatorPickHeroes,
 } from './bpSimulatorModel';
 import { useBpSimulatorState } from './bpSimulatorState';
@@ -26,9 +29,11 @@ export function BpSimulatorControl() {
   const [swapB,setSwapB]=useState(1);
 
   const sequence=useMemo(()=>phases(state.mode,state.firstPickSide),[state.mode,state.firstPickSide]);
-  const active=simulatorSlotForPhase(state.mode,state.firstPickSide,state.phaseIndex);
-  const activeKey=active?simulatorSlotKey(active):'';
-  const activeLocked=activeKey?state.locked.includes(activeKey):false;
+  const activeSlots=simulatorSlotsForTurn(state.mode,state.firstPickSide,state.phaseIndex);
+  const active=activeSlots[0];
+  const activeKeys=activeSlots.map(simulatorSlotKey);
+  const activeKey=activeKeys[0]??'';
+  const activeLocked=activeKeys.length>0&&activeKeys.every(key=>state.locked.includes(key));
 
   const patch=(partial:Partial<typeof state>)=>update(current=>({...current,...partial}));
 
@@ -59,31 +64,37 @@ export function BpSimulatorControl() {
   }));
 
   const toggleCurrentLock=()=> {
-    if(!activeKey) return;
-    update(current=>({
-      ...current,
-      locked:current.locked.includes(activeKey)
-        ? current.locked.filter(key=>key!==activeKey)
-        : unique([...current.locked,activeKey]),
-    }));
+    if(!activeKeys.length) return;
+    update(current=>{
+      const currentKeys=simulatorSlotsForTurn(current.mode,current.firstPickSide,current.phaseIndex).map(simulatorSlotKey);
+      const allLocked=currentKeys.length>0&&currentKeys.every(key=>current.locked.includes(key));
+      return {
+        ...current,
+        locked:allLocked
+          ? current.locked.filter(key=>!currentKeys.includes(key))
+          : unique([...current.locked,...currentKeys]),
+      };
+    });
   };
 
   const nextPhase=()=> {
-    if(!activeKey||!activeLocked) return;
+    if(!activeKeys.length||!activeLocked) return;
     update(current=>({
       ...current,
-      phaseIndex:Math.min(phases(current.mode,current.firstPickSide).length,current.phaseIndex+1),
+      phaseIndex:Math.min(
+        phases(current.mode,current.firstPickSide).length,
+        simulatorNextTurnPhase(current.mode,current.firstPickSide,current.phaseIndex),
+      ),
     }));
   };
 
   const previousPhase=()=>update(current=>{
-    const next=Math.max(0,current.phaseIndex-1);
-    const nextActive=simulatorSlotForPhase(current.mode,current.firstPickSide,next);
-    const key=nextActive?simulatorSlotKey(nextActive):'';
+    const next=simulatorPreviousTurnPhase(current.mode,current.firstPickSide,current.phaseIndex);
+    const previousKeys=simulatorSlotsForTurn(current.mode,current.firstPickSide,next).map(simulatorSlotKey);
     return {
       ...current,
       phaseIndex:next,
-      locked:key?current.locked.filter(item=>item!==key):current.locked,
+      locked:current.locked.filter(item=>!previousKeys.includes(item)),
       autoPlay:false,
     };
   });
@@ -99,13 +110,20 @@ export function BpSimulatorControl() {
   };
 
   const randomizeCurrent=()=> {
-    if(!activeKey||activeLocked) return;
-    const used=new Set(Object.values(state.slotHeroes));
-    const pool=heroes.filter(hero=>!used.has(hero.id));
-    const source=pool.length?pool:heroes;
-    const hero=source[Math.floor(Math.random()*source.length)];
-    if(!hero) return;
-    update(current=>({...current,slotHeroes:{...current.slotHeroes,[activeKey]:hero.id}}));
+    if(!activeKeys.length||activeLocked) return;
+    update(current=>{
+      const currentKeys=simulatorSlotsForTurn(current.mode,current.firstPickSide,current.phaseIndex).map(simulatorSlotKey);
+      const used=new Set(Object.entries(current.slotHeroes)
+        .filter(([key])=>!currentKeys.includes(key))
+        .map(([,heroId])=>heroId));
+      const pool=[...heroes].filter(hero=>!used.has(hero.id)).sort(()=>Math.random()-.5);
+      const slotHeroes={...current.slotHeroes};
+      currentKeys.forEach((key,index)=>{
+        const hero=pool[index]??heroes[index%heroes.length];
+        if(hero) slotHeroes[key]=hero.id;
+      });
+      return {...current,slotHeroes};
+    });
   };
 
   const randomizeAll=()=> {
