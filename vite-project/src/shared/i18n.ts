@@ -61,7 +61,7 @@ const messages = {
   scoreBoxes: {zh:'赛事格子',eng:'Win boxes'},
   bpInputMode: {zh:'BP 输入模式',eng:'BP input mode'},
   manualInput: {zh:'手动选择',eng:'Manual selection'},
-  screenInput: {zh:'屏幕识别（人工确认）',eng:'Screen recognition (review required)'},
+  screenInput: {zh:'屏幕识别',eng:'Screen recognition'},
   screenRecognitionAdvanced: {zh:'屏幕识别高级设置',eng:'Screen recognition advanced settings'},
   screenAutoSubmit: {zh:'高置信度自动录入',eng:'Auto-submit high-confidence recognition'},
   screenAutoSubmitHint: {zh:'达到设定相似度且锁定条件成立时，直接写入 BP，不再弹出人工审核。建议先用真实比赛素材验证后再开启。',eng:'When similarity reaches the configured threshold and lock conditions are satisfied, submit directly without the review dialog. Validate with real match footage first.'},
