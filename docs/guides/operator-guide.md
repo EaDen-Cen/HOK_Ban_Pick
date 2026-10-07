@@ -26,6 +26,7 @@
 - 屏幕识别模式把 Auto BP 作为主工作区；手动英雄选择器默认折叠为备用入口。
 - 低频的 18 框校准与预设默认折叠，比赛时只保留采集画面、phase、槽位、候选、识别状态和常用按钮。
 - 自动锁定判断没有触发时，可点击“手动确认当前最高候选”，直接用最近扫描的最高相似度单个英雄/英雄组进入人工确认。
+- 比赛设置 → 屏幕识别 → 高级设置可以开启 **高置信度自动录入**，阈值可设 50%–100%。只有锁定条件已经成立且候选达到阈值时才跳过审核弹窗，服务器仍执行 phase、重复英雄、Player/Global BP 等全部校验。
 - BP 完成后最终阵容区继续监视 10 个 Pick 槽；稳定检测到英雄互换时自动同步，也可“立即识别并应用换英雄”。
 - Auto BP 的详细锁定规则、空 Ban 和校准方式见 [屏幕识别指南](screen-recognition.md)。
 
@@ -38,7 +39,8 @@
 - 输入中文名、英文名、alias 或拼音声母会实时过滤；
 - 点击头像直接切换当前英雄；
 - 默认只渲染前 48 个匹配项，可继续加载或显示全部；
-- 英雄数据、头像地址、全身图地址和 Panel/Side 裁切仍按当前英雄保存。
+- 中文名、英文名、主/副分路保持直接可编辑；alias、头像地址、全身图地址收进 **高级英雄数据** 折叠项。
+- Panel / Side 裁切仍按当前英雄保存。
 
 这套选择逻辑与比赛中的 Hero Picker 分开，不会提交 BP 操作。
 
@@ -82,6 +84,7 @@
 
 - `match.json`：比赛、撤销、延迟时间线。
 - `team-presets.json`：版本 1 独立资料库；原子临时文件写入、同步与重命名。
+- `access-config.json`：Control / Caster / Overlay 远程密码的 salt + scrypt hash，不保存明文。
 - `uploads/player-portraits/`：运行时图片。
 
 指定 `DATA_FILE` 时，资料库和默认上传目录跟随该文件的父目录；可通过 `UPLOAD_DIR` 单独指定图片目录。
@@ -90,6 +93,14 @@
 仅 Control 可使用 `GET/POST /api/team-presets`、`PUT/DELETE /api/team-presets/:id` 和 `POST /api/uploads/player-portrait`。
 队伍载入经现有 WebSocket `load_team_preset {side,presetId}` 操作，走原有验证、持久化、实时广播与延迟时间线。
 图片 GET 不要求口令，以支持 OBS、解说页面及浏览器图片标签。
+
+## 本机信任与远程访问
+
+- 本机通过 `localhost` / `127.0.0.1` 打开的 Control、Caster、Overlay 直接信任，不需要密码。
+- Control 顶部的 **远程访问密码** 面板可以分别设置三个角色的密码；三者必须不同。
+- 远程 Caster 与 Overlay 使用自己的密码，不能因此取得 Control 写权限。
+- Overlay 没有认证时会显示登录页，不再用空白/黑屏代替认证错误。
+- 自有域名、Quick Tunnel 与本机服务器共用同一套页面和 API；未来更换域名不需要修改比赛状态逻辑。
 
 ## 验证边界
 
