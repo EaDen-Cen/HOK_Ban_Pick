@@ -636,7 +636,6 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
           entry.item.key,
           entry.evidence.top!.heroId,
         ]));
-        const heroIds=scanned.map(entry=>entry.evidence.top!.heroId);
         const autoSubmit=state.screenAutoSubmitEnabled
           && scanned.every(entry=>(entry.evidence.top?.confidence??0)>=state.screenAutoSubmitConfidence);
         if(autoSubmit){
