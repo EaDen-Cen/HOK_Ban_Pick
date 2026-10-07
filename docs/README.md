@@ -4,7 +4,8 @@
 
 | 类别 | 入口 | 用途 |
 | --- | --- | --- |
-| 当前操作 | [运行指南](guides/getting-started.md)、[操作指南](guides/operator-guide.md)、[Windows 启动器](guides/windows-launcher.md) | 安装部署与现场操作 |
+| 新手入口 | [从零开始教程](guides/beginner-guide.md) | 第一次安装、第一次 BP、Auto BP、OBS 与常见问题 |
+| 当前操作 | [运行指南](guides/getting-started.md)、[操作指南](guides/operator-guide.md)、[Auto BP 屏幕识别](guides/screen-recognition.md)、[Windows 启动器](guides/windows-launcher.md) | 安装部署、现场操作与识别校准 |
 | 当前设计 | [系统结构](design/architecture.md) | 代码职责、状态流与存储边界 |
 | 验证记录 | [历次验证](validation/history.md) | 按日期/版本保留结果和未验收范围 |
 | 研究资料 | [研究索引](research/README.md)、[英雄自动同步](research/hero-sync.md) | 英雄核查、自动同步与原始 JSON 证据 |
@@ -18,6 +19,7 @@
 - 测试结果写入验证记录并注明日期、环境、实际执行和未验证范围，不能混入当前操作步骤。
 - 研究叙述放在 `docs/research/`，原始证据继续放在根目录 `research/`。
 - 新增或移动文档同步修改本索引及相对链接；旧资料保留，不把历史需求当现状。
+- 发布版本需要同步更新根 README、MILESTONES、CHANGELOG、版本号和对应 release notes；发布说明以 GitHub Release 为公开入口。
 - 文中源码、运行数据和产物路径默认以仓库根目录为基准；npm 命令在 `vite-project/` 执行。历史原文的路径仍按其注明的原上下文理解。
 
 ## 本次整理路径清单
