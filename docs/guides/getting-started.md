@@ -12,7 +12,7 @@
 要求 Node.js 24（开发验证版本 24.14.1）。在 PowerShell 中进入 `vite-project`：
 
 ```powershell
-npm install
+npm ci
 npm run build
 npm run server
 ```
@@ -50,15 +50,14 @@ Vite 转发 `/api` 与 `/ws` 到 3001 端口；开发模式前端自动使用上
 Synergy、Counter、Be Countered 和克制敌方推荐使用原仓库数据，显示关系来源英雄。
 已 Ban 的英雄从分析隐藏，已 Pick 的相关英雄标记 ✓。关系数据未经当前游戏版本核验，供人工参考。
 
-解说端 REST 和 WS 由独立 token 限制为延迟状态，修改 URL 参数不会切换成实时状态。
-不要向解说分享 Control/Overlay 凭据或实时画面。
+解说端 REST 和 WS 由独立 Caster 密码限制为延迟状态，修改 URL 参数不会切换成实时状态。不要向解说分享 Control/Overlay 密码或实时画面。
 
 ### /overlay/draft
 
-OBS Browser Source 尺寸设为 **1920 × 1080**，URL 使用 Overlay token。
+OBS Browser Source 尺寸设为 **1920 × 1080**。本机 Overlay 免密码；远程 Overlay 首次打开时会显示登录页并要求 Overlay 密码。
 画布透明，可选择底部横排或左右竖排布局；中央保留游戏画面区域。
 选禁有短暂入场动画，当前行动方高亮。
-Overlay 不显示分析、后台错误或登录 UI。断线保留最后画面并自动重连；首次未授权保持透明。
+认证成功后 Overlay 只显示直播图层，不显示后台分析。远程未认证时会明确显示登录页；连接中显示连接状态，避免把缺少认证误判为黑屏。
 Logo 支持 HTTPS URL 或 `/teamLogo/xxx.png`，本地图片放 `public/teamLogo/` 后重新构建。
 同一路径的 Logo 不要在比赛中覆盖，换新文件名，以免历史时间轴显示新图片。
 
@@ -96,6 +95,7 @@ Production 通信不送入节目总线；最终节目声音也不要回送到解
 ## 数据恢复与运行边界
 
 - 默认持久化文件：`vite-project/data/match.json`，包含当前状态、事件历史、Undo、请求 ID 和延迟。
+- 远程访问密码哈希：`vite-project/data/access-config.json`；仅保存 scrypt 哈希和 salt，不保存明文。
 - 同目录临时文件写入并 fsync，然后 rename 替换；写入失败不推进内存状态。
 - 文件损坏时启动报错，不自动清空比赛。恢复上一份完整备份后重启。
 - **只运行一个后端进程**，不要用集群模式或多副本同时写同一个文件。
@@ -109,15 +109,15 @@ Production 通信不送入节目总线；最终节目声音也不要回送到解
 VPS 需要域名、80/443 端口和 Docker Compose。将域名解析到 VPS 后：
 
 1. 复制 `deploy/.env.example` 为 `deploy/.env`。
-2. 填写域名和三种不同的随机 token（每个至少 24 字符，建议 32 字节随机值）。
+2. 填写域名和三种不同的初始密码（Control / Caster / Overlay，至少 8 字符且彼此不同）。它们只用于远程服务器的首次启动；没有内置默认值。
 3. 在 `deploy` 运行 `docker compose up -d --build`。
-4. 访问 `https://你的域名/control`，输入 Control token。
-5. 给解说 `/caster#token=解说token`，给 OBS `/overlay/draft#token=OverlayToken`。
+4. 访问 `https://你的域名/control`，输入 Control 密码。
+5. 之后可以在 Control 的 **远程访问密码** 面板轮换三个密码。
+6. 解说打开 `/caster` 输入 Caster 密码；OBS/远程浏览器打开 `/overlay/draft` 输入 Overlay 密码。
 
 容器使用命名卷保存比赛数据，Caddy 提供 HTTPS/WSS。不要运行 `docker compose down -v`，
 它会删除持久化卷。备份卷和凭据，不要将 `.env` 提交到 Git。
-生产模式强制三种不同的长 token；`ALLOWED_ORIGINS` 填写前端完整 HTTPS origin。
-token 经 Authorization 头和 WS 初始认证消息发送，分享链接使用 fragment，避免出现在 HTTP 请求 URL。
+`ALLOWED_ORIGINS` 填写前端完整 HTTPS origin。远程密码经 Authorization 头和 WS 初始认证发送；服务器持久化时只保存密码哈希。若需要临时免手输分享链接，仍可使用 `#token=` fragment，但推荐让各端自行输入对应密码。
 
 ## 验证
 
