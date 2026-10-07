@@ -397,11 +397,12 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     }
   },[stopWindowCapture,t]);
 
-  const captureWindowFrame=useCallback(()=>{
+  const captureWindowFrame=useCallback((region?:NormalizedCaptureRegion)=>{
     const video=videoRef.current;
     if(!videoReady||!video||!video.videoWidth||!video.videoHeight) throw new Error(t('windowCaptureNotConnected'));
-    if(!target) throw new Error(t('captureNoActiveSlot'));
-    const pixels=regionToPixels(target.region,video.videoWidth,video.videoHeight);
+    const sourceRegion=region??target?.region;
+    if(!sourceRegion) throw new Error(t('captureNoActiveSlot'));
+    const pixels=regionToPixels(sourceRegion,video.videoWidth,video.videoHeight);
     const maxSide=384;
     const scale=Math.min(1,maxSide/Math.max(pixels.width,pixels.height));
     const canvas=document.createElement('canvas');
@@ -417,7 +418,20 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       0,0,canvas.width,canvas.height,
     );
     return canvas.toDataURL('image/png');
-  },[target,t,videoReady]);
+  },[target?.region,t,videoReady]);
+
+  const recognizeWindowRegion=useCallback(async(region:NormalizedCaptureRegion)=>{
+    const image=captureWindowFrame(region);
+    const response=await fetch('/api/recognize-frame',{
+      method:'POST',
+      headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({image,revision}),
+      signal:AbortSignal.timeout(25000),
+    });
+    const data:RecognitionResponse=await response.json();
+    if(!response.ok) throw new Error(t('windowCaptureRecognitionFailed'));
+    return data;
+  },[captureWindowFrame,revision,t,token]);
 
   const capture=useCallback(async()=>{
     if(busyRef.current||disabled||!phase||state.committedGameId) return;
