@@ -72,9 +72,27 @@ function pickKey(side:Side,index:number) {
   return `${side}Pick${index+1}` as CaptureSlotKey;
 }
 
+async function mapWithConcurrency<T,R>(
+  items:T[],
+  limit:number,
+  worker:(item:T)=>Promise<R>,
+):Promise<R[]> {
+  const output=new Array<R>(items.length);
+  let cursor=0;
+  const runners=Array.from({length:Math.min(limit,items.length)},async()=>{
+    while(true){
+      const index=cursor++;
+      if(index>=items.length) return;
+      output[index]=await worker(items[index]);
+    }
+  });
+  await Promise.all(runners);
+  return output;
+}
+
 function captureFrame(video:HTMLVideoElement,region:NormalizedCaptureRegion) {
   const pixels=regionToPixels(region,video.videoWidth,video.videoHeight);
-  const maxSide=384;
+  const maxSide=256;
   const scale=Math.min(1,maxSide/Math.max(pixels.width,pixels.height));
   const canvas=document.createElement('canvas');
   canvas.width=Math.max(32,Math.round(pixels.width*scale));
@@ -84,7 +102,7 @@ function captureFrame(video:HTMLVideoElement,region:NormalizedCaptureRegion) {
   context.imageSmoothingEnabled=true;
   context.imageSmoothingQuality='high';
   context.drawImage(video,pixels.x,pixels.y,pixels.width,pixels.height,0,0,canvas.width,canvas.height);
-  return canvas.toDataURL('image/png');
+  return canvas.toDataURL('image/jpeg',.94);
 }
 
 export function LineupAssignments({
@@ -206,8 +224,11 @@ export function LineupAssignments({
     busyRef.current=true;
     setBusy(true);
     try {
-      const scanned=await Promise.all((['blue','red'] as const).flatMap(side=>
-        Array.from({length:5},(_,index)=>recognizeSlot(side,index))));
+      const work=(['blue','red'] as const).flatMap(side=>
+        Array.from({length:5},(_,index)=>({side,index})));
+      // Final-lineup swaps are not frame-critical. Keep only two recognition
+      // requests in flight to avoid CPU spikes while OBS is encoding.
+      const scanned=await mapWithConcurrency(work,2,item=>recognizeSlot(item.side,item.index));
       if(!mounted.current) return;
       setResults(scanned);
 
@@ -255,7 +276,7 @@ export function LineupAssignments({
 
   useEffect(()=>{
     if(!auto||!videoReady||state.bpInputMode!=='screen'||!state.draftComplete||state.committedGameId||disabled) return;
-    const timer=setInterval(()=>{void scan();},1000);
+    const timer=setInterval(()=>{void scan();},1600);
     void scan();
     return()=>clearInterval(timer);
   },[auto,disabled,scan,state.bpInputMode,state.committedGameId,state.draftComplete,videoReady]);
