@@ -5,6 +5,9 @@ import type { IncomingMessage } from 'node:http';
 import heroes from '../src/components/HeroList.js';
 import sharp from 'sharp';
 
+const recognitionThreads=Number.parseInt(process.env.HOK_RECOGNITION_THREADS||'2',10);
+sharp.concurrency(Number.isFinite(recognitionThreads)?Math.max(1,Math.min(4,recognitionThreads)):2);
+
 type MatchShape = 'square' | 'circle';
 
 async function features(source: string | Buffer, shape:MatchShape='square') {
