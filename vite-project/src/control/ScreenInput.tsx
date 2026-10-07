@@ -493,7 +493,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     const sourceRegion=region??target?.region;
     if(!sourceRegion) throw new Error(t('captureNoActiveSlot'));
     const pixels=regionToPixels(sourceRegion,video.videoWidth,video.videoHeight);
-    const maxSide=384;
+    const maxSide=256;
     const scale=Math.min(1,maxSide/Math.max(pixels.width,pixels.height));
     const canvas=document.createElement('canvas');
     canvas.width=Math.max(32,Math.round(pixels.width*scale));
