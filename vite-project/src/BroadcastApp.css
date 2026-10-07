@@ -1161,3 +1161,95 @@
   font-size:13px;
   line-height:1.1;
 }
+
+
+/* v1.0 hero editor selector: searchable portrait grid instead of a long dropdown. */
+.hero-studio-selector{
+  display:grid;
+  gap:8px;
+  margin-bottom:14px;
+}
+.hero-studio-search{
+  display:grid;
+  gap:5px;
+}
+.hero-studio-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:6px;
+  max-height:320px;
+  overflow:auto;
+  padding:5px;
+  border:1px solid #30465f;
+  border-radius:8px;
+  background:#07101c;
+  scrollbar-gutter:stable;
+}
+.hero-studio-grid button{
+  min-width:0;
+  display:grid;
+  grid-template-rows:54px auto auto;
+  gap:3px;
+  align-items:center;
+  padding:5px;
+  border:1px solid #263a52;
+  border-radius:7px;
+  background:#0c1928;
+  color:#dbe7f5;
+  text-align:center;
+}
+.hero-studio-grid button:hover{
+  border-color:#5c83ad;
+  background:#122238;
+}
+.hero-studio-grid button.selected{
+  border-color:#7bd8ff;
+  box-shadow:0 0 0 1px #7bd8ff55 inset;
+  background:#122b42;
+}
+.hero-studio-grid img{
+  width:54px;
+  height:54px;
+  max-width:100%;
+  justify-self:center;
+  object-fit:cover;
+  border-radius:7px;
+  background:#02060d;
+}
+.hero-studio-grid span{
+  min-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  font-size:11px;
+  font-weight:750;
+}
+.hero-studio-grid small{
+  min-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  color:#8198b4;
+  font-size:9px;
+}
+.hero-studio-list-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  min-height:30px;
+}
+.hero-studio-list-footer>small{
+  color:#8ea5bf;
+}
+.hero-studio-list-actions{
+  display:flex;
+  gap:6px;
+}
+.hero-studio-list-actions button{
+  padding:5px 8px;
+  font-size:10px;
+}
+@media(max-width:1100px){
+  .hero-studio-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
