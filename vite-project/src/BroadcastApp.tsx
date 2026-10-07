@@ -230,10 +230,99 @@ function TeamSettingsPanel({ state, send, disabled, token }: { state: MatchState
     <button disabled={disabled || uploads.size > 0} className="primary">{t('saveSettings')}</button>
   </form>;
 }
+const localTrustedBrowser=['localhost','127.0.0.1','::1'].includes(location.hostname);
+
+function AccessSettingsPanel({
+  token,
+  lang,
+  onClose,
+}: {
+  token:string;
+  lang:Language;
+  onClose:()=>void;
+}) {
+  const t=translator(lang);
+  const [passwords,setPasswords]=useState<Record<Role,string>>({control:'',caster:'',overlay:''});
+  const [configured,setConfigured]=useState<Record<Role,boolean>>({control:false,caster:false,overlay:false});
+  const [message,setMessage]=useState('');
+  const [busy,setBusy]=useState(false);
+
+  const headers=()=>{
+    const value:Record<string,string>={'Content-Type':'application/json','X-HOK-Role':'control'};
+    if(token) value.Authorization=`Bearer ${token}`;
+    return value;
+  };
+
+  useEffect(()=>{
+    let stopped=false;
+    void fetch('/api/access-config',{headers:headers(),cache:'no-store'})
+      .then(async response=>{
+        if(!response.ok) throw new Error(t('accessSettingsLoadFailed'));
+        return await response.json();
+      })
+      .then(data=>{if(!stopped&&data?.configured)setConfigured(data.configured);})
+      .catch(()=>{if(!stopped)setMessage(t('accessSettingsLoadFailed'));});
+    return()=>{stopped=true;};
+  },[token,lang]);
+
+  const save=async(event:React.FormEvent)=>{
+    event.preventDefault();
+    const update=Object.fromEntries((['control','caster','overlay'] as Role[])
+      .filter(role=>passwords[role])
+      .map(role=>[role,passwords[role]]));
+    if(!Object.keys(update).length){setMessage(t('accessSettingsEnterOne'));return;}
+    setBusy(true);
+    setMessage('');
+    try{
+      const response=await fetch('/api/access-config',{
+        method:'POST',
+        headers:headers(),
+        body:JSON.stringify(update),
+      });
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok) throw new Error(data?.error||'accessConfigInvalid');
+      setConfigured(data.configured);
+      setPasswords({control:'',caster:'',overlay:''});
+      setMessage(t('accessSettingsSaved'));
+    }catch(error){
+      const key=error instanceof Error?error.message:'accessConfigInvalid';
+      setMessage(key==='accessPasswordInvalid'
+        ? t('accessPasswordInvalid')
+        : key==='accessPasswordsMustDiffer'
+          ? t('accessPasswordsMustDiffer')
+          : t('accessSettingsSaveFailed'));
+    }finally{setBusy(false);}
+  };
+
+  return <section className="settings-inline access-settings-panel" aria-label={t('accessSettings')}>
+    <header><strong>{t('accessSettings')}</strong><button type="button" onClick={onClose}>{t('hideSettings')}</button></header>
+    <form className="panel settings" onSubmit={save}>
+      <p className="muted">{t('accessSettingsHint')}</p>
+      <div className="access-password-grid">
+        {(['control','caster','overlay'] as Role[]).map(role=><label key={role}>
+          <span>{t(role==='control'?'controlPassword':role==='caster'?'casterPassword':'overlayPassword')} · {configured[role]?t('configured'):t('notConfigured')}</span>
+          <input
+            type="password"
+            minLength={8}
+            maxLength={128}
+            autoComplete="new-password"
+            value={passwords[role]}
+            placeholder={t('leaveBlankUnchanged')}
+            onChange={event=>setPasswords(current=>({...current,[role]:event.target.value}))}
+          />
+        </label>)}
+      </div>
+      <small className="muted">{t('accessSettingsLocalTrust')}</small>
+      {message&&<p role="status" className="access-settings-message">{message}</p>}
+      <button className="primary" disabled={busy}>{busy?t('saving'):t('saveAccessSettings')}</button>
+    </form>
+  </section>;
+}
+
 function initialToken(role: Role) {
   const fragment = new URLSearchParams(location.hash.slice(1)).get('token');
   if (fragment) { sessionStorage.setItem(`hok-${role}`, fragment); history.replaceState(null, '', location.pathname); }
-  return fragment || sessionStorage.getItem(`hok-${role}`) || (import.meta.env.DEV ? `local-${role}` : '');
+  return fragment || sessionStorage.getItem(`hok-${role}`) || '';
 }
 export default function BroadcastApp() {
   const role: Role = location.pathname === '/caster' ? 'caster' : location.pathname === '/overlay/draft' ? 'overlay' : 'control';
@@ -242,6 +331,7 @@ export default function BroadcastApp() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTeamSettings, setShowTeamSettings] = useState(false);
   const [showHeroArtEditor, setShowHeroArtEditor] = useState(false);
+  const [showAccessSettings, setShowAccessSettings] = useState(false);
   const [manualFallbackOpen, setManualFallbackOpen] = useState(false);
   const [delayInput, setDelayInput] = useState(180);
   const [lastLanguage, setLastLanguage] = useState<Language>(() => sessionStorage.getItem(`hok-language-${role}`) === 'eng' ? 'eng' : 'zh');
@@ -250,7 +340,7 @@ export default function BroadcastApp() {
   const compatible = !!snapshot?.state && Array.isArray(snapshot.state.draftHistory) && !!snapshot.state.draftRuleMode && !!snapshot.state.firstPickSide && !!snapshot.state.sideSwapMode && !!snapshot.state.displayLeftSide && typeof snapshot.state.showHeroName === 'boolean' && !!snapshot.state.artSourceMode && !!snapshot.state.heroArtOverrides && typeof snapshot.state.flowbornFormsIndependent === 'boolean';
   const disabled = !connected || pending || !compatible;
   const state = snapshot?.state ? normalizeState(snapshot.state) : undefined;
-  const lang: Language = token && !['Invalid token', 'Access rejected'].includes(status) ? state?.language ?? lastLanguage : lastLanguage;
+  const lang: Language = connected ? state?.language ?? lastLanguage : lastLanguage;
   const t = translator(lang);
   useEffect(() => {
     document.documentElement.lang = lang === 'eng' ? 'en' : 'zh-CN';
@@ -258,17 +348,17 @@ export default function BroadcastApp() {
     sessionStorage.setItem(`hok-language-${role}`, lang);
     setLastLanguage(lang);
   }, [lang, role]);
-  if (role === 'overlay') {
-    return <main className="overlay">{state && <DraftOverlay state={state} />}</main>;
-  }
-  if (!token || status === 'Invalid token' || status === 'Access rejected') {
+  if (!localTrustedBrowser && (!token || status === 'Invalid token' || status === 'Access rejected' || status === 'Access token required')) {
     return <main className="login panel">
-      <p>{t('appName')}</p><h1>{t(role === 'caster' ? 'casterLogin' : 'controlLogin')}</h1>
+      <p>{t('appName')}</p><h1>{t(role === 'caster' ? 'casterLogin' : role==='overlay' ? 'overlayLogin' : 'controlLogin')}</h1>
       <form onSubmit={e => { e.preventDefault(); sessionStorage.setItem(`hok-${role}`, tokenInput); setToken(tokenInput); }}>
         <label>{t('accessToken')}<input type="password" required value={tokenInput} onChange={e => setTokenInput(e.target.value)} /></label>
         <button className="primary">{t('connect')}</button>
       </form><p>{connectionLabel(status, lang)}</p>
     </main>;
+  }
+  if (role === 'overlay') {
+    return <main className="overlay">{state ? <DraftOverlay state={state} /> : <section className="overlay-login-status">{t('connectingServer')}</section>}</main>;
   }
   return <main className={`workspace ${role === 'control' ? 'control-workspace' : ''}`}>
     <header className="topbar">
@@ -276,12 +366,14 @@ export default function BroadcastApp() {
       <div className="toolbar">
         <b className={connected ? 'status live' : 'status'}>{connectionLabel(status, lang)}</b>
         <span>{role === 'caster' ? t('delayedFeed', { seconds: snapshot?.casterDelaySeconds ?? '—' }) : t('controlRealtime')}</span>
-        <button onClick={() => { sessionStorage.removeItem(`hok-${role}`); setToken(''); }}>{t('logout')}</button>
+        {role==='control'&&<button onClick={()=>setShowAccessSettings(value=>!value)}>{t('accessSettings')}</button>}
+        {!localTrustedBrowser&&<button onClick={() => { sessionStorage.removeItem(`hok-${role}`); setToken(''); }}>{t('logout')}</button>}
       </div>
     </header>
     {!connected && <p className="notice">{t('disconnectedNotice')}</p>}
     {connected && !compatible && <p className="notice">{t('backendUpgrade')}</p>}
     {error && <p role="alert" className="error">{errorMessage(error, lang)}</p>}
+    {role==='control'&&showAccessSettings&&<AccessSettingsPanel token={token} lang={lang} onClose={()=>setShowAccessSettings(false)}/>}
     {state ? <>
       {role === 'caster' && <Board state={state} lang={lang} />}
       {role === 'control' && <>
@@ -317,10 +409,10 @@ export default function BroadcastApp() {
               <details className="manual-picker-fallback" onToggle={event=>setManualFallbackOpen(event.currentTarget.open)}>
                 <summary>{t('manualFallbackTitle')}</summary>
                 <p className="muted">{t('manualFallbackHint')}</p>
-                <ControlHeroPicker state={state} disabled={disabled} active={manualFallbackOpen && !showSettings && !showTeamSettings && !showHeroArtEditor} send={send} acknowledged={acknowledged} />
+                <ControlHeroPicker state={state} disabled={disabled} active={manualFallbackOpen && !showSettings && !showTeamSettings && !showHeroArtEditor && !showAccessSettings} send={send} acknowledged={acknowledged} />
               </details>
             </div>
-            : <ControlHeroPicker state={state} disabled={disabled} active={!showSettings && !showTeamSettings && !showHeroArtEditor} send={send} acknowledged={acknowledged} />}
+            : <ControlHeroPicker state={state} disabled={disabled} active={!showSettings && !showTeamSettings && !showHeroArtEditor && !showAccessSettings} send={send} acknowledged={acknowledged} />}
         </ControlDraftWorkspace>
         {showTeamSettings && <TeamSettingsDialog label={t('teamSettings')} closeLabel={t('closeTeamSettings')} onClose={() => setShowTeamSettings(false)}>
           <TeamSettingsPanel key={JSON.stringify([state.blueTeam, state.redTeam])} state={state} send={send} disabled={disabled} token={token} />
