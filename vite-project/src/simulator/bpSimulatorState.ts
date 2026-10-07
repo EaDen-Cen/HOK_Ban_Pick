@@ -13,7 +13,8 @@ export interface BpSimulatorState {
   emptyBans: string[];
   locked: string[];
   autoPlay: boolean;
-  intervalMs: number;
+  intervalMinMs: number;
+  intervalMaxMs: number;
   banSize: number;
   pickSize: number;
 }
@@ -37,7 +38,8 @@ export function createDefaultBpSimulatorState():BpSimulatorState {
     emptyBans:[],
     locked:[],
     autoPlay:false,
-    intervalMs:1500,
+    intervalMinMs:900,
+    intervalMaxMs:1800,
     banSize:38,
     pickSize:72,
   };
@@ -51,6 +53,10 @@ function normalizeState(value:Partial<BpSimulatorState>|undefined):BpSimulatorSt
   const defaults=createDefaultBpSimulatorState();
   const source=value??{};
   const slotHeroes={...defaults.slotHeroes,...(source.slotHeroes??{})};
+  const rawMin=clamp(Number(source.intervalMinMs)||Number((source as {intervalMs?:number}).intervalMs)||defaults.intervalMinMs,300,15000);
+  const rawMax=clamp(Number(source.intervalMaxMs)||Number((source as {intervalMs?:number}).intervalMs)||defaults.intervalMaxMs,300,15000);
+  const intervalMinMs=Math.min(rawMin,rawMax);
+  const intervalMaxMs=Math.max(rawMin,rawMax);
   return {
     mode:source.mode==='normal'?'normal':'match',
     firstPickSide:source.firstPickSide==='red'?'red':'blue',
@@ -59,7 +65,8 @@ function normalizeState(value:Partial<BpSimulatorState>|undefined):BpSimulatorSt
     emptyBans:Array.isArray(source.emptyBans)?source.emptyBans.filter(key=>typeof key==='string'):[],
     locked:Array.isArray(source.locked)?source.locked.filter(key=>typeof key==='string'):[],
     autoPlay:source.autoPlay===true,
-    intervalMs:clamp(Number(source.intervalMs)||defaults.intervalMs,400,10000),
+    intervalMinMs,
+    intervalMaxMs,
     banSize:clamp(Number(source.banSize)||defaults.banSize,24,64),
     pickSize:clamp(Number(source.pickSize)||defaults.pickSize,48,104),
   };

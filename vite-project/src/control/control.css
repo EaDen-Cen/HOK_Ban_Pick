@@ -1215,3 +1215,13 @@
     text-align:left;
   }
 }
+
+
+/* v1.0 Auto BP manual-candidate fallback keeps the live action grid stable. */
+.screen-input-operator-pane .screen-input-actions .auto-watch-toggle{
+  grid-column:auto;
+  min-height:36px;
+}
+.manual-candidate-button{
+  min-height:36px;
+}

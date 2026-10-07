@@ -4,7 +4,7 @@
 
 From `vite-project`, double-click `start-broadcast.bat`.
 
-首次使用或更新源码后，先在 `vite-project/` 执行 `npm ci` 和 `npm run build`；启动器不会代替构建。下文 `artifacts/` 路径均相对于 `vite-project/`。
+首次使用或更新源码后可以直接运行启动器：它会根据 `package-lock.json` 检查依赖并执行生产构建。下文 `artifacts/` 路径均相对于 `vite-project/`。
 
 It will:
 1. stop any old process listening on port 3001 and any old `cloudflared.exe`;
@@ -22,6 +22,30 @@ The local operator intentionally uses `http://127.0.0.1:3001/control`; remote Ca
 
 If startup fails, inspect `artifacts/cloudflared.log` and the `HOK Broadcast Server` window.
 
+
+## BP Simulator 一键启动
+
+双击：
+
+```text
+start-bp-simulator.bat
+```
+
+启动器会检查 Node/npm、准备依赖、清理旧的 5173 端口进程，然后通过隐藏 PowerShell 后台启动 Vite Simulator。页面就绪后自动打开 Simulator Control，启动命令窗口随后关闭。
+
+后台日志：
+
+```text
+artifacts/bp-simulator.log
+```
+
+测试结束后双击：
+
+```text
+stop-bp-simulator.bat
+```
+
+它会停止监听 5173 端口的 Simulator。正常使用不再需要一直保留一个 CMD/PowerShell 窗口。
 
 ## Director app window
 

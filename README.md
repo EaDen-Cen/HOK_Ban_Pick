@@ -1,18 +1,22 @@
 # HOK Broadcast · 王者荣耀赛事 BP 导播系统
 
-基于 React、TypeScript、Node.js 与 WebSocket，提供操作台、延迟解说台及 OBS 直播画面。当前 main 包含 V2.3 导播快捷录入、选手照片上传、服务器端队伍资料库及替补快速换人。
+基于 React、TypeScript、Node.js 与 WebSocket 的社区赛事导播系统，提供 Control 操作台、延迟 Caster 解说台、OBS Overlay、Auto BP 屏幕识别、18 槽位校准预设、最终阵容换英雄同步与独立 BP Simulator。当前版本面向首个正式版本 **v1.0.0**。
 
 ## 快速启动
 
-使用 Node.js 24，首次下载并启动：
+第一次使用建议先看 [新手上手教程](docs/guides/beginner-guide.md)。
+
+使用 Node.js 24，从源码启动：
 
 ```powershell
-git clone https://github.com/EaDen-Cen/HOK_Ban_Pick.git
-cd HOK_Ban_Pick/vite-project
+git clone https://github.com/EaDen-Cen/Honor-of-Kings-International-Server-Tournament-Broadcasting-System.git
+cd Honor-of-Kings-International-Server-Tournament-Broadcasting-System/vite-project
 npm ci
 npm run build
 npm run server
 ```
+
+Windows 现场使用可直接双击 `vite-project/start-broadcast.bat`；启动器会准备依赖、构建网页、启动服务器和 Cloudflare Quick Tunnel。结束时双击 `stop-broadcast.bat`。
 
 本机开发入口：[操作台](http://127.0.0.1:3001/control#token=local-control)、[解说台](http://127.0.0.1:3001/caster#token=local-caster)、[OBS](http://127.0.0.1:3001/overlay/draft#token=local-overlay)。这些口令仅用于本机开发；公网部署按运行指南配置独立口令。
 
@@ -154,19 +158,26 @@ cd vite-project
 npm run simulator
 ```
 
-Windows 也可以直接运行：
+Windows 推荐直接运行：
 
 ```text
 vite-project/start-bp-simulator.bat
 ```
 
-入口：
+启动器会把 Simulator 放到后台运行并自动关闭命令窗口。测试结束后运行：
 
 ```text
+vite-project/stop-bp-simulator.bat
+```
+
+控制台与采集画面分别为：
+
+```text
+http://127.0.0.1:5173/tools/bp-simulator-control
 http://127.0.0.1:5173/tools/bp-simulator
 ```
 
-然后在 HOK Control 的 Auto BP 中选择模拟器窗口作为采集来源。模拟器可复现 Pick、圆形 Ban、锁定标记、空 Ban、蓝/红先手、不同头像尺寸与完整 BP phase 顺序；按 `H` 可以隐藏控制区，只保留干净的采集画面。
+模拟器可复现 Pick、双选、圆形 Ban、空 Ban、蓝/红先手、换英雄与完整 BP phase 顺序；自动脚本支持随机等待时间范围。然后在 HOK Control 的 Auto BP 中选择 Simulator 的采集画面窗口即可。
 
 LoL 项目中值得移植的功能优化及本次实际移植内容见 [HOK / LoL 功能对照审计](docs/research/lol-feature-parity-audit-2026-10-06.md)。
 
@@ -174,9 +185,12 @@ LoL 项目中值得移植的功能优化及本次实际移植内容见 [HOK / Lo
 
 | 需要做什么 | 文档 |
 | --- | --- |
+| 第一次使用，从下载安装到完成一轮测试 | [新手上手教程](docs/guides/beginner-guide.md) |
 | 安装、三端接入、延迟、备份和部署 | [运行指南](docs/guides/getting-started.md) |
 | 比赛流程、快捷 BP、照片、队伍库及替补 | [操作指南](docs/guides/operator-guide.md) |
-| Windows 一键启动及 Cloudflare | [启动器说明](docs/guides/windows-launcher.md) |
+| Windows 一键启动、Simulator 启停及 Cloudflare | [启动器说明](docs/guides/windows-launcher.md) |
+| Auto BP、18 框校准、预设、锁定与换英雄 | [屏幕识别指南](docs/guides/screen-recognition.md) |
+| v1.0.0 功能与已知边界 | [v1.0.0 发布说明](docs/releases/v1.0.0.md) |
 | 理解源码目录和状态流 | [系统结构](docs/design/architecture.md) |
 | 查看项目阶段与未来路线 | [项目里程碑](MILESTONES.md) |
 | 查看历次测试及未验收范围 | [验证记录](docs/validation/history.md) |

@@ -2,7 +2,7 @@
 
 # 安装、运行与部署指南
 
-当前比赛操作以 [操作指南](operator-guide.md) 为准；版本交接与旧实施计划见 [历史归档](../archive/README.md)。
+第一次使用建议先看 [新手上手教程](beginner-guide.md)。当前比赛操作以 [操作指南](operator-guide.md) 为准；Auto BP 见 [屏幕识别指南](screen-recognition.md)；版本交接与旧实施计划见 [历史归档](../archive/README.md)。
 
 基于 `qiqi47/HOK_Ban_Pick`，保留原英雄 ID、名称、图片、位置与关系数据和 MIT 许可。
 源码与执行目录：`vite-project/`。原单机组件保留在仓库中，新入口为 `src/BroadcastApp.tsx`。
@@ -35,7 +35,7 @@ Vite 转发 `/api` 与 `/ws` 到 3001 端口；开发模式前端自动使用上
 1. 点 **比赛设置**，设置队名、队徽、比分、赛制、阶段和选禁模式，保存；局数按比分自动计算。
 2. 默认每队 4 Ban / 5 Pick 的赛事顺序，也可在空 BP 时切换 2 Ban 模式。
 3. 根据当前蓝/红方 Ban/Pick，点一次英雄。阶段、重复英雄与 ID 由服务器验证。
-4. 搜索支持中英文；位置过滤支持主/副位置。“界面语言”选择中文或英文并保存后，整套界面和英雄名称一起切换。
+4. 搜索支持中英文；位置过滤支持主/副位置。“界面语言”选择中文或英文并保存后，整套界面和英雄名称一起切换。英雄数据与图片设置使用可搜索头像网格选择英雄。
 5. Undo 撤销最后一次比赛操作，包括设置、选禁和重置；延迟设置不进入 Undo。
 6. Reset Draft 只清 BP；Reset Match 清队伍、比分与局数。两者都可以 Undo。
 7. 修改 Caster delay，支持直接输入 0–3600 秒及 ±1/5/10 秒微调。
@@ -137,14 +137,14 @@ npm run test:e2e
 
 上线前彩排：走完两套 BP、修改比分、刷新页面、断开网络至少 30 秒、重启后端，
 确认 Overlay 恢复、Caster 无实时剧透；再测量 B站→解说→Discord 的真实音画偏差。
-本版不包含游戏识别、OCR、OBS 场景控制、赛事编排和自动视频同步。
+Auto BP 已支持浏览器窗口采集、18 槽位校准/预设、Pick/Ban 识别、空 Ban 与最终阵容换英雄同步；详细限制见 [屏幕识别指南](screen-recognition.md)。本版仍不包含 OCR、OBS 场景自动控制、赛事编排和自动视频同步。
 
 实现参考：[ws 官方文档](https://github.com/websockets/ws/blob/master/README.md)、[Vite 代理文档](https://vite.dev/config/server-options.html#server-proxy)。
 
 ## 最后一步已完成：英雄名单与头像补齐
 
 默认采用每队 4 Ban / 5 Pick 的赛事模式。本轮新增 21 条英雄/形态记录及全部本地头像，
-目前共 116 条有效记录，保留旧有效 ID 与旧名搜索别名。图标显示不依赖外部网站。
+当前英雄名单以根 README 自动生成的英雄池和 Hero Sync 校验结果为准，保留旧有效 ID 与旧名搜索别名。图标显示不依赖外部网站。
 未核实的新英雄关系保持“暂无数据”；Flowborn 形态及联动英雄以实际比赛房间为准。
 顺序和原则见 [WORKFLOW.md](../archive/planning/workflow-2026-09-17.md)，
 同步内容与来源见 [HERO-DATA-AUDIT.md](../research/hero-data-audit-2026-09-16.md)、

@@ -1,94 +1,217 @@
-# Windows BP recognition and broadcast update
+> [文档索引](../README.md) · 第一次使用建议先看 [新手上手教程](beginner-guide.md)。
 
-## Start
+# Auto BP / 屏幕识别指南
 
-Run `npm ci` and `npm run build` in `vite-project`. In the host's `.env`, set
-`HOK_CAPTURE_ENABLED=1`, then use the existing `start-broadcast.bat` or `npm run server`.
-Open the **local** Control URL (normally `http://127.0.0.1:3001/control`). In match
-settings select **Screen recognition (review required)** and save. Settings now expand
-under the game confirmation controls on the left.
+v1.0.0 的 Auto BP 采用**浏览器窗口采集 + 18 个独立槽位校准**。旧的 Windows 物理像素兼容采集不再作为正常操作入口。
 
-Enter the desktop physical-pixel rectangle `x`, `y`, `width`, `height` around the
-current game's current hero portrait. Coordinates can be negative on secondary
-monitors. The rectangle can be inside a visible game/OBS window; it must contain one
-portrait, not the entire draft screen. Region coordinates stay in this browser's
-local storage and are not shared with remote operators.
+## 1. 开启屏幕识别
 
-Click **Read region**, inspect the captured crop and the top three candidates, then
-confirm the correct hero or reject the result. The current side and ban/pick phase
-are shown in the review. Confidence is image similarity, not a calibrated accuracy
-percentage. Results below 0.55 similarity fail closed to manual input. The server
-still checks duplicates, phase order, Player/Global BP eligibility and revision.
-Every candidate expires after 30 seconds and is discarded on any match revision.
-You can always use the normal picker or change the mode back to manual.
+在 Control 的比赛设置中，将 BP 输入模式切换为 **屏幕识别**。
 
-## Capture boundary
+Auto BP 主工作区会显示：
 
-- Capture and recognition run on the Windows authoritative host, never in Caster,
-  Overlay or the remote browser. The capture route only returns candidates and a
-  crop; it cannot submit a draft action.
-- Requires an interactive, unlocked desktop. Minimized, obscured, protected or
-  exclusive-fullscreen windows may return the wrong pixels or black frames. Keep
-  the target visible and prefer windowed/borderless game or an OBS preview.
-- Desktop capture uses Windows GDI through a hidden PowerShell child process.
-  Sharp decodes all supported roster assets locally and compares normalized RGB
-  templates. Nothing is uploaded to an OCR/AI service, and crops are not saved.
-- The route requires the control token, loopback address/host and same-origin
-  requests; forwarded/Cloudflare requests are rejected. The existing public
-  control, caster and overlay routes continue to work as before.
-- This first version is on-demand, one calibrated current slot per read. It does
-  not track a window as it moves or infer the full ten-player draft automatically.
-  Different skins, overlays, animations or portrait crops may require manual input.
+- 采集窗口连接状态；
+- 游戏/BP 预览；
+- 当前 phase；
+- 当前 Ban/Pick 槽；
+- 识别候选与相似度；
+- 空 Ban 状态；
+- 立即识别；
+- 手动确认当前最高候选；
+- 自动监视。
 
-## Decisions for the production capture workflow
+低频的校准、预设和手动英雄池默认折叠，避免比赛时占用主操作区。
 
-1. **Use the included visible-region capture** for a fixed Windows/OBS setup.
-   No extra desktop application is required. Confirm the monitor scaling and
-   portrait rectangles against actual tournament footage before relying on it.
-2. **Windows Graphics Capture companion** if operators need a native window picker,
-   a region that follows a moved window, or continuous candidate detection. This
-   needs a separate packaged Windows helper and representative game recordings.
-3. **OBS source integration** if the production team already keeps a stable game
-   capture source. Decide which OBS source/scene and whether OBS WebSocket may be
-   enabled and paired locally.
+## 2. 选择采集窗口
 
-Recommended next decision: whether the match feed is a PC game window, emulator,
-capture-card/phone feed or OBS source. Provide the target resolution and a few
-representative BP screenshots to calibrate per-slot regions and measure accuracy.
-The current release does not claim live-match recognition accuracy.
+点击“选择/更换采集窗口”，在浏览器提供的共享窗口列表里选择：
 
-## Art audit and display
+- 真实 HOK BP 窗口；或
+- BP Simulator 的采集页。
 
-Initial main `d617664b7e27ea586748e7986c292ce8dbec8e39` had **116 heroes and 0 artLink**.
-During implementation, main advanced to `a2b4d87504e36672ad26c0deea3c4564ba1c5fa9`
-by merging Hero Sync PR #4. This implementation incorporates that latest main and
-retains all **118 heroes**, with **111 actual official main-art URLs**:
-108 decoded images have a longest edge >=1000 px; Ao'yin, Flowborn (Tank), and
-Garuda have approximately 756×780 px official character images. Missing art:
-Flowborn (Marksman), Flowborn (Mage), Flowborn (Assassin), Flowborn (Roamer),
-Annette, Florentino and Lorion.
+页面只处理你主动选择的共享画面。Control、Caster 和 Overlay 不会自动抓取桌面其他内容。
 
-PR #4 admitted Flowborn (Assassin) and Flowborn (Roamer). They are preserved from
-latest main; its audit still marks them unconfirmed and their Chinese labels remain
-"Coming soon". Review their tournament availability separately. Seven artLink values
-that merely aliased thumbnails have been removed, so they do not masquerade as full
-art or prevent subsequent backfill retries.
+## 3. 18 个独立识别框
 
-`research/hero-sync/art-audit.json` records browser-decoded dimensions and URLs.
-Run `npm run hero:art-audit` to repeat (Chrome required; override `CHROME_PATH`).
-Missing full art no longer becomes an artLink pointing at a small local icon;
-future sync attempts keep retrying it. Existing fallback aliases also retry.
+Match BP 共有：
 
-Side cards are 300 px wide and show full art with `object-fit: contain`, plus a
-separate caption and role column. Current-game bans are 72×72 px with hero labels.
-Empty history is omitted entirely. Numeric or win-box scores follow team identity,
-side swaps and the existing delayed caster timeline (BO1:1, BO3:2, BO5:3 boxes).
-Remote full art still falls back to local portraits when the CDN is unavailable.
+- 蓝方 B1–B4；
+- 红方 B1–B4；
+- 蓝方 P1–P5；
+- 红方 P1–P5。
 
-## Validation scope
+合计 18 个独立框。
 
-Build, lint, hero validation, server tests and Playwright regression tests cover
-the original draft modes, first pick, swapping, delay, team library and portraits.
-Recognition tests use image fixtures and mocked capture responses; they do not
-record the operator's desktop. Live game accuracy, mixed-DPI capture calibration,
-and a real Cloudflare/OBS deployment require the production setup.
+展开 **识别框校准与工具** 后，可以逐个选择槽位。推荐进入全屏精细校准：
+
+- 拖拽重新框选；
+- 方向键移动 1 像素；
+- Shift + 方向键调整宽/高；
+- [ / ] 或界面按钮切换槽位；
+- + / - 调整校准视图缩放；
+- Enter 前往下一个槽位。
+
+框应该尽量只覆盖头像本身，避免边框、选手 ID、动画文字或相邻槽位进入识别区域。
+
+## 4. 保存和载入 18 框预设
+
+校准完成后，在校准工具内部展开 **18 框位置预设**。
+
+一个预设会保存全部 18 个框的 x、y、width、height。坐标按采集窗口的相对比例保存。相同 UI 布局下，单纯移动窗口或改变普通窗口尺寸通常可以继续复用。
+
+建议按用途命名，例如：
+
+- 赛事机 1080p
+- Simulator
+- 比赛服 16:9
+
+预设支持保存为新预设、载入、用当前 18 框覆盖、改名和删除。
+
+预设保存在 Director 浏览器的 localStorage。换电脑、换浏览器配置或清理站点数据后不会自动同步。
+
+## 5. Hero Pick 识别与锁定
+
+### 普通 Pick
+
+程序先稳定识别当前 Pick 槽的英雄，但**不会仅因为头像稳定就提交**。
+
+普通 Pick 会观察对手的下一个 Pick 位：
+
+1. 当前英雄/英雄组稳定；
+2. 对手下一 Pick 位从空槽发生明显变化；
+3. 连续识别到同一个强候选；
+4. 才把上一组视为已锁定。
+
+这样可以避免“玩家只是预选英雄”时过早提交。
+
+### 双 Pick
+
+HOK 中连续的同队 Pick 会被当作同一个 Turn。
+
+例如 Match BP 中：
+
+- 红方 P1 + P2；
+- 蓝方 P2 + P3；
+- 蓝方 P4 + P5。
+
+Auto BP 会同时识别这一组的所有槽位，并在确认该 Turn 结束后一次审核/提交。
+
+### Pick → Ban 边界与最后一手
+
+如果当前 Pick 后面立即进入 Ban，或已经是整套 BP 的最后一手，就没有立即可观察的对手 Pick 位。
+
+这两种情况下使用“选角中的玩家行高亮恢复到普通亮度”作为 fallback。
+
+## 6. 自动锁定没触发时的人工 fallback
+
+如果你已经在游戏里看到英雄锁定，但程序仍显示等待锁定，不必卡住整轮比赛。
+
+点击：
+
+**手动确认当前最高候选**
+
+程序会使用**最近一次扫描**中的最高相似度结果：
+
+- 单选：打开当前最高候选；
+- 双选：分别取当前两个槽位的最高候选，作为一个英雄组打开审核；
+- Ban：有可信候选时同样可以进入人工审核。
+
+这只是跳过“锁定状态自动判断”，不会跳过最终人工审核，也不会绕过服务器的 phase、重复英雄和 BP 规则检查。
+
+## 7. Ban 识别
+
+Ban 槽在实际画面中是圆形头像，因此 Ban 使用单独的圆形 mask，减少方形模板四角造成的相似度损失。
+
+正常 Ban 还会结合锁定 cue 判断。
+
+相似度是图像相似度，不应理解为严格的统计准确率。实机仍应使用真实比赛素材做一次校准。
+
+## 8. 空 Ban
+
+空 Ban 不会在 phase 刚开始时立即提交。
+
+程序会：
+
+1. 等待约 4 秒保护时间；
+2. 排除可信的正常英雄 Ban；
+3. 检查 Ban 锁定 cue；
+4. 要求空槽状态连续稳定；
+5. 弹出空 Ban 人工确认。
+
+空槽偶然出现约 30%–40% 的“像某个英雄”低分匹配不会阻止空 Ban 判断。
+
+导播仍可以随时使用手动 **空 Ban** 按钮。
+
+## 9. 自动监视
+
+打开 Auto Watch 后，程序会持续扫描当前所需槽位。
+
+识别刷新不会自动提交未经确认的候选。出现审核弹窗时，自动扫描暂停，导播确认或拒绝后继续。
+
+比赛中建议一直保留游戏预览、当前 phase、当前槽位、当前候选和识别状态。校准工具和手动英雄池平时保持折叠即可。
+
+## 10. BP 完成后的换英雄检测
+
+BP 结束后，最终阵容区域会持续扫描蓝/红双方 P1–P5。
+
+识别时每支队伍**只在本队已经 Pick 的五个英雄里匹配**，然后求一组不重复的最终分配。
+
+自动模式：
+
+1. 检测到最终阵容与当前 assignment 不同；
+2. 阵容连续稳定；
+3. 达到最低识别质量；
+4. 自动发送最终阵容同步。
+
+如果同步没有及时发生，可以点击 **立即识别并应用换英雄**。
+
+如果画面本身无法可靠识别，最终仍可使用每个选手旁边的下拉框手工交换。
+
+换英雄只改变最终英雄归属，不改写原始 Pick/Ban 历史。
+
+## 11. BP Simulator
+
+不需要真实游戏也能测试。
+
+Windows：
+
+~~~text
+start-bp-simulator.bat
+~~~
+
+启动完成后命令窗口会自动关闭，Simulator 在后台运行。
+
+控制页：
+
+~~~text
+http://127.0.0.1:5173/tools/bp-simulator-control
+~~~
+
+采集页：
+
+~~~text
+http://127.0.0.1:5173/tools/bp-simulator
+~~~
+
+控制台支持 Match / Normal BP、蓝/红先手、单选与双选、空 Ban、Pick 高亮与锁定、选手互换英雄、自动推进，以及最短/最长随机等待时间。
+
+结束：
+
+~~~text
+stop-bp-simulator.bat
+~~~
+
+## 12. 现场验收建议
+
+每个真实比赛版本至少保留一组测试素材，重点检查：
+
+- 常用英雄 Pick；
+- 圆形 Ban；
+- Ban 锁定前/后；
+- 双 Pick；
+- Pick→Ban 边界；
+- 最后一手；
+- 空 Ban；
+- BP 完成后的英雄互换。
+
+如果游戏更新导致 UI、头像裁切、光效或比例变化，优先重新校准 18 框，再判断是否需要调整识别算法。

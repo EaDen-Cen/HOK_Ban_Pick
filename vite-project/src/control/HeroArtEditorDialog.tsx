@@ -144,6 +144,7 @@ export function HeroArtEditorDialog({
   const initialId = currentPicks[0] ?? heroes[0]?.id ?? 1;
   const [heroId, setHeroId] = useState(initialId);
   const [heroQuery, setHeroQuery] = useState('');
+  const [visibleHeroCount, setVisibleHeroCount] = useState(48);
 
   const makeDraft = (id: number): HeroArtOverride => {
     const runtime = state.heroArtOverrides?.[String(id)];
@@ -169,6 +170,11 @@ export function HeroArtEditorDialog({
     };
   };
   const [dataDraft, setDataDraft] = useState<HeroDataOverride>(() => makeDataDraft(initialId));
+  const selectHero = (nextId: number) => {
+    setHeroId(nextId);
+    setDraft(makeDraft(nextId));
+    setDataDraft(makeDataDraft(nextId));
+  };
   const [sourceSize, setSourceSize] = useState<SourceSize>({ width: 16, height: 9 });
   useEffect(() => {
     const element = dialog.current;
@@ -182,6 +188,8 @@ export function HeroArtEditorDialog({
     () => effectiveHeroes.filter(item => heroMatchesSearch(item, heroQuery, state.language)),
     [effectiveHeroes, heroQuery, state.language],
   );
+  const visibleHeroes = filteredHeroes.slice(0, visibleHeroCount);
+  const hasMoreHeroes = visibleHeroCount < filteredHeroes.length;
   if (!hero) return null;
 
   const panel = draft.panel ?? defaultHeroArtCrop('panel');
@@ -211,32 +219,43 @@ export function HeroArtEditorDialog({
 
       <div className="hero-art-editor-body">
         <aside className="hero-art-editor-controls">
-          <label>{t('heroStudioSearch')}
-            <input
-              value={heroQuery}
-              placeholder={t('heroStudioSearchHint')}
-              onChange={event => setHeroQuery(event.target.value)}
-              onKeyDown={event => {
-                if (event.key !== 'Enter' || event.nativeEvent.isComposing || !filteredHeroes.length) return;
-                event.preventDefault();
-                const nextId = filteredHeroes[0].id;
-                setHeroId(nextId);
-                setDraft(makeDraft(nextId));
-                setDataDraft(makeDataDraft(nextId));
-              }}
-            />
-          </label>
-          <label>{t('chooseHeroToEdit')}
-            <select value={hero.id} onChange={event => {
-              const nextId = Number(event.target.value);
-              setHeroId(nextId);
-              setDraft(makeDraft(nextId));
-              setDataDraft(makeDataDraft(nextId));
-            }}>
-              {effectiveHeroes.map(item => <option key={item.id} value={item.id}>{state.language === 'zh' ? item.chineseName : item.englishName}</option>)}
-            </select>
-            {heroQuery && <small>{t('heroStudioSearchResult',{count:filteredHeroes.length})}{filteredHeroes[0] ? ' · ' + (state.language === 'zh' ? filteredHeroes[0].chineseName : filteredHeroes[0].englishName) : ''}</small>}
-          </label>
+          <section className="hero-studio-selector">
+            <label className="hero-studio-search">{t('heroStudioSearch')}
+              <input
+                value={heroQuery}
+                placeholder={t('heroStudioSearchHintGrid')}
+                onChange={event => {
+                  setHeroQuery(event.target.value);
+                  setVisibleHeroCount(48);
+                }}
+              />
+            </label>
+            <div className="hero-studio-grid" role="list" aria-label={t('heroStudioSearchResults')}>
+              {visibleHeroes.map(item => {
+                const selectedHero=item.id===hero.id;
+                const displayName=state.language==='zh'?item.chineseName:item.englishName;
+                return <button
+                  type="button"
+                  role="listitem"
+                  key={item.id}
+                  className={selectedHero?'selected':''}
+                  onClick={()=>selectHero(item.id)}
+                  title={item.englishName}
+                >
+                  <img src={item.imageLink} alt="" />
+                  <span>{displayName}</span>
+                  <small>{item.occupation}</small>
+                </button>;
+              })}
+            </div>
+            <div className="hero-studio-list-footer">
+              <small>{t('heroStudioResultCount',{shown:visibleHeroes.length,total:filteredHeroes.length})}</small>
+              {hasMoreHeroes&&<div className="hero-studio-list-actions">
+                <button type="button" onClick={()=>setVisibleHeroCount(count=>Math.min(count+48,filteredHeroes.length))}>{t('heroStudioLoadMore')}</button>
+                <button type="button" onClick={()=>setVisibleHeroCount(filteredHeroes.length)}>{t('heroStudioShowAll')}</button>
+              </div>}
+            </div>
+          </section>
 
           <fieldset className="hero-data-editor">
             <legend>{t('heroDataSettings')}</legend>

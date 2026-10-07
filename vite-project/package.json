@@ -1,7 +1,7 @@
 {
   "name": "vite-project",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +16,7 @@
     "hero:sync": "tsx scripts/hero-sync/sync.ts --update",
     "hero:validate": "tsx scripts/hero-sync/validate.ts",
     "simulator": "vite --open /tools/bp-simulator-control",
+    "simulator:server": "vite --host 127.0.0.1 --strictPort",
     "simulator:stage": "vite --open /tools/bp-simulator"
   },
   "dependencies": {

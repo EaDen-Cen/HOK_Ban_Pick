@@ -40,3 +40,35 @@ linear-gradient(90deg,rgba(4,44,84,.95) 0,rgba(15,65,112,.65) 17%,transparent 39
 .sim-current-pick-group label{display:grid;gap:6px;font-size:11px;color:#9db0c7}
 .sim-current-pick-group select{width:100%}
 @media(max-width:900px){.sim-current-pick-group{grid-template-columns:1fr 1fr}.sim-current-pick-group button{width:100%}}
+
+
+.sim-interval-range{
+  display:grid;
+  grid-template-columns:1fr auto auto auto;
+  gap:7px;
+  align-items:end;
+  min-width:0;
+}
+.sim-interval-range>span:first-child{
+  grid-column:1 / -1;
+  color:#9db0c7;
+  font-size:11px;
+}
+.sim-interval-range label{
+  display:grid;
+  grid-template-columns:auto minmax(72px,1fr) auto;
+  gap:5px;
+  align-items:center;
+  margin:0;
+}
+.sim-interval-range input{
+  width:82px;
+}
+.sim-interval-range small{
+  color:#8da1b8;
+}
+.sim-range-separator{
+  align-self:center;
+  padding-bottom:7px;
+  color:#8da1b8;
+}

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { phases } from '../src/shared/types.js';
-import { completedSimulatorSlots, simulatorBanVisualKeys, simulatorNextTurnPhase, simulatorPreviousTurnPhase, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn, swapSimulatorPickHeroes } from '../src/simulator/bpSimulatorModel.js';
+import { completedSimulatorSlots, simulatorBanVisualKeys, simulatorNextTurnPhase, simulatorPreviousTurnPhase, simulatorRandomDelayMs, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn, swapSimulatorPickHeroes } from '../src/simulator/bpSimulatorModel.js';
 
 test('simulator match mode follows the production 18-phase HOK draft order', () => {
   const sequence=phases('match','blue');
@@ -67,4 +67,12 @@ test('simulator exposes simultaneous HOK pick turns instead of serial single pic
     ['bluePick4','bluePick5'],
   );
   assert.equal(simulatorPreviousTurnPhase('match','blue',7),5);
+});
+
+
+test('simulator random autoplay delay stays inside the configured range',()=>{
+  assert.equal(simulatorRandomDelayMs(900,1800,()=>0),900);
+  assert.equal(simulatorRandomDelayMs(900,1800,()=>1),1800);
+  assert.equal(simulatorRandomDelayMs(900,1800,()=>.5),1350);
+  assert.equal(simulatorRandomDelayMs(1800,900,()=>0),900);
 });

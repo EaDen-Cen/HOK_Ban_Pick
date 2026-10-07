@@ -5,6 +5,7 @@ import {
   simulatorAllSlotKeys,
   simulatorNextTurnPhase,
   simulatorPreviousTurnPhase,
+  simulatorRandomDelayMs,
   simulatorSlotForPhase,
   simulatorSlotKey,
   simulatorSlotsForTurn,
@@ -157,6 +158,7 @@ export function BpSimulatorControl() {
 
   useEffect(()=>{
     if(!state.autoPlay||state.phaseIndex>=sequence.length) return;
+    const delay=simulatorRandomDelayMs(state.intervalMinMs,state.intervalMaxMs);
     const timer=window.setTimeout(()=>{
       update(current=>{
         const currentSequence=phases(current.mode,current.firstPickSide);
@@ -173,9 +175,19 @@ export function BpSimulatorControl() {
         );
         return {...current,phaseIndex:next,autoPlay:next<currentSequence.length&&current.autoPlay};
       });
-    },state.intervalMs);
+    },delay);
     return()=>window.clearTimeout(timer);
-  },[sequence.length,state.autoPlay,state.firstPickSide,state.intervalMs,state.mode,state.phaseIndex,update]);
+  },[
+    sequence.length,
+    state.autoPlay,
+    state.firstPickSide,
+    state.intervalMaxMs,
+    state.intervalMinMs,
+    state.locked,
+    state.mode,
+    state.phaseIndex,
+    update,
+  ]);
 
   const renderPickEditor=(side:Side,index:number)=>{
     const key=side+'Pick'+(index+1);
@@ -222,15 +234,32 @@ export function BpSimulatorControl() {
             <option value="red">红方</option>
           </select>
         </label>
-        <label>自动脚本间隔
-          <select value={state.intervalMs} onChange={event=>patch({intervalMs:Number(event.target.value)})}>
-            <option value={600}>0.6 秒</option>
-            <option value={1000}>1 秒</option>
-            <option value={1500}>1.5 秒</option>
-            <option value={2500}>2.5 秒</option>
-            <option value={4000}>4 秒</option>
-          </select>
-        </label>
+        <div className="sim-interval-range">
+          <span>自动脚本随机等待</span>
+          <label>最短
+            <input
+              type="number"
+              min={0.3}
+              max={15}
+              step={0.1}
+              value={(state.intervalMinMs/1000).toFixed(1)}
+              onChange={event=>patch({intervalMinMs:Math.round(Number(event.target.value)*1000)})}
+            />
+            <small>秒</small>
+          </label>
+          <span className="sim-range-separator">—</span>
+          <label>最长
+            <input
+              type="number"
+              min={0.3}
+              max={15}
+              step={0.1}
+              value={(state.intervalMaxMs/1000).toFixed(1)}
+              onChange={event=>patch({intervalMaxMs:Math.round(Number(event.target.value)*1000)})}
+            />
+            <small>秒</small>
+          </label>
+        </div>
         <label>Ban 头像尺寸
           <input type="range" min={24} max={64} value={state.banSize} onChange={event=>patch({banSize:Number(event.target.value)})}/>
           <span>{state.banSize}px</span>
@@ -279,7 +308,7 @@ export function BpSimulatorControl() {
         <button onClick={randomizeCurrent} disabled={!activeKeys.length||activeLocked}>随机当前组预选</button>
         <button onClick={randomizeAll}>随机全部英雄</button>
       </div>
-      <p className="sim-control-note">双选阶段会同时显示两个可编辑 Pick 位。当前选手行在选角时会发亮；点击“锁定当前组”后只会恢复到普通亮度，不会额外变暗。普通 Pick 的 Auto BP 只应在对手下一个 Pick 位真正出现预选英雄后确认上一组锁定；轮次边界和最后一手则测试“高亮恢复”。</p>
+      <p className="sim-control-note">双选阶段可同时编辑两个 Pick 位；锁定当前组后即可推进到下一轮。</p>
     </section>
 
     <section className="sim-control-panel">
@@ -304,7 +333,7 @@ export function BpSimulatorControl() {
         </label>
         <button onClick={swapPicks} disabled={swapA===swapB}>立即交换英雄</button>
       </div>
-      <p className="sim-control-note">交换只改变两个玩家槽里的英雄，不解除锁定，也不会推进 BP phase，适合在 BP 完成后测试最终阵容 / 换英雄检测。</p>
+      <p className="sim-control-note">交换只改变最终玩家槽的英雄，不改写 BP 历史。</p>
     </section>
 
     <section className="sim-control-panel">

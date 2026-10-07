@@ -73,6 +73,17 @@ export function simulatorBanVisualKeys(side:Side) {
   return side==='blue'?keys:keys.reverse();
 }
 
+export function simulatorRandomDelayMs(
+  minMs:number,
+  maxMs:number,
+  random:()=>number=Math.random,
+) {
+  const min=Math.max(0,Math.min(minMs,maxMs));
+  const max=Math.max(min,Math.max(minMs,maxMs));
+  if(max===min) return Math.round(min);
+  return Math.round(min+(max-min)*Math.min(1,Math.max(0,random())));
+}
+
 export function swapSimulatorPickHeroes(
   assignments:Record<string,number>,
   side:Side,
