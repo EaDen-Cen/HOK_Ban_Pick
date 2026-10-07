@@ -9,17 +9,24 @@ import { TeamPresetStore } from './teamPresets.js';
 import { Store } from './store.js';
 import { uploadPortrait, servePortrait } from './portraits.js';
 import { captureRegion, captureRegions, localCaptureRequest, recognizeClientFrame, recognizeLineup, recognizeScreen } from './capture.js';
+import { AccessManager, localTrustedRequest } from './access.js';
 
 const production = process.env.NODE_ENV === 'production';
-const tokens: Record<Role, string> = {
-  control: process.env.CONTROL_TOKEN || (production ? '' : 'local-control'),
-  caster: process.env.CASTER_TOKEN || (production ? '' : 'local-caster'),
-  overlay: process.env.OVERLAY_TOKEN || (production ? '' : 'local-overlay'),
-};
-if (Object.values(tokens).some(t => !t || (production && t.length < 24)) || new Set(Object.values(tokens)).size !== 3) throw new Error('Set three distinct tokens of at least 24 characters in production');
-const roleFor = (token: unknown): Role | undefined => (Object.keys(tokens) as Role[]).find(role => tokens[role] === token);
 const project = fileURLToPath(new URL('../', import.meta.url));
 const dataFile = resolve(process.env.DATA_FILE || resolve(project, 'data/match.json'));
+const access = new AccessManager(resolve(dirname(dataFile),'access-config.json'));
+const validRoles:Role[]=['control','caster','overlay'];
+const roleHint = (value:unknown):Role|undefined =>
+  typeof value==='string'&&validRoles.includes(value as Role) ? value as Role : undefined;
+const bearerToken = (req:Parameters<typeof localTrustedRequest>[0]) =>
+  typeof req.headers.authorization==='string' ? req.headers.authorization.replace(/^Bearer\s+/i,'') : '';
+const roleForRequest = (req:Parameters<typeof localTrustedRequest>[0],forcedRole?:Role):Role|undefined => {
+  const hinted=forcedRole??roleHint(req.headers['x-hok-role']);
+  if(localTrustedRequest(req)) return hinted;
+  const token=bearerToken(req);
+  if(hinted&&access.verify(hinted,token)) return hinted;
+  return access.roleForPassword(token);
+};
 const presets = new TeamPresetStore(resolve(dirname(dataFile), 'team-presets.json'));
 const store = new Store(dataFile, Date.now, presets);
 const uploadDirectory = resolve(process.env.UPLOAD_DIR || resolve(dirname(dataFile), 'uploads/player-portraits'));
@@ -31,16 +38,36 @@ const server = createServer(async (req, res) => {
   if (req.headers.origin && allowedOrigins.includes(req.headers.origin)) {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
     res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-File-Name');
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-File-Name, X-HOK-Role');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   }
   const json = (status: number, data: unknown) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)); };
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
   try {
     const url = new URL(req.url || '/', 'http://localhost');
+    if (url.pathname === '/api/access-config') {
+      const role=roleForRequest(req,'control');
+      if(role!=='control'){ json(401,{error:'accessUnauthorized'}); req.resume(); return; }
+      if(req.method==='GET'){ json(200,access.status()); return; }
+      if(req.method!=='POST'){ json(405,{error:'POST required'}); req.resume(); return; }
+      try{
+        const chunks:Buffer[]=[]; let size=0; req.setTimeout(10000,()=>req.destroy());
+        for await (const chunk of req){
+          size+=chunk.length;
+          if(size>8192){ json(413,{error:'accessConfigInvalid'}); return; }
+          chunks.push(chunk);
+        }
+        const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        json(200,access.configure(input));
+      }catch(error){
+        const message=error instanceof Error?error.message:'accessConfigInvalid';
+        json(400,{error:message});
+      }
+      return;
+    }
     if (url.pathname === '/api/recognize-frame') {
       if (req.method !== 'POST') { json(405,{error:'POST required'}); return; }
-      if (roleFor(req.headers.authorization?.replace(/^Bearer /,'')) !== 'control') { json(403,{error:'Control only'}); req.resume(); return; }
+      if (roleForRequest(req,'control') !== 'control') { json(403,{error:'Control only'}); req.resume(); return; }
       if (store.data.state.bpInputMode !== 'screen') { json(409,{error:'Screen input is not enabled'}); req.resume(); return; }
       try {
         const chunks:Buffer[]=[]; let size=0; req.setTimeout(10000,()=>req.destroy());
@@ -61,7 +88,7 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname === '/api/capture') {
       if (req.method !== 'POST') { json(405, {error:'POST required'}); return; }
-      if (roleFor(req.headers.authorization?.replace(/^Bearer /, '')) !== 'control' || !localCaptureRequest(req)) { json(403,{error:'Local control only'}); req.resume(); return; }
+      if (roleForRequest(req,'control') !== 'control' || !localCaptureRequest(req)) { json(403,{error:'Local control only'}); req.resume(); return; }
       if (process.platform !== 'win32' || process.env.HOK_CAPTURE_ENABLED !== '1' || store.data.state.bpInputMode !== 'screen') { json(503,{error:'Windows capture is not enabled'}); req.resume(); return; }
       try {
         let body = ''; req.setTimeout(5000, () => req.destroy());
@@ -105,7 +132,7 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (url.pathname === '/api/team-presets' || url.pathname.startsWith('/api/team-presets/')) {
-      const role = roleFor(req.headers.authorization?.replace(/^Bearer /, ''));
+      const role = roleForRequest(req);
       if (role !== 'control' || (production && req.headers.origin && !allowedOrigins.includes(req.headers.origin))) { json(role ? 403 : 401, {error:'uploadUnauthorized'}); req.resume(); return; }
       const id = url.pathname.slice('/api/team-presets/'.length);
       const collection = url.pathname === '/api/team-presets';
@@ -127,7 +154,7 @@ const server = createServer(async (req, res) => {
       }
     }
     if (url.pathname === '/api/uploads/player-portrait' && req.method === 'POST') {
-      const role = roleFor(req.headers.authorization?.replace(/^Bearer /, ''));
+      const role = roleForRequest(req);
       if (role !== 'control') { json(role ? 403 : 401, { error: 'uploadUnauthorized' }); req.resume(); return; }
       if (production && req.headers.origin && !allowedOrigins.includes(req.headers.origin)) { json(403, { error: 'uploadUnauthorized' }); req.resume(); return; }
       await uploadPortrait(req, res, uploadDirectory); return;
@@ -136,7 +163,7 @@ const server = createServer(async (req, res) => {
     if (url.pathname.startsWith('/uploads/player-portraits/')) { await servePortrait(url.pathname, res, uploadDirectory); return; }
     if (url.pathname === '/api/health') { json(200, { ok: true }); return; }
     if (url.pathname.startsWith('/api/')) {
-      const role = roleFor(req.headers.authorization?.replace(/^Bearer /, ''));
+      const role = roleForRequest(req);
       if (!role) { json(401, { error: '访问口令缺失或无效，请重新输入' }); return; }
       if (url.pathname === '/api/match') json(200, store.snapshot(role));
       else if (url.pathname === '/api/heroes') json(200, heroes);
@@ -183,8 +210,13 @@ wss.on('connection', (ws, req) => {
       if (!message || typeof message !== 'object') throw new Error('消息格式无效，请重新连接后重试');
       id = message.id;
       if (!c.role) {
-        c.role = message.type === 'auth' ? roleFor(message.token) : undefined;
-        if (!c.role) { ws.close(1008, '访问口令无效'); return; }
+        if(message.type==='auth'){
+          const requested=roleHint(message.role);
+          if(localTrustedRequest(req)) c.role=requested;
+          else if(requested&&access.verify(requested,typeof message.token==='string'?message.token:'')) c.role=requested;
+          else if(typeof message.token==='string') c.role=access.roleForPassword(message.token);
+        }
+        if (!c.role) { ws.close(1008, access.configured(roleHint(message.role)) ? '访问口令无效' : '远程访问密码尚未配置'); return; }
         clearTimeout(authTimeout); update(ws, true); return;
       }
       if (message.type === 'ping') { ws.send(JSON.stringify({ type: 'pong' })); return; }
