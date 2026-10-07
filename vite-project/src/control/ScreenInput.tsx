@@ -650,7 +650,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       busyRef.current=false;
       if(mounted.current) setBusy(false);
     }
-  },[captureMode,captureWindowFrame,disabled,label,nativeRegion,phase,phaseKey,revision,state.committedGameId,t,token,zh]);
+  },[captureMode,captureSlotLabel,captureWindowFrame,disabled,label,nativeRegion,nextTurnProbe,phase,phaseKey,recognizeWindowRegion,revision,state.committedGameId,t,token,turnTargets,zh]);
 
   useEffect(()=>{
     if(!autoWatch||result||disabled||!phase||state.committedGameId||busy) return;
@@ -665,7 +665,11 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     emptyStability.current=freshEmptyStability();
     heroStability.current=freshHeroStability();
     heroLockStability.current=freshHeroLockStability();
+    pickSlotStability.current={};
+    nextTurnStability.current=freshHeroStability();
+    pickTurnDimState.current=freshPickTurnDimState();
     setResult(undefined);
+    setGroupSelected({});
     setMessage('');
     setCandidateStatus('');
   };
