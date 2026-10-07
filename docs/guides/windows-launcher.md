@@ -18,9 +18,9 @@ It will:
 
 Keep the server and tunnel windows running during the event. Double-click `stop-broadcast.bat` when finished.
 
-The local operator intentionally uses `http://127.0.0.1:3001/control`; remote Caster/Overlay clients use the generated HTTPS URL.
+The local operator intentionally uses `http://127.0.0.1:3001/control`; loopback pages are trusted without a password. Remote Control/Caster/Overlay clients use the generated HTTPS URL and the user-defined passwords configured from local Control.
 
-If startup fails, inspect `artifacts/cloudflared.log` and the `HOK Broadcast Server` window.
+If startup fails, inspect `artifacts/cloudflared.log` and `artifacts/server.log`. Remote passwords are not hard-coded by the launcher: after first local startup, use Control → **Remote access passwords** to configure or rotate them.
 
 
 ## BP Simulator 一键启动
@@ -60,3 +60,12 @@ vite-project/data/director-browser-profile/
 This keeps Control isolated from the operator's normal browser profile and avoids inheriting a saved per-site zoom level. The Auto BP calibration UI also blocks Ctrl/Cmd zoom shortcuts and Ctrl+wheel while it is mounted.
 
 This is the first desktopization step, not the final distributable EXE. It deliberately reuses the existing server and browser engine while the Auto BP workflow is still being validated. The planned Electron package can later bundle the same Control UI, server lifecycle, tunnel status and logs without changing match-state APIs.
+
+
+## 公网域名预留
+
+当前前端默认使用同域 `/api` 和 `/ws`，因此 Quick Tunnel、反向代理和未来固定域名使用同一套页面。仓库已经保留 `deploy/compose.yaml` 与 Caddy 配置；获得域名后只需要配置域名、HTTPS origin 和首次启动的三组远程密码，不需要改写 Control/Caster/Overlay 路由。
+
+## 未来桌面软件
+
+当前 Edge/Chrome `--app` 是轻量 Director 窗口。里程碑中保留了正式打包阶段：未来可以用 Electron 等桌面壳统一接管 Server 启停、原生窗口采集、Tunnel/域名状态、日志、备份和更新，同时继续复用现有 HTTP/WebSocket API，而不是重新写比赛规则。
