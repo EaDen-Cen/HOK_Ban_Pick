@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import heroes from '../components/HeroList';
-import { phases, type Side } from '../shared/types';
+import { phases, type MatchState, type Side } from '../shared/types';
+import { normalizeState } from '../shared/draftRules';
 import {
   simulatorAllSlotKeys,
   simulatorNextTurnPhase,
   simulatorPreviousTurnPhase,
   simulatorRandomDelayMs,
+  randomLegalHeroesForSimulatorTurn,
+  randomLegalSimulatorDraft,
   simulatorSlotForPhase,
   simulatorSlotKey,
   simulatorSlotsForTurn,
@@ -28,6 +31,9 @@ export function BpSimulatorControl() {
   const [swapSide,setSwapSide]=useState<Side>('blue');
   const [swapA,setSwapA]=useState(0);
   const [swapB,setSwapB]=useState(1);
+  const [controlRules,setControlRules]=useState<MatchState>();
+  const [controlRuleStatus,setControlRuleStatus]=useState('独立模式：仅遵循当前 BP 的重复英雄规则');
+  const preparedAutoPhase=useRef(-1);
 
   const sequence=useMemo(()=>phases(state.mode,state.firstPickSide),[state.mode,state.firstPickSide]);
   const activeSlots=simulatorSlotsForTurn(state.mode,state.firstPickSide,state.phaseIndex);
@@ -37,6 +43,21 @@ export function BpSimulatorControl() {
   const activeLocked=activeKeys.length>0&&activeKeys.every(key=>state.locked.includes(key));
 
   const patch=(partial:Partial<typeof state>)=>update(current=>({...current,...partial}));
+
+  const syncControlRules=async()=>{
+    try{
+      setControlRuleStatus('正在读取 Control…');
+      const response=await fetch('/api/match',{headers:{'X-HOK-Role':'control'},cache:'no-store'});
+      if(!response.ok) throw new Error();
+      const snapshot=await response.json();
+      const next=normalizeState(snapshot.state as MatchState);
+      setControlRules(next);
+      setControlRuleStatus(`已同步 Control · ${next.draftRuleMode.toUpperCase()} · ${next.draftHistory.length} 局历史`);
+    }catch{
+      setControlRules(undefined);
+      setControlRuleStatus('Control 不可用：继续使用独立 BP 规则');
+    }
+  };
 
   const resetProgress=()=>update(current=>({
     ...current,
@@ -112,30 +133,19 @@ export function BpSimulatorControl() {
 
   const randomizeCurrent=()=> {
     if(!activeKeys.length||activeLocked) return;
-    update(current=>{
-      const currentKeys=simulatorSlotsForTurn(current.mode,current.firstPickSide,current.phaseIndex).map(simulatorSlotKey);
-      const used=new Set(Object.entries(current.slotHeroes)
-        .filter(([key])=>!currentKeys.includes(key))
-        .map(([,heroId])=>heroId));
-      const pool=[...heroes].filter(hero=>!used.has(hero.id)).sort(()=>Math.random()-.5);
-      const slotHeroes={...current.slotHeroes};
-      currentKeys.forEach((key,index)=>{
-        const hero=pool[index]??heroes[index%heroes.length];
-        if(hero) slotHeroes[key]=hero.id;
-      });
-      return {...current,slotHeroes};
-    });
+    update(current=>({
+      ...current,
+      slotHeroes:{
+        ...current.slotHeroes,
+        ...randomLegalHeroesForSimulatorTurn(current,controlRules),
+      },
+    }));
   };
 
-  const randomizeAll=()=> {
-    const shuffled=[...heroes].sort(()=>Math.random()-.5);
-    const slotHeroes={...state.slotHeroes};
-    simulatorAllSlotKeys.forEach((key,index)=>{
-      const hero=shuffled[index%shuffled.length];
-      if(hero) slotHeroes[key]=hero.id;
-    });
-    patch({slotHeroes});
-  };
+  const randomizeAll=()=>update(current=>({
+    ...current,
+    slotHeroes:randomLegalSimulatorDraft(current,controlRules),
+  }));
 
   const completeDraft=()=>update(current=>{
     const currentSequence=phases(current.mode,current.firstPickSide);
@@ -157,18 +167,41 @@ export function BpSimulatorControl() {
   }));
 
   useEffect(()=>{
-    if(!state.autoPlay||state.phaseIndex>=sequence.length) return;
-    const delay=simulatorRandomDelayMs(state.intervalMinMs,state.intervalMaxMs);
+    if(!state.autoPlay||state.phaseIndex>=sequence.length) {
+      if(!state.autoPlay) preparedAutoPhase.current=-1;
+      return;
+    }
+
+    const currentSlots=simulatorSlotsForTurn(state.mode,state.firstPickSide,state.phaseIndex);
+    const keys=currentSlots.map(simulatorSlotKey);
+    if(!keys.length) return;
+
+    if(!activeLocked&&preparedAutoPhase.current!==state.phaseIndex){
+      preparedAutoPhase.current=state.phaseIndex;
+      update(current=>({
+        ...current,
+        slotHeroes:{
+          ...current.slotHeroes,
+          ...randomLegalHeroesForSimulatorTurn(current,controlRules),
+        },
+      }));
+    }
+
+    // Random delay represents the player's thinking/preselect time only.
+    // Once the turn is locked, transition to the next turn quickly and predictably.
+    const delay=activeLocked
+      ? 180
+      : simulatorRandomDelayMs(state.intervalMinMs,state.intervalMaxMs);
     const timer=window.setTimeout(()=>{
       update(current=>{
-        const currentSequence=phases(current.mode,current.firstPickSide);
-        const currentSlots=simulatorSlotsForTurn(current.mode,current.firstPickSide,current.phaseIndex);
-        if(!currentSlots.length) return {...current,autoPlay:false};
-        const keys=currentSlots.map(simulatorSlotKey);
-        const allLocked=keys.every(key=>current.locked.includes(key));
-        if(!allLocked) {
-          return {...current,locked:unique([...current.locked,...keys])};
+        const slots=simulatorSlotsForTurn(current.mode,current.firstPickSide,current.phaseIndex);
+        const currentKeys=slots.map(simulatorSlotKey);
+        const allLocked=currentKeys.length>0&&currentKeys.every(key=>current.locked.includes(key));
+        if(!allLocked){
+          return {...current,locked:unique([...current.locked,...currentKeys])};
         }
+        preparedAutoPhase.current=-1;
+        const currentSequence=phases(current.mode,current.firstPickSide);
         const next=Math.min(
           currentSequence.length,
           simulatorNextTurnPhase(current.mode,current.firstPickSide,current.phaseIndex),
@@ -178,6 +211,8 @@ export function BpSimulatorControl() {
     },delay);
     return()=>window.clearTimeout(timer);
   },[
+    activeLocked,
+    controlRules,
     sequence.length,
     state.autoPlay,
     state.firstPickSide,
@@ -234,6 +269,11 @@ export function BpSimulatorControl() {
             <option value="red">红方</option>
           </select>
         </label>
+        <div className="sim-control-rule-sync">
+          <span>随机选角规则</span>
+          <button type="button" onClick={()=>void syncControlRules()}>同步 Control 规则</button>
+          <small>{controlRuleStatus}</small>
+        </div>
         <div className="sim-interval-range">
           <span>自动脚本随机等待</span>
           <label>最短
