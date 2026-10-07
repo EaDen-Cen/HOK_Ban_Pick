@@ -246,6 +246,7 @@ function AccessSettingsPanel({
   const [configured,setConfigured]=useState<Record<Role,boolean>>({control:false,caster:false,overlay:false});
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
+  const loadFailedMessage=t('accessSettingsLoadFailed');
 
   useEffect(()=>{
     let stopped=false;
@@ -253,13 +254,13 @@ function AccessSettingsPanel({
     if(token) headers.Authorization=`Bearer ${token}`;
     void fetch('/api/access-config',{headers,cache:'no-store'})
       .then(async response=>{
-        if(!response.ok) throw new Error(t('accessSettingsLoadFailed'));
+        if(!response.ok) throw new Error(loadFailedMessage);
         return await response.json();
       })
       .then(data=>{if(!stopped&&data?.configured)setConfigured(data.configured);})
-      .catch(()=>{if(!stopped)setMessage(t('accessSettingsLoadFailed'));});
+      .catch(()=>{if(!stopped)setMessage(loadFailedMessage);});
     return()=>{stopped=true;};
-  },[token,lang]);
+  },[token,loadFailedMessage]);
 
   const save=async(event:FormEvent)=>{
     event.preventDefault();
