@@ -21,6 +21,13 @@ import { getSharedWindowCaptureStream, setSharedWindowCaptureStream } from './sh
 import { freshPickTurnDimState, updatePickTurnDimState, type PickTurnDimState } from './pickTurnDimDetection';
 import { regionFromDrag, regionToPixels, type NormalizedCaptureRegion } from './windowCaptureGeometry';
 import { nextCaptureSlotKey, nudgeCaptureRegion, type CalibrationDelta } from './precisionCalibration';
+import {
+  CAPTURE_PRESETS_STORAGE,
+  createCaptureSlotPreset,
+  readCaptureSlotPresets,
+  updateCaptureSlotPreset,
+  type CaptureSlotPreset,
+} from './captureSlotPresets';
 import { phaseName } from '../shared/display';
 import { translator } from '../shared/i18n';
 import { phases, type Action, type MatchState } from '../shared/types';
@@ -118,6 +125,9 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const [precisionMode,setPrecisionMode]=useState(false);
   const [calibrationZoom,setCalibrationZoom]=useState(2);
   const [calibrationPreview,setCalibrationPreview]=useState('');
+  const [capturePresets,setCapturePresets]=useState<CaptureSlotPreset[]>(()=>readCaptureSlotPresets(localStorage.getItem(CAPTURE_PRESETS_STORAGE)));
+  const [selectedCapturePresetId,setSelectedCapturePresetId]=useState('');
+  const [capturePresetName,setCapturePresetName]=useState('');
 
   const dialog=useRef<HTMLDialogElement>(null);
   const videoRef=useRef<HTMLVideoElement>(null);
@@ -144,6 +154,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const pickToBanBoundary=phase?.action==='pick'&&immediateNextTurnIsBan(state.draftMode,state.firstPickSide,state.currentPhase);
   const useHighlightRelease=phase?.action==='pick'&&(pickToBanBoundary||!nextOpponentPickProbe);
   const activeTargetKeys=useMemo(()=>new Set(turnTargets.map(item=>item.key)),[turnTargets]);
+  const selectedCapturePreset=useMemo(()=>capturePresets.find(item=>item.id===selectedCapturePresetId),[capturePresets,selectedCapturePresetId]);
 
   const label=useCallback((id:number)=>{
     const hero=heroForState(state,id);
@@ -187,6 +198,85 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     setCalibratingSlot(key);
     setCalibrationPreview(buildCalibrationPreview(slots[key]));
   },[buildCalibrationPreview,slots]);
+
+  const persistCapturePresets=useCallback((next:CaptureSlotPreset[])=>{
+    const ordered=[...next].sort((a,b)=>b.updatedAt-a.updatedAt);
+    setCapturePresets(ordered);
+    localStorage.setItem(CAPTURE_PRESETS_STORAGE,JSON.stringify(ordered));
+  },[]);
+
+  const saveCapturePreset=useCallback(()=>{
+    const name=capturePresetName.trim();
+    if(!name){
+      setMessage(t('capturePresetNameRequired'));
+      return;
+    }
+    if(capturePresets.some(item=>item.name.toLowerCase()===name.toLowerCase())){
+      setMessage(t('capturePresetNameDuplicate'));
+      return;
+    }
+    const now=Date.now();
+    const preset=createCaptureSlotPreset({
+      id:`capture-${now}-${capturePresets.length+1}`,
+      name,
+      slots,
+      sourceWidth:windowInfo?.width,
+      sourceHeight:windowInfo?.height,
+      now,
+    });
+    persistCapturePresets([preset,...capturePresets]);
+    setSelectedCapturePresetId(preset.id);
+    setCapturePresetName(preset.name);
+    setMessage(t('capturePresetSaved',{name:preset.name}));
+  },[capturePresetName,capturePresets,persistCapturePresets,slots,t,windowInfo?.height,windowInfo?.width]);
+
+  const updateSelectedCapturePreset=useCallback(()=>{
+    if(!selectedCapturePreset){
+      setMessage(t('capturePresetChooseFirst'));
+      return;
+    }
+    const nextName=capturePresetName.trim()||selectedCapturePreset.name;
+    const duplicate=capturePresets.some(item=>item.id!==selectedCapturePreset.id&&item.name.toLowerCase()===nextName.toLowerCase());
+    if(duplicate){
+      setMessage(t('capturePresetNameDuplicate'));
+      return;
+    }
+    const updated=updateCaptureSlotPreset(selectedCapturePreset,{
+      name:nextName,
+      slots,
+      sourceWidth:windowInfo?.width,
+      sourceHeight:windowInfo?.height,
+    });
+    persistCapturePresets(capturePresets.map(item=>item.id===updated.id?updated:item));
+    setCapturePresetName(updated.name);
+    setMessage(t('capturePresetUpdated',{name:updated.name}));
+  },[capturePresetName,capturePresets,persistCapturePresets,selectedCapturePreset,slots,t,windowInfo?.height,windowInfo?.width]);
+
+  const loadSelectedCapturePreset=useCallback(()=>{
+    if(!selectedCapturePreset){
+      setMessage(t('capturePresetChooseFirst'));
+      return;
+    }
+    const next=normalizeCaptureSlots(selectedCapturePreset.slots);
+    setSlots(next);
+    localStorage.setItem(SLOTS_STORAGE,JSON.stringify(next));
+    setCalibratingSlot(undefined);
+    setCalibrationPreview('');
+    setMessage(t('capturePresetLoaded',{name:selectedCapturePreset.name}));
+  },[selectedCapturePreset,t]);
+
+  const deleteSelectedCapturePreset=useCallback(()=>{
+    if(!selectedCapturePreset){
+      setMessage(t('capturePresetChooseFirst'));
+      return;
+    }
+    if(!window.confirm(t('capturePresetDeleteConfirm',{name:selectedCapturePreset.name}))) return;
+    persistCapturePresets(capturePresets.filter(item=>item.id!==selectedCapturePreset.id));
+    setSelectedCapturePresetId('');
+    setCapturePresetName('');
+    setMessage(t('capturePresetDeleted',{name:selectedCapturePreset.name}));
+  },[capturePresets,persistCapturePresets,selectedCapturePreset,t]);
+
 
   const enterPrecisionCalibration=useCallback(async()=>{
     if(!videoReady) return;
@@ -825,6 +915,51 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
               setCalibrationPreview('');
               setMessage(t('captureExplicitSlotsReset'));
             }}>{t('captureResetAllSlots')}</button>
+          </div>
+        </div>
+
+        <div className="capture-preset-manager">
+          <div className="capture-preset-heading">
+            <div>
+              <strong>{t('capturePresetTitle')}</strong>
+              <p className="muted">{t('capturePresetHint')}</p>
+            </div>
+            {selectedCapturePreset&&<span className="capture-preset-meta">
+              {selectedCapturePreset.sourceWidth&&selectedCapturePreset.sourceHeight
+                ? `${selectedCapturePreset.sourceWidth}×${selectedCapturePreset.sourceHeight}`
+                : t('capturePresetRelative')}
+            </span>}
+          </div>
+          <div className="capture-preset-controls">
+            <label>
+              <span>{t('capturePresetName')}</span>
+              <input
+                type="text"
+                maxLength={48}
+                value={capturePresetName}
+                placeholder={t('capturePresetNamePlaceholder')}
+                onChange={event=>setCapturePresetName(event.target.value)}
+              />
+            </label>
+            <button type="button" onClick={saveCapturePreset}>{t('capturePresetSaveNew')}</button>
+            <label>
+              <span>{t('capturePresetSavedList')}</span>
+              <select
+                value={selectedCapturePresetId}
+                onChange={event=>{
+                  const id=event.target.value;
+                  setSelectedCapturePresetId(id);
+                  const preset=capturePresets.find(item=>item.id===id);
+                  setCapturePresetName(preset?.name??'');
+                }}
+              >
+                <option value="">{t('capturePresetChoose')}</option>
+                {capturePresets.map(preset=><option key={preset.id} value={preset.id}>{preset.name}</option>)}
+              </select>
+            </label>
+            <button type="button" className="primary" disabled={!selectedCapturePreset} onClick={loadSelectedCapturePreset}>{t('capturePresetLoad')}</button>
+            <button type="button" disabled={!selectedCapturePreset} onClick={updateSelectedCapturePreset}>{t('capturePresetOverwrite')}</button>
+            <button type="button" className="danger" disabled={!selectedCapturePreset} onClick={deleteSelectedCapturePreset}>{t('capturePresetDelete')}</button>
           </div>
         </div>
 
