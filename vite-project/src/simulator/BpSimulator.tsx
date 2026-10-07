@@ -41,8 +41,8 @@ export function BpSimulator() {
   const visibleState=(key:string)=>{
     const slotPhase=phaseByKey.get(key);
     const visible=slotPhase!==undefined&&(slotPhase<state.phaseIndex||activeKeys.has(key));
-    const isCurrent=activeKeys.has(key);
     const isLocked=(slotPhase!==undefined&&slotPhase<state.phaseIndex)||state.locked.includes(key);
+    const isCurrent=activeKeys.has(key)&&!state.locked.includes(key);
     return {visible,isCurrent,isLocked,empty:state.emptyBans.includes(key)};
   };
 
