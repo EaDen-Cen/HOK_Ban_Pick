@@ -5,6 +5,7 @@ import {
   simulatorAllSlotKeys,
   simulatorNextTurnPhase,
   simulatorPreviousTurnPhase,
+  simulatorRandomDelayMs,
   simulatorSlotForPhase,
   simulatorSlotKey,
   simulatorSlotsForTurn,
@@ -157,6 +158,7 @@ export function BpSimulatorControl() {
 
   useEffect(()=>{
     if(!state.autoPlay||state.phaseIndex>=sequence.length) return;
+    const delay=simulatorRandomDelayMs(state.intervalMinMs,state.intervalMaxMs);
     const timer=window.setTimeout(()=>{
       update(current=>{
         const currentSequence=phases(current.mode,current.firstPickSide);
@@ -173,9 +175,19 @@ export function BpSimulatorControl() {
         );
         return {...current,phaseIndex:next,autoPlay:next<currentSequence.length&&current.autoPlay};
       });
-    },state.intervalMs);
+    },delay);
     return()=>window.clearTimeout(timer);
-  },[sequence.length,state.autoPlay,state.firstPickSide,state.intervalMs,state.mode,state.phaseIndex,update]);
+  },[
+    sequence.length,
+    state.autoPlay,
+    state.firstPickSide,
+    state.intervalMaxMs,
+    state.intervalMinMs,
+    state.locked,
+    state.mode,
+    state.phaseIndex,
+    update,
+  ]);
 
   const renderPickEditor=(side:Side,index:number)=>{
     const key=side+'Pick'+(index+1);
@@ -222,15 +234,32 @@ export function BpSimulatorControl() {
             <option value="red">红方</option>
           </select>
         </label>
-        <label>自动脚本间隔
-          <select value={state.intervalMs} onChange={event=>patch({intervalMs:Number(event.target.value)})}>
-            <option value={600}>0.6 秒</option>
-            <option value={1000}>1 秒</option>
-            <option value={1500}>1.5 秒</option>
-            <option value={2500}>2.5 秒</option>
-            <option value={4000}>4 秒</option>
-          </select>
-        </label>
+        <div className="sim-interval-range">
+          <span>自动脚本随机等待</span>
+          <label>最短
+            <input
+              type="number"
+              min={0.3}
+              max={15}
+              step={0.1}
+              value={(state.intervalMinMs/1000).toFixed(1)}
+              onChange={event=>patch({intervalMinMs:Math.round(Number(event.target.value)*1000)})}
+            />
+            <small>秒</small>
+          </label>
+          <span className="sim-range-separator">—</span>
+          <label>最长
+            <input
+              type="number"
+              min={0.3}
+              max={15}
+              step={0.1}
+              value={(state.intervalMaxMs/1000).toFixed(1)}
+              onChange={event=>patch({intervalMaxMs:Math.round(Number(event.target.value)*1000)})}
+            />
+            <small>秒</small>
+          </label>
+        </div>
         <label>Ban 头像尺寸
           <input type="range" min={24} max={64} value={state.banSize} onChange={event=>patch({banSize:Number(event.target.value)})}/>
           <span>{state.banSize}px</span>
