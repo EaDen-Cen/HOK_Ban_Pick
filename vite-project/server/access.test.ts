@@ -47,12 +47,13 @@ test('access manager supports partial password changes and rejects shared role p
 });
 
 test('local trust requires loopback, local host, and no forwarding headers',()=>{
-  const local={
-    headers:{host:'127.0.0.1:3001',origin:'http://127.0.0.1:3001'},
-    socket:{remoteAddress:'127.0.0.1'},
-  } as any;
-  assert.equal(localTrustedRequest(local),true);
-  assert.equal(localTrustedRequest({...local,headers:{...local.headers,'x-forwarded-for':'1.2.3.4'}}),false);
-  assert.equal(localTrustedRequest({...local,headers:{host:'example.com',origin:'https://example.com'}}),false);
-  assert.equal(localTrustedRequest({...local,socket:{remoteAddress:'10.0.0.5'}}),false);
+  type LocalRequest=Parameters<typeof localTrustedRequest>[0];
+  const request=(headers:Record<string,string>,remoteAddress:string)=>({
+    headers,
+    socket:{remoteAddress},
+  } as unknown as LocalRequest);
+  assert.equal(localTrustedRequest(request({host:'127.0.0.1:3001',origin:'http://127.0.0.1:3001'},'127.0.0.1')),true);
+  assert.equal(localTrustedRequest(request({host:'127.0.0.1:3001',origin:'http://127.0.0.1:3001','x-forwarded-for':'1.2.3.4'},'127.0.0.1')),false);
+  assert.equal(localTrustedRequest(request({host:'example.com',origin:'https://example.com'},'127.0.0.1')),false);
+  assert.equal(localTrustedRequest(request({host:'127.0.0.1:3001',origin:'http://127.0.0.1:3001'},'10.0.0.5')),false);
 });
