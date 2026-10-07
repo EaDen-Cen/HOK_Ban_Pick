@@ -10,30 +10,46 @@ sharp.concurrency(Number.isFinite(recognitionThreads)?Math.max(1,Math.min(4,reco
 
 type MatchShape = 'square' | 'circle';
 
-async function features(source: string | Buffer, shape:MatchShape='square') {
+function normalizedFeatureVector(pixels:Buffer,shape:MatchShape='square') {
   const size=32;
-  const pixels: Buffer = await sharp(source).resize(size,size,{fit:'fill'}).toColourspace('srgb').removeAlpha().raw().toBuffer();
-  const included:number[]=[];
+  let sum=0;
+  let samples=0;
   for(let y=0;y<size;y++) for(let x=0;x<size;x++) {
     const dx=(x+.5-size/2)/(size/2);
     const dy=(y+.5-size/2)/(size/2);
-    if(shape==='circle' && dx*dx+dy*dy>1) continue;
+    if(shape==='circle'&&dx*dx+dy*dy>1) continue;
     const base=(y*size+x)*3;
-    included.push(pixels[base],pixels[base+1],pixels[base+2]);
+    sum+=pixels[base]+pixels[base+1]+pixels[base+2];
+    samples+=3;
   }
-  const mean=included.reduce((sum,n)=>sum+n,0)/Math.max(included.length,1);
-  const values:number[]=[];
+  const mean=sum/Math.max(samples,1);
+  const values=new Array<number>(size*size*3);
+  let normSquared=0;
+  let out=0;
   for(let y=0;y<size;y++) for(let x=0;x<size;x++) {
     const dx=(x+.5-size/2)/(size/2);
     const dy=(y+.5-size/2)/(size/2);
     const inside=shape!=='circle'||dx*dx+dy*dy<=1;
     const base=(y*size+x)*3;
     for(let channel=0;channel<3;channel++) {
-      values.push(inside ? pixels[base+channel]-mean : 0);
+      const value=inside ? pixels[base+channel]-mean : 0;
+      values[out++]=value;
+      normSquared+=value*value;
     }
   }
-  const norm=Math.sqrt(values.reduce((sum,n)=>sum+n*n,0));
-  return values.map(n=>n/Math.max(norm,1));
+  const inverseNorm=1/Math.max(Math.sqrt(normSquared),1);
+  for(let index=0;index<values.length;index++) values[index]*=inverseNorm;
+  return values;
+}
+
+async function features(source: string | Buffer, shape:MatchShape='square') {
+  const pixels:Buffer=await sharp(source,{sequentialRead:true})
+    .resize(32,32,{fit:'fill'})
+    .toColourspace('srgb')
+    .removeAlpha()
+    .raw()
+    .toBuffer();
+  return normalizedFeatureVector(pixels,shape);
 }
 
 async function perceptualFingerprint(source: Buffer, region?: {left:number;top:number;width:number;height:number}) {
@@ -98,7 +114,8 @@ async function captureFeatureVariants(
   shape:MatchShape='square',
   metadata?:{width?:number;height?:number},
 ) {
-  const meta=metadata??await sharp(source).metadata();
+  const base=sharp(source,{sequentialRead:true});
+  const meta=metadata??await base.metadata();
   const width=meta.width||0, height=meta.height||0;
   if(width<8||height<8) return [await features(source,shape)];
 
@@ -109,10 +126,14 @@ async function captureFeatureVariants(
     const centerY=height/2 + spec.dy*Math.max(0,height-side);
     const left=Math.max(0,Math.min(width-side,Math.round(centerX-side/2)));
     const top=Math.max(0,Math.min(height-side,Math.round(centerY-side/2)));
-    const cropped=await sharp(source,{sequentialRead:true})
+    const pixels:Buffer=await base.clone()
       .extract({left,top,width:side,height:side})
+      .resize(32,32,{fit:'fill'})
+      .toColourspace('srgb')
+      .removeAlpha()
+      .raw()
       .toBuffer();
-    return await features(cropped,shape);
+    return normalizedFeatureVector(pixels,shape);
   }));
 }
 
