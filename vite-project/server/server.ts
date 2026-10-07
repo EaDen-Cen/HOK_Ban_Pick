@@ -148,7 +148,7 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (url.pathname === '/api/team-presets' || url.pathname.startsWith('/api/team-presets/')) {
-      const role = roleForRequest(req);
+      const role = roleForRequest(req,'control');
       if (role !== 'control' || (production && req.headers.origin && !allowedOrigins.includes(req.headers.origin))) { json(role ? 403 : 401, {error:'uploadUnauthorized'}); req.resume(); return; }
       const id = url.pathname.slice('/api/team-presets/'.length);
       const collection = url.pathname === '/api/team-presets';
@@ -170,7 +170,7 @@ const server = createServer(async (req, res) => {
       }
     }
     if (url.pathname === '/api/uploads/player-portrait' && req.method === 'POST') {
-      const role = roleForRequest(req);
+      const role = roleForRequest(req,'control');
       if (role !== 'control') { json(role ? 403 : 401, { error: 'uploadUnauthorized' }); req.resume(); return; }
       if (production && req.headers.origin && !allowedOrigins.includes(req.headers.origin)) { json(403, { error: 'uploadUnauthorized' }); req.resume(); return; }
       await uploadPortrait(req, res, uploadDirectory); return;
