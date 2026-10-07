@@ -1225,3 +1225,149 @@
 .manual-candidate-button{
   min-height:36px;
 }
+
+
+/* v1.0 adaptive Control layout */
+.control-draft-workspace{
+  grid-template-columns:minmax(340px,clamp(380px,34vw,540px)) minmax(0,1fr);
+  gap:clamp(12px,1.5vw,20px);
+}
+.control-draft-workspace:has(.screen-recognition-workspace){
+  grid-template-columns:minmax(330px,clamp(360px,31vw,500px)) minmax(0,1fr);
+}
+.screen-recognition-workspace,
+.control-monitor,
+.control-hero-picker,
+.screen-input-live-grid,
+.screen-input-preview-pane,
+.screen-input-operator-pane{min-width:0}
+.screen-recognition-workspace{max-width:100%}
+.screen-input-live-grid{
+  grid-template-columns:minmax(0,1.45fr) minmax(230px,.72fr);
+  gap:clamp(8px,1vw,12px);
+}
+.screen-input-preview-pane .window-capture-preview{
+  width:100%;
+  max-width:none;
+}
+.window-capture-preview video{max-height:min(58dvh,640px)}
+.settings-advanced,
+.hero-data-advanced{
+  margin:10px 0 12px;
+  padding:0;
+  border:1px solid #31445e;
+  border-radius:8px;
+  background:#091321;
+  overflow:hidden;
+}
+.settings-advanced>summary,
+.hero-data-advanced>summary{
+  cursor:pointer;
+  list-style:none;
+  padding:10px 12px;
+  color:#dce9f8;
+  font-weight:750;
+  user-select:none;
+}
+.settings-advanced>summary::-webkit-details-marker,
+.hero-data-advanced>summary::-webkit-details-marker{display:none}
+.settings-advanced>summary::after,
+.hero-data-advanced>summary::after{
+  content:'▾';
+  float:right;
+  color:#86a1be;
+  transition:transform .15s ease;
+}
+.settings-advanced[open]>summary::after,
+.hero-data-advanced[open]>summary::after{transform:rotate(180deg)}
+.settings-advanced[open]>summary,
+.hero-data-advanced[open]>summary{border-bottom:1px solid #2c4059}
+.settings-advanced>label,
+.hero-data-advanced>label{margin:10px 12px}
+.settings-advanced input[type="range"]{width:100%}
+
+.access-settings-panel{
+  margin:0 0 14px;
+  border:1px solid #31445e;
+  border-radius:10px;
+  background:#0d1725;
+  overflow:hidden;
+}
+.access-settings-panel>header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 16px;
+  background:#15243a;
+  border-bottom:1px solid #34435a;
+}
+.access-settings-panel .panel{margin:0;border:0;border-radius:0}
+.access-password-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  margin:14px 0;
+}
+.access-password-grid label{min-width:0}
+.access-password-grid input{width:100%}
+
+.sim-control-rule-sync{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:5px 8px;
+  align-items:end;
+}
+.sim-control-rule-sync>span{grid-column:1/-1;color:#9db0c7;font-size:11px}
+.sim-control-rule-sync>small{grid-column:1/-1;color:#8da1b8;line-height:1.35}
+
+@media(max-width:1450px) and (min-width:1200px){
+  .control-draft-workspace:has(.screen-recognition-workspace){
+    grid-template-columns:minmax(320px,.58fr) minmax(0,1.42fr);
+  }
+  .screen-input-live-grid{
+    grid-template-columns:minmax(0,1.25fr) minmax(220px,.75fr);
+  }
+  .screen-input-operator-pane .capture-live-status>div{
+    height:auto;
+    min-height:58px;
+  }
+}
+@media(max-width:1199px){
+  .control-draft-workspace,
+  .control-draft-workspace:has(.screen-recognition-workspace){
+    display:grid;
+    grid-template-columns:1fr;
+  }
+  .control-monitor{
+    position:static;
+    max-height:none;
+    overflow:visible;
+  }
+  .screen-recognition-workspace{position:static}
+}
+@media(max-width:860px){
+  .screen-input-live-grid{grid-template-columns:1fr}
+  .screen-input-operator-pane{
+    grid-template-columns:1fr 1fr;
+    align-items:start;
+  }
+  .screen-input-operator-pane .capture-live-status,
+  .screen-input-operator-pane .screen-input-message{grid-column:1/-1}
+  .screen-input-operator-pane .screen-input-actions{grid-column:1/-1}
+  .access-password-grid{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .screen-input-operator-pane{grid-template-columns:1fr}
+  .window-capture-preview video{max-height:46dvh}
+}
+@media(max-height:760px) and (min-width:1200px){
+  .control-monitor,
+  .screen-recognition-workspace,
+  .control-hero-picker.panel{
+    top:6px;
+    max-height:calc(100dvh - 86px);
+  }
+  .screen-input-preview-pane .window-capture-preview{max-height:48dvh}
+  .window-capture-preview video{max-height:48dvh}
+}
