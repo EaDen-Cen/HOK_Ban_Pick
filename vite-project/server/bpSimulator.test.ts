@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { phases } from '../src/shared/types.js';
-import { completedSimulatorSlots, simulatorBanVisualKeys, simulatorSlotForPhase, simulatorSlotKey, swapSimulatorPickHeroes } from '../src/simulator/bpSimulatorModel.js';
+import { completedSimulatorSlots, simulatorBanVisualKeys, simulatorNextTurnPhase, simulatorPreviousTurnPhase, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn, swapSimulatorPickHeroes } from '../src/simulator/bpSimulatorModel.js';
 
 test('simulator match mode follows the production 18-phase HOK draft order', () => {
   const sequence=phases('match','blue');
@@ -48,4 +48,23 @@ test('player hero swap exchanges pick portraits without touching other slots',()
   assert.equal(after.bluePick3,11);
   assert.equal(after.bluePick2,22);
   assert.equal(after.redPick1,44);
+});
+
+
+test('simulator exposes simultaneous HOK pick turns instead of serial single picks',()=>{
+  assert.deepEqual(
+    simulatorSlotsForTurn('match','blue',5).map(simulatorSlotKey),
+    ['redPick1','redPick2'],
+  );
+  assert.equal(simulatorNextTurnPhase('match','blue',5),7);
+  assert.deepEqual(
+    simulatorSlotsForTurn('match','blue',7).map(simulatorSlotKey),
+    ['bluePick2','bluePick3'],
+  );
+  assert.equal(simulatorNextTurnPhase('match','blue',7),9);
+  assert.deepEqual(
+    simulatorSlotsForTurn('match','blue',15).map(simulatorSlotKey),
+    ['bluePick4','bluePick5'],
+  );
+  assert.equal(simulatorPreviousTurnPhase('match','blue',7),5);
 });
