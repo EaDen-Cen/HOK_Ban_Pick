@@ -1,14 +1,16 @@
 # HOK Broadcast · 王者荣耀赛事 BP 导播系统
 
-基于 React、TypeScript、Node.js 与 WebSocket，提供操作台、延迟解说台及 OBS 直播画面。当前 main 包含 V2.3 导播快捷录入、选手照片上传、服务器端队伍资料库及替补快速换人。
+> 当前发布基线：**v2.4.0** · First public release candidate
+
+基于 React、TypeScript、Node.js 与 WebSocket，提供 Control 导播台、延迟 Caster、OBS Overlay、Auto BP 屏幕识别、最终阵容换英雄检测、队伍资料库与跨局 BP 规则。v2.4.0 把最近完成的 18 槽屏幕识别、双 Pick、空 Ban、识别框预设与 Control 布局重构整理为首个正式 GitHub Release 基线。
 
 ## 快速启动
 
 使用 Node.js 24，首次下载并启动：
 
 ```powershell
-git clone https://github.com/EaDen-Cen/HOK_Ban_Pick.git
-cd HOK_Ban_Pick/vite-project
+git clone https://github.com/EaDen-Cen/Honor-of-Kings-International-Server-Tournament-Broadcasting-System.git
+cd Honor-of-Kings-International-Server-Tournament-Broadcasting-System/vite-project
 npm ci
 npm run build
 npm run server
@@ -163,10 +165,11 @@ vite-project/start-bp-simulator.bat
 入口：
 
 ```text
-http://127.0.0.1:5173/tools/bp-simulator
+控制台：http://127.0.0.1:5173/tools/bp-simulator-control
+采集画面：http://127.0.0.1:5173/tools/bp-simulator
 ```
 
-然后在 HOK Control 的 Auto BP 中选择模拟器窗口作为采集来源。模拟器可复现 Pick、圆形 Ban、锁定标记、空 Ban、蓝/红先手、不同头像尺寸与完整 BP phase 顺序；按 `H` 可以隐藏控制区，只保留干净的采集画面。
+控制台和采集画面是两个独立页面，方便一边操作、一边让 Auto BP 只抓干净的 BP 画面。模拟器可复现 Match BP、同时双 Pick、圆形 Ban、空 Ban、Pick 行高亮恢复、最终阵容和选手换英雄。
 
 LoL 项目中值得移植的功能优化及本次实际移植内容见 [HOK / LoL 功能对照审计](docs/research/lol-feature-parity-audit-2026-10-06.md)。
 
@@ -174,8 +177,10 @@ LoL 项目中值得移植的功能优化及本次实际移植内容见 [HOK / Lo
 
 | 需要做什么 | 文档 |
 | --- | --- |
+| 第一次使用，从安装到跑完第一场 BP | [新手教程](docs/guides/beginner-guide.md) |
 | 安装、三端接入、延迟、备份和部署 | [运行指南](docs/guides/getting-started.md) |
-| 比赛流程、快捷 BP、照片、队伍库及替补 | [操作指南](docs/guides/operator-guide.md) |
+| 比赛流程、Auto BP、照片、队伍库及替补 | [操作指南](docs/guides/operator-guide.md) |
+| 18 框校准、预设、Pick/Ban 锁定、空 Ban、换英雄 | [Auto BP 屏幕识别](docs/guides/screen-recognition.md) |
 | Windows 一键启动及 Cloudflare | [启动器说明](docs/guides/windows-launcher.md) |
 | 理解源码目录和状态流 | [系统结构](docs/design/architecture.md) |
 | 查看项目阶段与未来路线 | [项目里程碑](MILESTONES.md) |
