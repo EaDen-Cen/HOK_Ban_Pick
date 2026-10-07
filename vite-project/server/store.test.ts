@@ -25,12 +25,13 @@ test('caster sees picks only at the exact delay boundary, and no realtime revisi
   now += 179999; assert.equal(s.snapshot('caster').state.blueBans.length, 0); assert.equal(s.snapshot('caster').revision, 0);
   now++; assert.deepEqual(s.snapshot('caster').state.blueBans, [46]);
 });
-test('all metadata and next-game resets follow the same delayed timeline', () => {
+test('caster sees team and tournament metadata immediately while gameplay remains delayed', () => {
   let now = 1000000; const s = new Store(undefined, () => now);
   apply(s, {
     type: 'settings',
     settings: {
       ...initialState(),
+      stage: 'Grand Final',
       blueTeam: {
         ...initialState().blueTeam,
         name: 'Secret finalist',
@@ -40,8 +41,10 @@ test('all metadata and next-game resets follow the same delayed timeline', () =>
       gameNumber: 2,
     },
   });
-  assert.equal(s.snapshot('caster').state.blueScore, 0); assert.equal(s.snapshot('caster').state.gameNumber, 1);
-  assert.equal(s.snapshot('caster').state.blueTeam.name, initialState().blueTeam.name);
+  const immediate=s.snapshot('caster').state;
+  assert.equal(immediate.blueScore, 0); assert.equal(immediate.gameNumber, 1);
+  assert.equal(immediate.blueTeam.name, 'Secret finalist');
+  assert.equal(immediate.stage, 'Grand Final');
   now += 180000; assert.equal(s.snapshot('caster').state.blueScore, 1);
   apply(s, { type: 'reset_match' }); assert.equal(s.snapshot('caster').state.blueScore, 1);
   now += 180000; assert.equal(s.snapshot('caster').state.blueScore, 0);
@@ -219,4 +222,85 @@ test('empty bans do not consume heroes and are persisted in committed history', 
   apply(s, { type: 'commit_game' });
   assert.equal(s.data.state.draftHistory[0].blueBans?.[0], null);
   assert.equal(s.data.state.draftHistory[0].redBans?.[0], firstHero);
+});
+
+
+test('reset match clears progress while preserving tournament configuration', () => {
+  const s=new Store();
+  const settings={
+    ...initialState(),
+    stage:'Championship Sunday',
+    seriesFormat:'BO5' as const,
+    draftMode:'match' as const,
+    draftRuleMode:'global' as const,
+    firstPickSide:'red' as const,
+    sideSwapMode:'colorsOnly' as const,
+    language:'eng' as const,
+    overlayLayout:'side' as const,
+    scoreDisplay:'boxes' as const,
+    bpInputMode:'screen' as const,
+  };
+  apply(s,{type:'settings',settings});
+  pick(s,heroes[0].id);
+  apply(s,{type:'score',team:'blue',delta:1});
+  apply(s,{type:'reset_match'});
+
+  assert.equal(s.data.state.blueScore,0);
+  assert.equal(s.data.state.redScore,0);
+  assert.equal(s.data.state.gameNumber,1);
+  assert.equal(s.data.state.currentPhase,0);
+  assert.deepEqual(s.data.state.blueBans,[]);
+  assert.equal(s.data.state.stage,'Championship Sunday');
+  assert.equal(s.data.state.seriesFormat,'BO5');
+  assert.equal(s.data.state.draftRuleMode,'global');
+  assert.equal(s.data.state.firstPickSide,'red');
+  assert.equal(s.data.state.sideSwapMode,'colorsOnly');
+  assert.equal(s.data.state.language,'eng');
+  assert.equal(s.data.state.overlayLayout,'side');
+  assert.equal(s.data.state.scoreDisplay,'boxes');
+  assert.equal(s.data.state.bpInputMode,'screen');
+});
+
+test('hero data overrides can replace portrait/full-art sources without freezing unchanged baseline fields', () => {
+  const s=new Store();
+  const base=heroes[0];
+  apply(s,{
+    type:'hero_data_override',
+    heroId:base.id,
+    override:{
+      englishName:base.englishName,
+      chineseName:base.chineseName,
+      occupation:base.occupation,
+      altOccupation:base.altOccupation ?? '',
+      aliases:base.aliases ?? [],
+      imageLink:'/heroesImg/custom-test.png',
+      artLink:'https://example.com/hok-test-art.jpg',
+    },
+  });
+  assert.deepEqual(s.data.state.heroDataOverrides[String(base.id)],{
+    imageLink:'/heroesImg/custom-test.png',
+    artLink:'https://example.com/hok-test-art.jpg',
+  });
+
+  apply(s,{
+    type:'hero_data_override',
+    heroId:base.id,
+    override:{
+      englishName:base.englishName,
+      chineseName:base.chineseName,
+      occupation:base.occupation,
+      altOccupation:base.altOccupation ?? '',
+      aliases:base.aliases ?? [],
+      imageLink:base.imageLink,
+      artLink:base.artLink ?? '',
+    },
+  });
+  assert.equal(s.data.state.heroDataOverrides[String(base.id)],undefined);
+});
+
+test('hero source overrides reject unsafe URLs', () => {
+  const s=new Store();
+  const heroId=heroes[0].id;
+  assert.throws(()=>apply(s,{type:'hero_data_override',heroId,override:{imageLink:'http://example.com/icon.png'}}),/portraitInvalid/);
+  assert.throws(()=>apply(s,{type:'hero_data_override',heroId,override:{artLink:'https://example.com/bad path.jpg'}}),/portraitInvalid/);
 });
