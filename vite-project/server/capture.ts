@@ -4,10 +4,33 @@ import type { IncomingMessage } from 'node:http';
 import heroes from '../src/components/HeroList.js';
 import sharp from 'sharp';
 
-async function features(source: string | Buffer) {
-  const pixels: Buffer = await sharp(source).resize(32,32,{fit:'fill'}).toColourspace('srgb').removeAlpha().raw().toBuffer();
-  const mean=pixels.reduce((sum,n)=>sum+n,0)/pixels.length;
-  const values=Array.from(pixels,n=>n-mean), norm=Math.sqrt(values.reduce((sum,n)=>sum+n*n,0));
+type MatchShape = 'square' | 'circle';
+
+async function features(source: string | Buffer, shape:MatchShape='square') {
+  const size=32;
+  const pixels: Buffer = await sharp(source).resize(size,size,{fit:'fill'}).toColourspace('srgb').removeAlpha().raw().toBuffer();
+  const included:number[]=[];
+  for(let y=0;y<size;y++) for(let x=0;x<size;x++) {
+    const dx=(x+.5-size/2)/(size/2);
+    const dy=(y+.5-size/2)/(size/2);
+    if(shape==='circle' && dx*dx+dy*dy>1) continue;
+    const base=(y*size+x)*3;
+    included.push(pixels[base],pixels[base+1],pixels[base+2]);
+  }
+  const mean=included.reduce((sum,n)=>sum+n,0)/Math.max(included.length,1);
+  const values:number[]=[];
+  let cursor=0;
+  for(let y=0;y<size;y++) for(let x=0;x<size;x++) {
+    const dx=(x+.5-size/2)/(size/2);
+    const dy=(y+.5-size/2)/(size/2);
+    const inside=shape!=='circle'||dx*dx+dy*dy<=1;
+    const base=(y*size+x)*3;
+    for(let channel=0;channel<3;channel++) {
+      values.push(inside ? pixels[base+channel]-mean : 0);
+      if(inside) cursor++;
+    }
+  }
+  const norm=Math.sqrt(values.reduce((sum,n)=>sum+n*n,0));
   return values.map(n=>n/Math.max(norm,1));
 }
 
@@ -47,10 +70,10 @@ export async function lockCueFingerprint(source: Buffer) {
   });
 }
 
-async function captureFeatureVariants(source: Buffer) {
+async function captureFeatureVariants(source: Buffer, shape:MatchShape='square') {
   const meta=await sharp(source).metadata();
   const width=meta.width||0, height=meta.height||0;
-  if(width<8||height<8) return [await features(source)];
+  if(width<8||height<8) return [await features(source,shape)];
 
   const minSide=Math.min(width,height);
   const specs:{scale:number;dx:number;dy:number}[]=[
@@ -74,28 +97,33 @@ async function captureFeatureVariants(source: Buffer) {
     const centerY=height/2 + spec.dy*Math.max(0,height-side);
     const left=Math.max(0,Math.min(width-side,Math.round(centerX-side/2)));
     const top=Math.max(0,Math.min(height-side,Math.round(centerY-side/2)));
-    variants.push(await features(await sharp(source).extract({left,top,width:side,height:side}).toBuffer()));
+    variants.push(await features(await sharp(source).extract({left,top,width:side,height:side}).toBuffer(),shape));
   }
   return variants;
 }
 
-let templates: Promise<{heroId:number; values:number[]}[]> | undefined;
-export async function recognizeImage(buffer: Buffer, allowedHeroIds?: number[]) {
-  templates ??= Promise.all(heroes.map(async h=>({heroId:h.id,values:await features(fileURLToPath(new URL(`../public${h.imageLink}`,import.meta.url)))}))).catch(error=>{templates=undefined;throw error;});
-  const variants=await captureFeatureVariants(buffer);
+let templates: Promise<{heroId:number; square:number[]; circle:number[]}[]> | undefined;
+export async function recognizeImage(buffer: Buffer, allowedHeroIds?: number[], shape:MatchShape='square') {
+  templates ??= Promise.all(heroes.map(async h=>{
+    const source=fileURLToPath(new URL(`../public${h.imageLink}`,import.meta.url));
+    const [square,circle]=await Promise.all([features(source,'square'),features(source,'circle')]);
+    return {heroId:h.id,square,circle};
+  })).catch(error=>{templates=undefined;throw error;});
+  const variants=await captureFeatureVariants(buffer,shape);
   const allowed = allowedHeroIds?.length ? new Set(allowedHeroIds) : undefined;
   return (await templates)
     .filter(hero => !allowed || allowed.has(hero.heroId))
     .map(hero=>{
       let confidence=0;
+      const template=shape==='circle'?hero.circle:hero.square;
       for(const values of variants){
-        const score=hero.values.reduce((sum,n,i)=>sum+n*values[i],0);
+        const score=template.reduce((sum,n,i)=>sum+n*values[i],0);
         if(score>confidence) confidence=score;
       }
       return {heroId:hero.heroId,confidence:Math.max(0,Math.min(1,confidence))};
     })
     .sort((a,b)=>b.confidence-a.confidence)
-    .slice(0,3);
+    .slice(0,5);
 }
 
 export function localCaptureRequest(req: Pick<IncomingMessage, 'headers' | 'socket'>) {
@@ -171,13 +199,17 @@ export function decodeClientCapture(value: unknown) {
   return buffer;
 }
 
-export async function recognizeClientFrame(value: unknown) {
+export async function recognizeClientFrame(value: unknown, allowedHeroIds?: unknown, shape:unknown='square') {
   const buffer=decodeClientCapture(value);
+  const allowed=Array.isArray(allowedHeroIds)
+    ? allowedHeroIds.filter((id):id is number=>Number.isInteger(id)&&heroes.some(hero=>hero.id===id)).slice(0,10)
+    : undefined;
+  const matchShape:MatchShape=shape==='circle'?'circle':'square';
   return {
     preview:value as string,
     fingerprint:await frameFingerprint(buffer),
     lockFingerprint:await lockCueFingerprint(buffer),
     meanLuma:await frameMeanLuma(buffer),
-    candidates:await recognizeImage(buffer),
+    candidates:await recognizeImage(buffer,allowed,matchShape),
   };
 }
