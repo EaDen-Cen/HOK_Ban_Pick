@@ -641,29 +641,13 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       busyRef.current=false;
       if(mounted.current) setBusy(false);
     }
-  },[captureMode,captureSlotLabel,captureWindowFrame,disabled,label,nativeRegion,nextTurnProbe,phase,phaseKey,recognizeWindowRegion,revision,state.committedGameId,t,token,turnTargets,zh]);
+  },[captureSlotLabel,disabled,label,nextOpponentPickProbe,phase,phaseKey,recognizeWindowRegion,state.committedGameId,t,target,turnTargets,useHighlightRelease,zh]);
 
   useEffect(()=>{
-    if(!autoWatch||result||disabled||!phase||state.committedGameId||busy) return;
-    if(captureMode==='window'&&!videoReady) return;
+    if(!autoWatch||result||disabled||!phase||state.committedGameId||busy||!videoReady) return;
     const timer=setTimeout(()=>{void capture();},350);
     return()=>clearTimeout(timer);
-  },[autoWatch,busy,capture,captureMode,disabled,phase,result,state.committedGameId,videoReady]);
-
-  const setMode=(mode:CaptureMode)=>{
-    setCaptureMode(mode);
-    localStorage.setItem('hok-capture-mode',mode);
-    emptyStability.current=freshEmptyStability();
-    heroStability.current=freshHeroStability();
-    heroLockStability.current=freshHeroLockStability();
-    pickSlotStability.current={};
-    nextTurnStability.current=freshHeroStability();
-    pickTurnDimState.current=freshPickTurnDimState();
-    setResult(undefined);
-    setGroupSelected({});
-    setMessage('');
-    setCandidateStatus('');
-  };
+  },[autoWatch,busy,capture,disabled,phase,result,state.committedGameId,videoReady]);
 
   const pointerDown=(event:React.PointerEvent<HTMLDivElement>)=>{
     if(!calibratingSlot||!videoReady) return;
@@ -750,13 +734,9 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         <h2>{zh?'自动 BP · 屏幕识别':'Auto BP · screen recognition'}</h2>
         <p>{t('captureExplicitSlotsHint')}</p>
       </div>
-      <div className="capture-mode-switch" role="group" aria-label={t('captureSource')}>
-        <button type="button" className={captureMode==='window'?'selected':''} onClick={()=>setMode('window')}>{t('windowCaptureMode')}</button>
-        <button type="button" className={captureMode==='native'?'selected':''} onClick={()=>setMode('native')}>{t('nativeCaptureMode')}</button>
-      </div>
     </div>
 
-    {captureMode==='window'?<div className="window-capture">
+    <div className="window-capture">
       <div className="window-capture-toolbar">
         <button type="button" className="primary" disabled={disabled} onClick={()=>void connectWindow()}>{videoReady?t('windowCaptureChange'):t('windowCaptureChoose')}</button>
         {videoReady&&<button type="button" onClick={stopWindowCapture}>{t('windowCaptureDisconnect')}</button>}
@@ -851,11 +831,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       </div>
 
       <p className="muted">{videoReady&&windowInfo?`${windowInfo.width}×${windowInfo.height} · ${windowInfo.surface} · ${t('windowCaptureRelativeHint')}`:t('windowCaptureRelativeHint')}</p>
-    </div>:<details className="native-capture-settings" open>
-      <summary>{t('nativeCaptureAdvanced')}</summary>
-      <p className="muted">{t('nativeCaptureHint')}</p>
-      <div className="capture-region">{(['x','y','width','height'] as const).map(key=><label key={key}>{key}<input type="number" value={nativeRegion[key]} onChange={event=>setNativeRegion({...nativeRegion,[key]:Number(event.target.value)})}/></label>)}</div>
-    </details>}
+    </div>
 
     <div className="capture-live-status">
       <div><span>{t('capturePhaseLabel')}</span><strong>{phaseName(state)}</strong></div>
@@ -871,14 +847,14 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     </div>
 
     <div className="screen-input-actions">
-      <button disabled={disabled||busy||!phase||!!state.committedGameId||(captureMode==='window'&&!videoReady)} onClick={()=>void capture()}>{busy?(zh?'正在识别…':'Recognizing…'):t('captureNow')}</button>
+      <button disabled={disabled||busy||!phase||!!state.committedGameId||!videoReady} onClick={()=>void capture()}>{busy?(zh?'正在识别…':'Recognizing…'):t('captureNow')}</button>
       {phase?.action==='ban'&&<button className="empty-ban-button" disabled={disabled||!!state.committedGameId} onClick={()=>send({type:'skip_ban',team:phase.team})}>{t('emptyBanButton')}</button>}
       <label className="auto-watch-toggle"><input type="checkbox" checked={autoWatch} onChange={event=>{
         setAutoWatch(event.target.checked);
         localStorage.setItem('hok-capture-auto-watch',event.target.checked?'1':'0');
       }}/>{t('autoCaptureWatch')}</label>
     </div>
-    <small>{captureMode==='window'?t('captureExplicitAutoHint'):t('autoCaptureWatchHint')}</small>
+    <small>{t('captureExplicitAutoHint')}</small>
     <p role="status">{message}</p>
 
     {result&&<dialog ref={dialog} className="library-dialog capture-review" aria-label={result.kind==='empty-ban'?t('emptyBanReviewTitle'):(zh?'确认识别结果':'Review recognition')} onCancel={event=>{event.preventDefault();closeReview();}}>
@@ -889,7 +865,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         <img src={result.preview} alt={zh?'当前槽位截图':'Current slot capture'}/>
       </>:result.kind==='pick-group'?<>
         <h2>{zh?(result.entries.length>1?'确认同时选人结果':'确认 Pick 结果'):(result.entries.length>1?'Review simultaneous picks':'Review pick')}</h2>
-        <p>{zh?'检测到下一轮已经开始（或最后一手已变暗），因此当前 Pick 组视为已锁定。':'The next turn started (or the final slot dimmed), so the current pick turn is treated as locked.'}</p>
+        <p>{zh?'普通 Pick 只在检测到对手下一个 Pick 位真正出现预选英雄后视为锁定；轮次边界和最后一手则检测选角高亮恢复到正常亮度。':'Normal Picks lock only after the opponent next Pick slot visibly starts preselecting; round boundaries and the final pick use the active-row highlight returning to normal.'}</p>
         <div className="pick-group-review">
           {result.entries.map(entry=><div className="pick-group-review-entry" key={entry.key}>
             <strong>{captureSlotLabel(entry.key)}</strong>
