@@ -17,16 +17,15 @@ npm run build
 npm run server
 ```
 
-打开以下本地地址。`#token=` 是本机开发凭据，生产环境必须更换：
+打开以下本地地址：
 
-- 操作台：http://127.0.0.1:3001/control#token=local-control
-- 解说台：http://127.0.0.1:3001/caster#token=local-caster
-- OBS：http://127.0.0.1:3001/overlay/draft#token=local-overlay
+- 操作台：http://127.0.0.1:3001/control
+- 解说台：http://127.0.0.1:3001/caster
+- OBS：http://127.0.0.1:3001/overlay/draft
 
-开发热更新：另一个终端运行 `npm run dev`，打开 http://localhost:5173/control。
-Vite 转发 `/api` 与 `/ws` 到 3001 端口；开发模式前端自动使用上述本地凭据。
-生产构建不会内置这些凭据。前端默认同域连接，跨域地址可通过 `.env` 中的
-`VITE_API_URL` 与 `VITE_WS_URL` 配置，并在更改后重新构建。
+通过 `localhost` / `127.0.0.1` / `::1` 打开的 loopback 页面自动信任，不需要密码。远程访问没有内置默认口令；在本机 Control 的 **远程访问密码** 面板分别设置 Control、Caster、Overlay 密码。
+
+开发热更新：另一个终端运行 `npm run dev`，打开 http://localhost:5173/control。Vite 转发 `/api` 与 `/ws` 到 3001 端口，本机仍按 loopback 信任。前端默认同域连接；只有前后端刻意分开部署时才使用 `VITE_API_URL` 与 `VITE_WS_URL`。
 
 ## 三端操作
 
