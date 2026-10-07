@@ -35,3 +35,10 @@ linear-gradient(90deg,rgba(4,44,84,.95) 0,rgba(15,65,112,.65) 17%,transparent 39
 
 @media(max-width:1100px){.sim-control-grid.separated{grid-template-columns:repeat(3,minmax(150px,1fr))}.sim-swap-row{grid-template-columns:1fr 1fr}.sim-swap-arrow{display:none}.sim-current-hero-control{grid-template-columns:1fr 1fr}.sim-current-hero-control label{grid-column:1/-1}}
 @media(max-width:720px){.bp-simulator-control-page{padding:12px}.sim-control-page-header{align-items:flex-start;flex-direction:column}.sim-control-grid.separated{grid-template-columns:1fr 1fr}.sim-roster-editors{grid-template-columns:1fr}.sim-current-hero-control,.sim-swap-row{grid-template-columns:1fr}.sim-pick-column{width:26%}.sim-game-center{left:29%;right:29%}}
+
+.sim-player-row.locked{filter:brightness(.58) saturate(.72);background:rgba(5,9,16,.28)}
+.sim-player-row.locked .sim-pick-avatar{box-shadow:inset 0 0 26px rgba(0,0,0,.45),0 0 0 1px rgba(0,0,0,.45)}
+.sim-current-pick-group{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr)) auto auto;gap:10px;align-items:end}
+.sim-current-pick-group label{display:grid;gap:6px;font-size:11px;color:#9db0c7}
+.sim-current-pick-group select{width:100%}
+@media(max-width:900px){.sim-current-pick-group{grid-template-columns:1fr 1fr}.sim-current-pick-group button{width:100%}}
