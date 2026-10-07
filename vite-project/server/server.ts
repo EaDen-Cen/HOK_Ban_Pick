@@ -65,6 +65,21 @@ const server = createServer(async (req, res) => {
       }
       return;
     }
+    if (url.pathname === '/api/recognition/providers') {
+      if(req.method!=='GET'){json(405,{error:'GET required'});return;}
+      if(roleForRequest(req,'control')!=='control'){json(401,{error:'Control only'});return;}
+      json(200,{
+        apiVersion:1,
+        activeProvider:'template-v1',
+        providers:[{
+          id:'template-v1',
+          kind:'local-template',
+          shapes:['square','circle'],
+          externalNetwork:false,
+        }],
+      });
+      return;
+    }
     if (url.pathname === '/api/recognize-frame') {
       if (req.method !== 'POST') { json(405,{error:'POST required'}); return; }
       if (roleForRequest(req,'control') !== 'control') { json(403,{error:'Control only'}); req.resume(); return; }
@@ -77,6 +92,7 @@ const server = createServer(async (req, res) => {
           chunks.push(chunk);
         }
         const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        if(input.provider!==undefined&&input.provider!=='template-v1'){ json(400,{error:'Unsupported recognition provider'}); return; }
         if(input.revision!==store.data.revision){ json(409,{error:'Stale capture'}); return; }
         const result=await recognizeClientFrame(input.image,input.allowedHeroIds,input.shape);
         if(input.revision!==store.data.revision){ json(409,{error:'State changed during capture'}); return; }
