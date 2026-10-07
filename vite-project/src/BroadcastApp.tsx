@@ -104,6 +104,8 @@ const settingsFromState = (state: MatchState): MatchSettings => ({
   overlayLayout: state.overlayLayout,
   scoreDisplay: state.scoreDisplay,
   bpInputMode: state.bpInputMode,
+  screenAutoSubmitEnabled: state.screenAutoSubmitEnabled,
+  screenAutoSubmitConfidence: state.screenAutoSubmitConfidence,
   showHeroName: state.showHeroName,
   artSourceMode: state.artSourceMode,
 });
@@ -154,6 +156,26 @@ function MatchSettingsPanel({ state, send, disabled }: { state: MatchState; send
         </select><small>{t('languageHint')}</small></label>
         <label>{t('scoreDisplay')}<select value={form.scoreDisplay || 'number'} onChange={e => setForm({ ...form, scoreDisplay: e.target.value as MatchSettings['scoreDisplay'] })}><option value="number">{t('scoreNumber')}</option><option value="boxes">{t('scoreBoxes')}</option></select></label>
         <label>{t('bpInputMode')}<select value={form.bpInputMode || 'manual'} onChange={e => setForm({ ...form, bpInputMode: e.target.value as MatchSettings['bpInputMode'] })}><option value="manual">{t('manualInput')}</option><option value="screen">{t('screenInput')}</option></select></label>
+        {form.bpInputMode==='screen'&&<details className="settings-advanced">
+          <summary>{t('screenRecognitionAdvanced')}</summary>
+          <label className="settings-checkbox">
+            <span>{t('screenAutoSubmit')}</span>
+            <input type="checkbox" checked={form.screenAutoSubmitEnabled} onChange={e=>setForm({...form,screenAutoSubmitEnabled:e.target.checked})}/>
+            <small>{t('screenAutoSubmitHint')}</small>
+          </label>
+          <label>{t('screenAutoSubmitThreshold')}
+            <input
+              type="range"
+              min={50}
+              max={100}
+              step={1}
+              disabled={!form.screenAutoSubmitEnabled}
+              value={Math.round(form.screenAutoSubmitConfidence*100)}
+              onChange={e=>setForm({...form,screenAutoSubmitConfidence:Number(e.target.value)/100})}
+            />
+            <small>{Math.round(form.screenAutoSubmitConfidence*100)}% · {t('screenAutoSubmitThresholdHint')}</small>
+          </label>
+        </details>}
         <label>{t('overlayLayout')}<select value={form.overlayLayout} onChange={e => setForm({ ...form, overlayLayout: e.target.value as MatchSettings['overlayLayout'] })}>
           <option value="panel">{t('panelLayout')}</option><option value="side">{t('sideLayout')}</option>
         </select></label>
@@ -286,7 +308,7 @@ export default function BroadcastApp() {
           </section>
 
           <DraftLifecycle state={state} send={send} disabled={disabled} />
-          {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><MatchSettingsPanel key={JSON.stringify([state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode, state.showHeroName, state.artSourceMode])} state={state} send={send} disabled={disabled} /></SettingsDialog>}
+          {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><MatchSettingsPanel key={JSON.stringify([state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode, state.screenAutoSubmitEnabled, state.screenAutoSubmitConfidence, state.showHeroName, state.artSourceMode])} state={state} send={send} disabled={disabled} /></SettingsDialog>}
           <LineupAssignments state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />
         </>}>
           {state.bpInputMode === 'screen'
