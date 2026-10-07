@@ -103,7 +103,7 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname === '/api/capture-lineup') {
       if (req.method !== 'POST') { json(405, {error:'POST required'}); return; }
-      if (roleFor(req.headers.authorization?.replace(/^Bearer /, '')) !== 'control' || !localCaptureRequest(req)) { json(403,{error:'Local control only'}); req.resume(); return; }
+      if (roleForRequest(req,'control') !== 'control' || !localCaptureRequest(req)) { json(403,{error:'Local control only'}); req.resume(); return; }
       if (process.platform !== 'win32' || process.env.HOK_CAPTURE_ENABLED !== '1' || store.data.state.bpInputMode !== 'screen') { json(503,{error:'Windows capture is not enabled'}); req.resume(); return; }
       if (!store.data.state.draftComplete || store.data.state.committedGameId) { json(409,{error:'Lineup sync requires a completed uncommitted draft'}); req.resume(); return; }
       try {
@@ -164,7 +164,7 @@ const server = createServer(async (req, res) => {
     if (url.pathname === '/api/health') { json(200, { ok: true }); return; }
     if (url.pathname.startsWith('/api/')) {
       const role = roleForRequest(req);
-      if (!role) { json(401, { error: '访问口令缺失或无效，请重新输入' }); return; }
+      if (!role) { const hinted=roleHint(req.headers['x-hok-role']); json(401, { error: access.configured(hinted) ? '访问口令缺失或无效，请重新输入' : '远程访问密码尚未配置，请先在本机 Control 中设置' }); return; }
       if (url.pathname === '/api/match') json(200, store.snapshot(role));
       else if (url.pathname === '/api/heroes') json(200, heroes);
       else json(404, { error: '找不到请求的内容' });
