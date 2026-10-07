@@ -5,7 +5,7 @@
 | 类别 | 入口 | 用途 |
 | --- | --- | --- |
 | 当前操作 | [新手上手](guides/beginner-guide.md)、[运行指南](guides/getting-started.md)、[操作指南](guides/operator-guide.md)、[Auto BP](guides/screen-recognition.md)、[Windows 启动器](guides/windows-launcher.md) | 第一次使用、安装部署、现场操作与屏幕识别 |
-| 当前设计 | [系统结构](design/architecture.md) | 代码职责、状态流与存储边界 |
+| 当前设计 | [系统结构](design/architecture.md)、[API 与扩展接口](design/api.md) | 代码职责、状态流、鉴权、识别 provider 与未来扩展边界 |
 | 发布说明 | [v1.0.0](releases/v1.0.0.md) | 正式版本功能、升级和已知边界 |
 | 验证记录 | [历次验证](validation/history.md) | 按日期/版本保留结果和未验收范围 |
 | 研究资料 | [研究索引](research/README.md)、[英雄自动同步](research/hero-sync.md) | 英雄核查、自动同步与原始 JSON 证据 |
