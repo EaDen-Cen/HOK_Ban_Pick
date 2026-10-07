@@ -10,6 +10,7 @@ const messages = {
   heroSortDataCoverage: {zh:'该排序已有 {known}/{total} 位英雄的数据；缺失数据的英雄会排在已知数据之后。',eng:'This sort has data for {known}/{total} heroes; heroes with missing data are placed after known values.'},
   heroImageSettings: {zh:'英雄数据与图片',eng:'Hero data & artwork'},
   heroDataSettings: {zh:'英雄数据',eng:'Hero data'},
+  heroAdvancedData: {zh:'高级英雄数据',eng:'Advanced hero data'},
   heroEnglishName: {zh:'英文名',eng:'English name'},
   heroChineseName: {zh:'中文名',eng:'Chinese name'},
   heroPrimaryLane: {zh:'主分路',eng:'Primary lane'},
