@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import './broadcast.css';
 import './BroadcastApp.css';
 import { heroForState } from './shared/heroData';
@@ -247,15 +247,11 @@ function AccessSettingsPanel({
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
 
-  const headers=()=>{
-    const value:Record<string,string>={'Content-Type':'application/json','X-HOK-Role':'control'};
-    if(token) value.Authorization=`Bearer ${token}`;
-    return value;
-  };
-
   useEffect(()=>{
     let stopped=false;
-    void fetch('/api/access-config',{headers:headers(),cache:'no-store'})
+    const headers:Record<string,string>={'X-HOK-Role':'control'};
+    if(token) headers.Authorization=`Bearer ${token}`;
+    void fetch('/api/access-config',{headers,cache:'no-store'})
       .then(async response=>{
         if(!response.ok) throw new Error(t('accessSettingsLoadFailed'));
         return await response.json();
@@ -265,7 +261,7 @@ function AccessSettingsPanel({
     return()=>{stopped=true;};
   },[token,lang]);
 
-  const save=async(event:React.FormEvent)=>{
+  const save=async(event:FormEvent)=>{
     event.preventDefault();
     const update=Object.fromEntries((['control','caster','overlay'] as Role[])
       .filter(role=>passwords[role])
@@ -274,9 +270,11 @@ function AccessSettingsPanel({
     setBusy(true);
     setMessage('');
     try{
+      const headers:Record<string,string>={'Content-Type':'application/json','X-HOK-Role':'control'};
+      if(token) headers.Authorization=`Bearer ${token}`;
       const response=await fetch('/api/access-config',{
         method:'POST',
-        headers:headers(),
+        headers,
         body:JSON.stringify(update),
       });
       const data=await response.json().catch(()=>({}));
