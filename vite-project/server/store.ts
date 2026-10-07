@@ -60,6 +60,8 @@ function casterViewState(current: MatchState, delayed?: MatchState): MatchState 
   view.overlayLayout = current.overlayLayout;
   view.scoreDisplay = current.scoreDisplay;
   view.bpInputMode = current.bpInputMode;
+  view.screenAutoSubmitEnabled = current.screenAutoSubmitEnabled;
+  view.screenAutoSubmitConfidence = current.screenAutoSubmitConfidence;
   view.showHeroName = current.showHeroName;
   view.artSourceMode = current.artSourceMode;
   view.heroArtOverrides = copy(current.heroArtOverrides || {});
@@ -311,6 +313,8 @@ export class Store {
       reset.overlayLayout = state.overlayLayout;
       reset.scoreDisplay = state.scoreDisplay;
       reset.bpInputMode = state.bpInputMode;
+      reset.screenAutoSubmitEnabled = state.screenAutoSubmitEnabled;
+      reset.screenAutoSubmitConfidence = state.screenAutoSubmitConfidence;
 
       reset.heroArtOverrides = copy(state.heroArtOverrides || {});
       reset.heroDataOverrides = copy(state.heroDataOverrides || {});
@@ -332,6 +336,11 @@ export class Store {
         !['panel', 'side'].includes(s.overlayLayout) ||
         !['number', 'boxes'].includes(s.scoreDisplay ?? state.scoreDisplay ?? 'number') ||
         !['manual', 'screen'].includes(s.bpInputMode ?? state.bpInputMode ?? 'manual') ||
+        typeof (s.screenAutoSubmitEnabled ?? state.screenAutoSubmitEnabled) !== 'boolean' ||
+        typeof (s.screenAutoSubmitConfidence ?? state.screenAutoSubmitConfidence) !== 'number' ||
+        !Number.isFinite(s.screenAutoSubmitConfidence ?? state.screenAutoSubmitConfidence) ||
+        (s.screenAutoSubmitConfidence ?? state.screenAutoSubmitConfidence) < .5 ||
+        (s.screenAutoSubmitConfidence ?? state.screenAutoSubmitConfidence) > 1 ||
         typeof (s.showHeroName ?? state.showHeroName) !== 'boolean' ||
         typeof (s.flowbornFormsIndependent ?? state.flowbornFormsIndependent) !== 'boolean' ||
         !['auto', 'legacy'].includes(s.artSourceMode ?? state.artSourceMode ?? 'auto')
@@ -428,6 +437,8 @@ export class Store {
         overlayLayout: s.overlayLayout,
         scoreDisplay: s.scoreDisplay ?? state.scoreDisplay ?? 'number',
         bpInputMode: s.bpInputMode ?? state.bpInputMode ?? 'manual',
+        screenAutoSubmitEnabled: s.screenAutoSubmitEnabled ?? state.screenAutoSubmitEnabled ?? false,
+        screenAutoSubmitConfidence: s.screenAutoSubmitConfidence ?? state.screenAutoSubmitConfidence ?? .9,
         showHeroName: s.showHeroName ?? state.showHeroName ?? true,
         artSourceMode: s.artSourceMode ?? state.artSourceMode ?? 'auto',
 
