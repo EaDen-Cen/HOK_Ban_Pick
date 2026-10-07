@@ -305,3 +305,47 @@ test('hero source overrides reject unsafe URLs', () => {
   assert.throws(()=>apply(s,{type:'hero_data_override',heroId,override:{imageLink:'http://example.com/icon.png'}}),/portraitInvalid/);
   assert.throws(()=>apply(s,{type:'hero_data_override',heroId,override:{artLink:'https://example.com/bad path.jpg'}}),/portraitInvalid/);
 });
+
+
+test('simultaneous pick group advances both HOK pick slots atomically and undoes as one action',()=>{
+  const s=new Store();
+  const used=new Set<number>();
+  const nextHero=()=>{
+    const hero=heroes.find(item=>!used.has(item.id))!;
+    used.add(hero.id);
+    return hero.id;
+  };
+
+  while(s.data.state.currentPhase<5) pick(s,nextHero());
+  assert.equal(s.data.state.currentPhase,5);
+  assert.equal(phases('match')[5].team,'red');
+  assert.equal(phases('match')[6].team,'red');
+
+  const first=nextHero(), second=nextHero();
+  apply(s,{type:'draft_pick_group',team:'red',heroIds:[first,second]});
+  assert.equal(s.data.state.currentPhase,7);
+  assert.deepEqual(s.data.state.redPicks,[first,second]);
+  assert.equal(s.data.state.redAssignments[0],first);
+  assert.equal(s.data.state.redAssignments[1],second);
+
+  apply(s,{type:'undo'});
+  assert.equal(s.data.state.currentPhase,5);
+  assert.deepEqual(s.data.state.redPicks,[]);
+  assert.equal(s.data.state.redAssignments[0],null);
+  assert.equal(s.data.state.redAssignments[1],null);
+});
+
+test('simultaneous pick group rejects wrong group size and duplicate heroes',()=>{
+  const s=new Store();
+  const used=new Set<number>();
+  const nextHero=()=>{
+    const hero=heroes.find(item=>!used.has(item.id))!;
+    used.add(hero.id);
+    return hero.id;
+  };
+  while(s.data.state.currentPhase<5) pick(s,nextHero());
+  const hero=nextHero();
+  assert.throws(()=>apply(s,{type:'draft_pick_group',team:'red',heroIds:[hero]}),/pickGroupInvalid/);
+  assert.throws(()=>apply(s,{type:'draft_pick_group',team:'red',heroIds:[hero,hero]}));
+  assert.equal(s.data.state.currentPhase,5);
+});
