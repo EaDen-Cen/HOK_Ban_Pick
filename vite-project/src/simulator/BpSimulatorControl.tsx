@@ -308,7 +308,7 @@ export function BpSimulatorControl() {
         <button onClick={randomizeCurrent} disabled={!activeKeys.length||activeLocked}>随机当前组预选</button>
         <button onClick={randomizeAll}>随机全部英雄</button>
       </div>
-      <p className="sim-control-note">双选阶段会同时显示两个可编辑 Pick 位。当前选手行在选角时会发亮；点击“锁定当前组”后只会恢复到普通亮度，不会额外变暗。普通 Pick 的 Auto BP 只应在对手下一个 Pick 位真正出现预选英雄后确认上一组锁定；轮次边界和最后一手则测试“高亮恢复”。</p>
+      <p className="sim-control-note">双选阶段可同时编辑两个 Pick 位；锁定当前组后即可推进到下一轮。</p>
     </section>
 
     <section className="sim-control-panel">
@@ -333,7 +333,7 @@ export function BpSimulatorControl() {
         </label>
         <button onClick={swapPicks} disabled={swapA===swapB}>立即交换英雄</button>
       </div>
-      <p className="sim-control-note">交换只改变两个玩家槽里的英雄，不解除锁定，也不会推进 BP phase，适合在 BP 完成后测试最终阵容 / 换英雄检测。</p>
+      <p className="sim-control-note">交换只改变最终玩家槽的英雄，不改写 BP 历史。</p>
     </section>
 
     <section className="sim-control-panel">
