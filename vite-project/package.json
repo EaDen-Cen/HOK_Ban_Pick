@@ -15,7 +15,8 @@
     "hero:art-audit": "tsx scripts/hero-sync/auditArt.ts",
     "hero:sync": "tsx scripts/hero-sync/sync.ts --update",
     "hero:validate": "tsx scripts/hero-sync/validate.ts",
-    "simulator": "vite --open /tools/bp-simulator"
+    "simulator": "vite --open /tools/bp-simulator-control",
+    "simulator:stage": "vite --open /tools/bp-simulator"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -34,7 +35,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.39.5",
-    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-hooks": "^6.1.1",
     "eslint-plugin-react-refresh": "^0.4.13",
     "globals": "^15.11.0",
     "postcss": "^8.4.47",
