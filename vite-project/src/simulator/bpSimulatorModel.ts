@@ -7,6 +7,13 @@ export interface SimulatorPhaseSlot {
   phaseIndex: number;
 }
 
+export const simulatorAllSlotKeys = [
+  'blueBan1','blueBan2','blueBan3','blueBan4',
+  'redBan1','redBan2','redBan3','redBan4',
+  'bluePick1','bluePick2','bluePick3','bluePick4','bluePick5',
+  'redPick1','redPick2','redPick3','redPick4','redPick5',
+] as const;
+
 export function simulatorSlotForPhase(
   mode: MatchState['draftMode'],
   firstPickSide: Side,
@@ -24,6 +31,32 @@ export function simulatorSlotForPhase(
 
 export function simulatorSlotKey(slot:SimulatorPhaseSlot) {
   return `${slot.side}${slot.action==='ban'?'Ban':'Pick'}${slot.slotIndex+1}`;
+}
+
+/**
+ * Physical left-to-right order on the screen.
+ * Blue fills B1 -> B4 from left to right. Red is axis-mirrored, so B1 is
+ * physically the right-most circle and the visible order is B4 -> B1.
+ */
+export function simulatorBanVisualKeys(side:Side) {
+  const keys=Array.from({length:4},(_,index)=>`${side}Ban${index+1}`);
+  return side==='blue'?keys:keys.reverse();
+}
+
+export function swapSimulatorPickHeroes(
+  assignments:Record<string,number>,
+  side:Side,
+  firstIndex:number,
+  secondIndex:number,
+) {
+  if(firstIndex===secondIndex) return {...assignments};
+  const firstKey=`${side}Pick${firstIndex+1}`;
+  const secondKey=`${side}Pick${secondIndex+1}`;
+  return {
+    ...assignments,
+    [firstKey]:assignments[secondKey],
+    [secondKey]:assignments[firstKey],
+  };
 }
 
 export function completedSimulatorSlots(
