@@ -184,7 +184,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     if(!context) return '';
     context.imageSmoothingEnabled=false;
     context.drawImage(video,pixels.x,pixels.y,pixels.width,pixels.height,0,0,canvas.width,canvas.height);
-    return canvas.toDataURL('image/png');
+    return canvas.toDataURL('image/jpeg',.94);
   },[videoReady]);
 
   const persistCalibrationSlot=useCallback((key:CaptureSlotKey,region:NormalizedCaptureRegion)=>{
@@ -507,7 +507,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       pixels.x,pixels.y,pixels.width,pixels.height,
       0,0,canvas.width,canvas.height,
     );
-    return canvas.toDataURL('image/png');
+    return canvas.toDataURL('image/jpeg',.94);
   },[target?.region,t,videoReady]);
 
   const recognizeWindowRegion=useCallback(async(
