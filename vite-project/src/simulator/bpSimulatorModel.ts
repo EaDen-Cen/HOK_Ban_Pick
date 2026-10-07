@@ -1,4 +1,6 @@
-import { phases, type MatchState, type Side } from '../shared/types.js';
+import heroes from '../components/HeroList.js';
+import { initialState, phases, type MatchState, type Side } from '../shared/types.js';
+import { draftHeroUsed, draftRestriction, normalizeState } from '../shared/draftRules.js';
 import { draftTurnAtPhase, previousDraftTurnStart } from '../shared/draftTurns.js';
 
 export interface SimulatorPhaseSlot {
@@ -71,6 +73,104 @@ export function simulatorSlotKey(slot:SimulatorPhaseSlot) {
 export function simulatorBanVisualKeys(side:Side) {
   const keys=Array.from({length:4},(_,index)=>`${side}Ban${index+1}`);
   return side==='blue'?keys:keys.reverse();
+}
+
+export interface SimulatorRuleSnapshot {
+  mode: MatchState['draftMode'];
+  firstPickSide: Side;
+  phaseIndex: number;
+  slotHeroes: Record<string,number>;
+  emptyBans: string[];
+}
+
+export function simulatorRuleState(
+  simulator: SimulatorRuleSnapshot,
+  baseState?: MatchState,
+  throughPhase = simulator.phaseIndex,
+) {
+  const state=normalizeState(baseState ? structuredClone(baseState) : initialState());
+  state.draftMode=simulator.mode;
+  state.firstPickSide=simulator.firstPickSide;
+  state.currentPhase=0;
+  state.draftComplete=false;
+  state.committedGameId=null;
+  state.draftGameNumber=state.gameNumber;
+  state.blueBans=[];
+  state.redBans=[];
+  state.bluePicks=[];
+  state.redPicks=[];
+  state.blueAssignments=[null,null,null,null,null];
+  state.redAssignments=[null,null,null,null,null];
+
+  const sequence=phases(simulator.mode,simulator.firstPickSide);
+  for(let index=0;index<Math.min(throughPhase,sequence.length);index++){
+    const slot=simulatorSlotForPhase(simulator.mode,simulator.firstPickSide,index);
+    if(!slot) continue;
+    const key=simulatorSlotKey(slot);
+    if(slot.action==='ban'){
+      state[`${slot.side}Bans`].push(simulator.emptyBans.includes(key)?null:simulator.slotHeroes[key]);
+    }else{
+      const heroId=simulator.slotHeroes[key];
+      state[`${slot.side}Picks`].push(heroId);
+      state[`${slot.side}Assignments`][state[`${slot.side}Picks`].length-1]=heroId;
+    }
+    state.currentPhase=index+1;
+  }
+  return state;
+}
+
+function shuffledHeroIds(random:()=>number) {
+  return heroes.map(hero=>hero.id)
+    .map(id=>({id,key:random()}))
+    .sort((a,b)=>a.key-b.key)
+    .map(item=>item.id);
+}
+
+export function randomLegalHeroesForSimulatorTurn(
+  simulator: SimulatorRuleSnapshot,
+  baseState?: MatchState,
+  random:()=>number=Math.random,
+) {
+  const slots=simulatorSlotsForTurn(simulator.mode,simulator.firstPickSide,simulator.phaseIndex);
+  const state=simulatorRuleState(simulator,baseState);
+  const result:Record<string,number>={};
+  for(const slot of slots){
+    const key=simulatorSlotKey(slot);
+    const heroId=shuffledHeroIds(random).find(id=>
+      !draftHeroUsed(state,id)
+      && !draftRestriction(state,slot.side,slot.action,id));
+    if(heroId===undefined) continue;
+    result[key]=heroId;
+    if(slot.action==='ban') state[`${slot.side}Bans`].push(heroId);
+    else {
+      state[`${slot.side}Picks`].push(heroId);
+      state[`${slot.side}Assignments`][state[`${slot.side}Picks`].length-1]=heroId;
+    }
+    state.currentPhase++;
+  }
+  return result;
+}
+
+export function randomLegalSimulatorDraft(
+  simulator: SimulatorRuleSnapshot,
+  baseState?: MatchState,
+  random:()=>number=Math.random,
+) {
+  const working:SimulatorRuleSnapshot={
+    ...simulator,
+    phaseIndex:0,
+    slotHeroes:{...simulator.slotHeroes},
+    emptyBans:[],
+  };
+  const sequence=phases(simulator.mode,simulator.firstPickSide);
+  while(working.phaseIndex<sequence.length){
+    const turn=randomLegalHeroesForSimulatorTurn(working,baseState,random);
+    Object.assign(working.slotHeroes,turn);
+    const next=simulatorNextTurnPhase(working.mode,working.firstPickSide,working.phaseIndex);
+    if(next<=working.phaseIndex) break;
+    working.phaseIndex=next;
+  }
+  return working.slotHeroes;
 }
 
 export function simulatorRandomDelayMs(
