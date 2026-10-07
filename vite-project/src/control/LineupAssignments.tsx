@@ -110,7 +110,7 @@ export function LineupAssignments({
   const stableRef=useRef({signature:'',count:0});
   const busyRef=useRef(false);
 
-  const slots=useMemo(()=>readCaptureSlots(),[state.draftComplete]);
+  const slots=readCaptureSlots();
   const blueResults=results.filter(slot=>slot.side==='blue').sort((a,b)=>a.playerIndex-b.playerIndex);
   const redResults=results.filter(slot=>slot.side==='red').sort((a,b)=>a.playerIndex-b.playerIndex);
   const blueSolved=useMemo(()=>solveTeam(blueResults,state.bluePicks),[blueResults,state.bluePicks]);
@@ -266,51 +266,51 @@ export function LineupAssignments({
   };
   const resultFor=(side:Side,index:number)=>results.find(result=>result.side===side&&result.playerIndex===index);
 
-  return <section className={`panel lineup-sync ${draftReady?'':'lineup-sync-capture-only'}`}>
+  return <>
     <video ref={videoRef} className="lineup-capture-video" playsInline muted />
-    {draftReady&&<>
-    <div className="lineup-sync-head">
-      <div>
-        <h2>{zh?'最终阵容归属 / 换英雄检测':'Final lineup ownership / hero-swap detection'}</h2>
-        <p className="muted">{zh?'Pick/Ban 历史保持不变；这里根据最终 10 个玩家槽位持续检测英雄互换。':'Pick/Ban history stays immutable; this continuously watches the ten final player slots for hero swaps.'}</p>
+    {draftReady&&<section className="panel lineup-sync">
+      <div className="lineup-sync-head">
+        <div>
+          <h2>{zh?'最终阵容归属 / 换英雄检测':'Final lineup ownership / hero-swap detection'}</h2>
+          <p className="muted">{zh?'Pick/Ban 历史保持不变；这里根据最终 10 个玩家槽位持续检测英雄互换。':'Pick/Ban history stays immutable; this continuously watches the ten final player slots for hero swaps.'}</p>
+        </div>
+        <button disabled={disabled} onClick={()=>applyLineups([...state.bluePicks],[...state.redPicks])}>{zh?'按选角顺序重置':'Reset to pick order'}</button>
       </div>
-      <button disabled={disabled} onClick={()=>applyLineups([...state.bluePicks],[...state.redPicks])}>{zh?'按选角顺序重置':'Reset to pick order'}</button>
-    </div>
 
-    <div className="lineup-team-grid">
-      {(['blue','red'] as const).map(side=><section className={`lineup-team ${side}`} key={side}>
-        <h3>{state[`${side}Team`].name}</h3>
-        {state[`${side}Team`].players.map((player,index)=>{
-          const detected=resultFor(side,index);
-          const top=detected?.candidates[0];
-          return <div className="lineup-player-row" key={index}>
-            <span className="lineup-player-name">{player||`${zh?'选手':'Player'} ${index+1}`}</span>
-            <select aria-label={`${player||`Player ${index+1}`} hero`} disabled={disabled} value={current(side)[index]??''} onChange={event=>change(side,index,Number(event.target.value))}>
-              {picked(side).map(heroId=><option key={heroId} value={heroId}>{label(state,heroId)}</option>)}
-            </select>
-            <span className="lineup-detected">{top?`${label(state,top.heroId)} ${Math.round(top.confidence*100)}%`:'—'}</span>
-          </div>;
-        })}
-      </section>)}
-    </div>
-
-    {state.bpInputMode==='screen'&&<div className="lineup-auto">
-      <div className="lineup-auto-toolbar">
-        <label><input type="checkbox" checked={auto} onChange={event=>{
-          setAuto(event.target.checked);
-          localStorage.setItem('hok-lineup-auto',event.target.checked?'1':'0');
-        }} /> {zh?'自动检测并同步换英雄':'Automatically detect and sync hero swaps'}</label>
-        {!videoReady&&<button disabled={disabled} onClick={()=>void connectWindow()}>{zh?'连接 BP 窗口':'Connect BP window'}</button>}
-        <button disabled={disabled||busy||!videoReady} onClick={()=>void scan(true)}>{busy?(zh?'正在识别…':'Recognizing…'):(zh?'立即识别并应用换英雄':'Recognize and apply swap now')}</button>
-        {blueSolved&&redSolved&&<button disabled={disabled} onClick={()=>applyLineups(blueSolved.heroes,redSolved.heroes)}>{zh?'应用本次识别':'Apply this scan'}</button>}
+      <div className="lineup-team-grid">
+        {(['blue','red'] as const).map(side=><section className={`lineup-team ${side}`} key={side}>
+          <h3>{state[`${side}Team`].name}</h3>
+          {state[`${side}Team`].players.map((player,index)=>{
+            const detected=resultFor(side,index);
+            const top=detected?.candidates[0];
+            return <div className="lineup-player-row" key={index}>
+              <span className="lineup-player-name">{player||`${zh?'选手':'Player'} ${index+1}`}</span>
+              <select aria-label={`${player||`Player ${index+1}`} hero`} disabled={disabled} value={current(side)[index]??''} onChange={event=>change(side,index,Number(event.target.value))}>
+                {picked(side).map(heroId=><option key={heroId} value={heroId}>{label(state,heroId)}</option>)}
+              </select>
+              <span className="lineup-detected">{top?`${label(state,top.heroId)} ${Math.round(top.confidence*100)}%`:'—'}</span>
+            </div>;
+          })}
+        </section>)}
       </div>
-      <p role="status" className="lineup-status">
-        {message||(videoReady
-          ? (zh?`已复用 BP 屏幕采集：${streamLabel||'窗口'}。阵容变化连续稳定 2 次后自动更新。`:`Reusing BP capture: ${streamLabel||'window'}. A changed lineup auto-applies after 2 stable scans.`)
-          : (zh?'尚未连接 BP 窗口。若上方 Auto BP 已连接，会自动复用同一采集流；否则可在这里连接。':'No BP window connected. The existing Auto BP stream is reused automatically, or connect one here.'))}
-      </p>
-      <p className="muted">{zh?'换英雄检测直接复用 Auto BP 的蓝/红 P1–P5 校准框，不再使用 Windows 物理坐标兼容模式。':'Hero-swap detection reuses the calibrated blue/red P1–P5 boxes from Auto BP; the old Windows physical-coordinate compatibility path is no longer used.'}</p>
-    </div>}
-    </>}
-  </section>;
+
+      {state.bpInputMode==='screen'&&<div className="lineup-auto">
+        <div className="lineup-auto-toolbar">
+          <label><input type="checkbox" checked={auto} onChange={event=>{
+            setAuto(event.target.checked);
+            localStorage.setItem('hok-lineup-auto',event.target.checked?'1':'0');
+          }} /> {zh?'自动检测并同步换英雄':'Automatically detect and sync hero swaps'}</label>
+          {!videoReady&&<button disabled={disabled} onClick={()=>void connectWindow()}>{zh?'连接 BP 窗口':'Connect BP window'}</button>}
+          <button disabled={disabled||busy||!videoReady} onClick={()=>void scan(true)}>{busy?(zh?'正在识别…':'Recognizing…'):(zh?'立即识别并应用换英雄':'Recognize and apply swap now')}</button>
+          {blueSolved&&redSolved&&<button disabled={disabled} onClick={()=>applyLineups(blueSolved.heroes,redSolved.heroes)}>{zh?'应用本次识别':'Apply this scan'}</button>}
+        </div>
+        <p role="status" className="lineup-status">
+          {message||(videoReady
+            ? (zh?`已复用 BP 屏幕采集：${streamLabel||'窗口'}。阵容变化连续稳定 2 次后自动更新。`:`Reusing BP capture: ${streamLabel||'window'}. A changed lineup auto-applies after 2 stable scans.`)
+            : (zh?'尚未连接 BP 窗口。若上方 Auto BP 已连接，会自动复用同一采集流；否则可在这里连接。':'No BP window connected. The existing Auto BP stream is reused automatically, or connect one here.'))}
+        </p>
+        <p className="muted">{zh?'换英雄检测直接复用 Auto BP 的蓝/红 P1–P5 校准框，不再使用 Windows 物理坐标兼容模式。':'Hero-swap detection reuses the calibrated blue/red P1–P5 boxes from Auto BP; the old Windows physical-coordinate compatibility path is no longer used.'}</p>
+      </div>}
+    </section>}
+  </>;
 }
