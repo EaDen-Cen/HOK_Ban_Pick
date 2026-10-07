@@ -828,77 +828,116 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     <div className="screen-input-heading">
       <div>
         <h2>{zh?'自动 BP · 屏幕识别':'Auto BP · screen recognition'}</h2>
-        <p>{t('captureExplicitSlotsHint')}</p>
+        <p>{t('captureLiveWorkspaceHint')}</p>
       </div>
-    </div>
-
-    <div className="window-capture">
       <div className="window-capture-toolbar">
         <button type="button" className="primary" disabled={disabled} onClick={()=>void connectWindow()}>{videoReady?t('windowCaptureChange'):t('windowCaptureChoose')}</button>
         {videoReady&&<button type="button" onClick={stopWindowCapture}>{t('windowCaptureDisconnect')}</button>}
         <span className={videoReady?'window-capture-status connected':'window-capture-status'}>{videoReady?'●':'○'} {windowInfo?.label||t('windowCaptureDisconnected')}</span>
       </div>
+    </div>
 
-      <div ref={precisionWorkspace} className={`precision-calibration-workspace ${precisionMode?'active':''}`}>
-        {precisionMode&&<div className="precision-calibration-toolbar">
-          <div className="precision-calibration-title">
-            <span>{t('precisionCalibrationTitle')}</span>
-            <strong>{calibratingSlot?captureSlotLabel(calibratingSlot):t('captureNoActiveSlot')}</strong>
-          </div>
-          <div className="precision-zoom-controls" role="group" aria-label={t('precisionZoom')}>
-            <button type="button" onClick={()=>setCalibrationZoom(value=>Math.max(1,Math.round((value-.25)*100)/100))}>−</button>
-            <button type="button" onClick={()=>setCalibrationZoom(1)}>{t('precisionFit')}</button>
-            {[1.5,2,3,4].map(value=><button type="button" key={value} className={calibrationZoom===value?'selected':''} onClick={()=>setCalibrationZoom(value)}>{Math.round(value*100)}%</button>)}
-            <button type="button" onClick={()=>setCalibrationZoom(value=>Math.min(4,Math.round((value+.25)*100)/100))}>+</button>
-          </div>
-          <div className="precision-calibration-nav">
-            <button type="button" onClick={()=>moveCalibrationSelection(-1)}>← {t('precisionPreviousSlot')}</button>
-            <button type="button" className="primary" onClick={()=>moveCalibrationSelection(1)}>{t('precisionNextSlot')} →</button>
-            <button type="button" onClick={()=>void exitPrecisionCalibration()}>{t('precisionExit')}</button>
-          </div>
-        </div>}
+    <div className="screen-input-live-grid">
+      <div className="screen-input-preview-pane">
+        <div ref={precisionWorkspace} className={`precision-calibration-workspace ${precisionMode?'active':''}`}>
+          {precisionMode&&<div className="precision-calibration-toolbar">
+            <div className="precision-calibration-title">
+              <span>{t('precisionCalibrationTitle')}</span>
+              <strong>{calibratingSlot?captureSlotLabel(calibratingSlot):t('captureNoActiveSlot')}</strong>
+            </div>
+            <div className="precision-zoom-controls" role="group" aria-label={t('precisionZoom')}>
+              <button type="button" onClick={()=>setCalibrationZoom(value=>Math.max(1,Math.round((value-.25)*100)/100))}>−</button>
+              <button type="button" onClick={()=>setCalibrationZoom(1)}>{t('precisionFit')}</button>
+              {[1.5,2,3,4].map(value=><button type="button" key={value} className={calibrationZoom===value?'selected':''} onClick={()=>setCalibrationZoom(value)}>{Math.round(value*100)}%</button>)}
+              <button type="button" onClick={()=>setCalibrationZoom(value=>Math.min(4,Math.round((value+.25)*100)/100))}>+</button>
+            </div>
+            <div className="precision-calibration-nav">
+              <button type="button" onClick={()=>moveCalibrationSelection(-1)}>← {t('precisionPreviousSlot')}</button>
+              <button type="button" className="primary" onClick={()=>moveCalibrationSelection(1)}>{t('precisionNextSlot')} →</button>
+              <button type="button" onClick={()=>void exitPrecisionCalibration()}>{t('precisionExit')}</button>
+            </div>
+          </div>}
 
-        <div className="precision-preview-scroll">
-          <div
-            className={`window-capture-preview ${videoReady?'ready':''} ${calibratingSlot?'calibrating':''}`}
-            style={{
-              ...(videoReady&&windowInfo?.width&&windowInfo?.height?{aspectRatio:`${windowInfo.width}/${windowInfo.height}`}:{}),
-              ...(precisionMode?{width:`${calibrationZoom*100}%`}:{}),
-            }}
-            onPointerDown={pointerDown}
-            onPointerMove={pointerMove}
-            onPointerUp={pointerUp}
-            onPointerCancel={()=>{dragStart.current=null;}}
-          >
-            <video ref={videoRef} playsInline muted />
-            {videoReady&&captureSlotKeys.map(key=><div
-              key={key}
-              className={`capture-explicit-slot ${key.startsWith('blue')?'blue':'red'} ${key.includes('Ban')?'ban':'pick'} ${activeTargetKeys.has(key)?'active':''} ${calibratingSlot===key?'editing':''}`}
-              style={percentageStyle(slots[key])}
-            ><span>{captureSlotLabel(key)}</span></div>)}
-            {!videoReady&&<div className="window-capture-placeholder">{t('windowCaptureChooseHint')}</div>}
+          <div className="precision-preview-scroll">
+            <div
+              className={`window-capture-preview ${videoReady?'ready':''} ${calibratingSlot?'calibrating':''}`}
+              style={{
+                ...(videoReady&&windowInfo?.width&&windowInfo?.height?{aspectRatio:`${windowInfo.width}/${windowInfo.height}`}:{}),
+                ...(precisionMode?{width:`${calibrationZoom*100}%`}:{}),
+              }}
+              onPointerDown={pointerDown}
+              onPointerMove={pointerMove}
+              onPointerUp={pointerUp}
+              onPointerCancel={()=>{dragStart.current=null;}}
+            >
+              <video ref={videoRef} playsInline muted />
+              {videoReady&&captureSlotKeys.map(key=><div
+                key={key}
+                className={`capture-explicit-slot ${key.startsWith('blue')?'blue':'red'} ${key.includes('Ban')?'ban':'pick'} ${activeTargetKeys.has(key)?'active':''} ${calibratingSlot===key?'editing':''}`}
+                style={percentageStyle(slots[key])}
+              ><span>{captureSlotLabel(key)}</span></div>)}
+              {!videoReady&&<div className="window-capture-placeholder">{t('windowCaptureChooseHint')}</div>}
+            </div>
           </div>
+
+          {precisionMode&&<div className="precision-calibration-footer">
+            <div className="precision-slot-strip">
+              {captureSlotKeys.map(key=><button
+                type="button"
+                key={key}
+                className={[calibratingSlot===key?'selected':'',activeTargetKeys.has(key)?'active':''].filter(Boolean).join(' ')}
+                onClick={()=>selectCalibrationSlot(key)}
+              >{captureSlotLabel(key)}</button>)}
+            </div>
+            <div className="precision-calibration-help">
+              <span>{t('precisionKeyboardHint')}</span>
+              {calibrationPreview&&<figure className="precision-crop-preview">
+                <figcaption>{t('precisionActualInput')}</figcaption>
+                <img src={calibrationPreview} alt={t('precisionActualInput')} />
+              </figure>}
+            </div>
+          </div>}
         </div>
-
-        {precisionMode&&<div className="precision-calibration-footer">
-          <div className="precision-slot-strip">
-            {captureSlotKeys.map(key=><button
-              type="button"
-              key={key}
-              className={[calibratingSlot===key?'selected':'',activeTargetKeys.has(key)?'active':''].filter(Boolean).join(' ')}
-              onClick={()=>selectCalibrationSlot(key)}
-            >{captureSlotLabel(key)}</button>)}
-          </div>
-          <div className="precision-calibration-help">
-            <span>{t('precisionKeyboardHint')}</span>
-            {calibrationPreview&&<figure className="precision-crop-preview">
-              <figcaption>{t('precisionActualInput')}</figcaption>
-              <img src={calibrationPreview} alt={t('precisionActualInput')} />
-            </figure>}
-          </div>
-        </div>}
+        <p className="screen-input-source-meta muted">{videoReady&&windowInfo?`${windowInfo.width}×${windowInfo.height} · ${windowInfo.surface} · ${t('windowCaptureRelativeHint')}`:t('windowCaptureRelativeHint')}</p>
       </div>
 
+      <aside className="screen-input-operator-pane">
+        <div className="capture-live-status">
+          <div><span>{t('capturePhaseLabel')}</span><strong>{phaseName(state)}</strong></div>
+          <div><span>{t('captureSlotLabel')}</span><strong>{currentSlotText}</strong></div>
+          <div><span>{t('captureCandidateLabel')}</span><strong>{candidateStatus||t('captureWaiting')}</strong></div>
+          <div><span>{t('captureEmptyBanLabel')}</span><strong>{
+            phase?.action!=='ban'
+              ? t('captureNotApplicable')
+              : emptyPromptedPhase.current===phaseKey
+                ? t('capturePromptedOnce')
+                : t('captureGraceThenCheck',{seconds:Math.max(0,Math.ceil((EMPTY_BAN_GRACE_MS-(Date.now()-phaseStartedAt.current))/1000))})
+          }</strong></div>
+        </div>
+
+        <div className="screen-input-actions">
+          <button className="primary capture-now-button" disabled={disabled||busy||!phase||!!state.committedGameId||!videoReady} onClick={()=>void capture()}>{busy?(zh?'正在识别…':'Recognizing…'):t('captureNow')}</button>
+          {phase?.action==='ban'
+            ? <button className="empty-ban-button" disabled={disabled||!!state.committedGameId} onClick={()=>send({type:'skip_ban',team:phase.team})}>{t('emptyBanButton')}</button>
+            : <span className="empty-ban-action-placeholder" aria-hidden="true" />}
+          <label className="auto-watch-toggle"><input type="checkbox" checked={autoWatch} onChange={event=>{
+            setAutoWatch(event.target.checked);
+            localStorage.setItem('hok-capture-auto-watch',event.target.checked?'1':'0');
+          }}/>{t('autoCaptureWatch')}</label>
+        </div>
+
+        <div className="screen-input-message" role="status" aria-live="polite">
+          <span>{busy?t('captureRefreshing'):t('captureStatusLabel')}</span>
+          <p>{message||t('captureWaitingForFrame')}</p>
+        </div>
+      </aside>
+    </div>
+
+    <details className="capture-calibration-tools">
+      <summary>
+        <span>{t('captureCalibrationToolsTitle')}</span>
+        <small>{t('captureCalibrationToolsHint')}</small>
+      </summary>
       <div className="explicit-slot-calibration">
         <div className="explicit-slot-calibration-heading">
           <div>
@@ -918,85 +957,65 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
           </div>
         </div>
 
-        <div className="capture-preset-manager">
-          <div className="capture-preset-heading">
-            <div>
-              <strong>{t('capturePresetTitle')}</strong>
-              <p className="muted">{t('capturePresetHint')}</p>
-            </div>
-            {selectedCapturePreset&&<span className="capture-preset-meta">
-              {selectedCapturePreset.sourceWidth&&selectedCapturePreset.sourceHeight
-                ? `${selectedCapturePreset.sourceWidth}×${selectedCapturePreset.sourceHeight}`
-                : t('capturePresetRelative')}
-            </span>}
-          </div>
-          <div className="capture-preset-controls">
-            <label>
-              <span>{t('capturePresetName')}</span>
-              <input
-                type="text"
-                maxLength={48}
-                value={capturePresetName}
-                placeholder={t('capturePresetNamePlaceholder')}
-                onChange={event=>setCapturePresetName(event.target.value)}
-              />
-            </label>
-            <button type="button" onClick={saveCapturePreset}>{t('capturePresetSaveNew')}</button>
-            <label>
-              <span>{t('capturePresetSavedList')}</span>
-              <select
-                value={selectedCapturePresetId}
-                onChange={event=>{
-                  const id=event.target.value;
-                  setSelectedCapturePresetId(id);
-                  const preset=capturePresets.find(item=>item.id===id);
-                  setCapturePresetName(preset?.name??'');
-                }}
-              >
-                <option value="">{t('capturePresetChoose')}</option>
-                {capturePresets.map(preset=><option key={preset.id} value={preset.id}>{preset.name}</option>)}
-              </select>
-            </label>
-            <button type="button" className="primary" disabled={!selectedCapturePreset} onClick={loadSelectedCapturePreset}>{t('capturePresetLoad')}</button>
-            <button type="button" disabled={!selectedCapturePreset} onClick={updateSelectedCapturePreset}>{t('capturePresetOverwrite')}</button>
-            <button type="button" className="danger" disabled={!selectedCapturePreset} onClick={deleteSelectedCapturePreset}>{t('capturePresetDelete')}</button>
-          </div>
-        </div>
-
         <div className="explicit-slot-groups">
           {renderSlotButtons('blue','ban')}
           {renderSlotButtons('red','ban')}
           {renderSlotButtons('blue','pick')}
           {renderSlotButtons('red','pick')}
         </div>
+
+        <details className="capture-preset-details">
+          <summary>
+            <span>{t('capturePresetTitle')}</span>
+            <small>{selectedCapturePreset?t('capturePresetSelected',{name:selectedCapturePreset.name}):t('capturePresetCollapsedHint')}</small>
+          </summary>
+          <div className="capture-preset-manager">
+            <div className="capture-preset-heading">
+              <div>
+                <strong>{t('capturePresetTitle')}</strong>
+                <p className="muted">{t('capturePresetHint')}</p>
+              </div>
+              {selectedCapturePreset&&<span className="capture-preset-meta">
+                {selectedCapturePreset.sourceWidth&&selectedCapturePreset.sourceHeight
+                  ? `${selectedCapturePreset.sourceWidth}×${selectedCapturePreset.sourceHeight}`
+                  : t('capturePresetRelative')}
+              </span>}
+            </div>
+            <div className="capture-preset-controls">
+              <label>
+                <span>{t('capturePresetName')}</span>
+                <input
+                  type="text"
+                  maxLength={48}
+                  value={capturePresetName}
+                  placeholder={t('capturePresetNamePlaceholder')}
+                  onChange={event=>setCapturePresetName(event.target.value)}
+                />
+              </label>
+              <button type="button" onClick={saveCapturePreset}>{t('capturePresetSaveNew')}</button>
+              <label>
+                <span>{t('capturePresetSavedList')}</span>
+                <select
+                  value={selectedCapturePresetId}
+                  onChange={event=>{
+                    const id=event.target.value;
+                    setSelectedCapturePresetId(id);
+                    const preset=capturePresets.find(item=>item.id===id);
+                    setCapturePresetName(preset?.name??'');
+                  }}
+                >
+                  <option value="">{t('capturePresetChoose')}</option>
+                  {capturePresets.map(preset=><option key={preset.id} value={preset.id}>{preset.name}</option>)}
+                </select>
+              </label>
+              <button type="button" className="primary" disabled={!selectedCapturePreset} onClick={loadSelectedCapturePreset}>{t('capturePresetLoad')}</button>
+              <button type="button" disabled={!selectedCapturePreset} onClick={updateSelectedCapturePreset}>{t('capturePresetOverwrite')}</button>
+              <button type="button" className="danger" disabled={!selectedCapturePreset} onClick={deleteSelectedCapturePreset}>{t('capturePresetDelete')}</button>
+            </div>
+          </div>
+        </details>
       </div>
-
-      <p className="muted">{videoReady&&windowInfo?`${windowInfo.width}×${windowInfo.height} · ${windowInfo.surface} · ${t('windowCaptureRelativeHint')}`:t('windowCaptureRelativeHint')}</p>
-    </div>
-
-    <div className="capture-live-status">
-      <div><span>{t('capturePhaseLabel')}</span><strong>{phaseName(state)}</strong></div>
-      <div><span>{t('captureSlotLabel')}</span><strong>{currentSlotText}</strong></div>
-      <div><span>{t('captureCandidateLabel')}</span><strong>{candidateStatus||t('captureWaiting')}</strong></div>
-      <div><span>{t('captureEmptyBanLabel')}</span><strong>{
-        phase?.action!=='ban'
-          ? t('captureNotApplicable')
-          : emptyPromptedPhase.current===phaseKey
-            ? t('capturePromptedOnce')
-            : t('captureGraceThenCheck',{seconds:Math.max(0,Math.ceil((EMPTY_BAN_GRACE_MS-(Date.now()-phaseStartedAt.current))/1000))})
-      }</strong></div>
-    </div>
-
-    <div className="screen-input-actions">
-      <button disabled={disabled||busy||!phase||!!state.committedGameId||!videoReady} onClick={()=>void capture()}>{busy?(zh?'正在识别…':'Recognizing…'):t('captureNow')}</button>
-      {phase?.action==='ban'&&<button className="empty-ban-button" disabled={disabled||!!state.committedGameId} onClick={()=>send({type:'skip_ban',team:phase.team})}>{t('emptyBanButton')}</button>}
-      <label className="auto-watch-toggle"><input type="checkbox" checked={autoWatch} onChange={event=>{
-        setAutoWatch(event.target.checked);
-        localStorage.setItem('hok-capture-auto-watch',event.target.checked?'1':'0');
-      }}/>{t('autoCaptureWatch')}</label>
-    </div>
-    <small>{t('captureExplicitAutoHint')}</small>
-    <p role="status">{message}</p>
+    </details>
 
     {result&&<dialog ref={dialog} className="library-dialog capture-review" aria-label={result.kind==='empty-ban'?t('emptyBanReviewTitle'):(zh?'确认识别结果':'Review recognition')} onCancel={event=>{event.preventDefault();closeReview();}}>
       {result.kind==='empty-ban'?<>
