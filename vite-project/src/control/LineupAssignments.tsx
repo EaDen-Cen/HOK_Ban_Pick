@@ -201,7 +201,7 @@ export function LineupAssignments({
     } satisfies SlotResult;
   },[revision,slots,state,token,videoReady,zh]);
 
-  const scan=useCallback(async()=>{
+  const scan=useCallback(async(forceApply=false)=>{
     if(busyRef.current||disabled||!state.draftComplete||state.committedGameId||state.bpInputMode!=='screen'||!videoReady) return;
     busyRef.current=true;
     setBusy(true);
@@ -227,10 +227,11 @@ export function LineupAssignments({
       const highConfidence=blue.minimum>=.62&&red.minimum>=.62&&blue.average>=.75&&red.average>=.75;
 
       setMessage(zh
-        ? `换英雄检测运行中 · 蓝均值 ${Math.round(blue.average*100)}% · 红均值 ${Math.round(red.average*100)}% · 稳定 ${count}/2${changed?' · 检测到阵容变化':''}`
-        : `Hero-swap detection active · blue avg ${Math.round(blue.average*100)}% · red avg ${Math.round(red.average*100)}% · stable ${count}/2${changed?' · lineup change detected':''}`);
+        ? `换英雄检测运行中 · 蓝均值/最低 ${Math.round(blue.average*100)}%/${Math.round(blue.minimum*100)}% · 红均值/最低 ${Math.round(red.average*100)}%/${Math.round(red.minimum*100)}% · 稳定 ${count}/2${changed?' · 检测到阵容变化':''}${changed&&!highConfidence?' · 但置信度不足，暂不自动应用':''}`
+        : `Hero-swap detection active · blue avg/min ${Math.round(blue.average*100)}%/${Math.round(blue.minimum*100)}% · red avg/min ${Math.round(red.average*100)}%/${Math.round(red.minimum*100)}% · stable ${count}/2${changed?' · lineup change detected':''}${changed&&!highConfidence?' · confidence too low to auto-apply':''}`);
 
-      if(auto&&changed&&highConfidence&&count>=2&&applying.current!==signature){
+      const shouldApply=changed&&highConfidence&&(forceApply||(auto&&count>=2));
+      if(shouldApply&&applying.current!==signature){
         applying.current=signature;
         applyLineups(blue.heroes,red.heroes);
       }
@@ -300,7 +301,7 @@ export function LineupAssignments({
           localStorage.setItem('hok-lineup-auto',event.target.checked?'1':'0');
         }} /> {zh?'自动检测并同步换英雄':'Automatically detect and sync hero swaps'}</label>
         {!videoReady&&<button disabled={disabled} onClick={()=>void connectWindow()}>{zh?'连接 BP 窗口':'Connect BP window'}</button>}
-        <button disabled={disabled||busy||!videoReady} onClick={()=>void scan()}>{busy?(zh?'正在扫描…':'Scanning…'):(zh?'立即扫描 10 个 Pick 槽':'Scan all 10 Pick slots')}</button>
+        <button disabled={disabled||busy||!videoReady} onClick={()=>void scan(true)}>{busy?(zh?'正在识别…':'Recognizing…'):(zh?'立即识别并应用换英雄':'Recognize and apply swap now')}</button>
         {blueSolved&&redSolved&&<button disabled={disabled} onClick={()=>applyLineups(blueSolved.heroes,redSolved.heroes)}>{zh?'应用本次识别':'Apply this scan'}</button>}
       </div>
       <p role="status" className="lineup-status">
