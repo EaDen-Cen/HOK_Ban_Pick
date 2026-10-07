@@ -2,7 +2,9 @@
 
 # 安装、运行与部署指南
 
-当前比赛操作以 [操作指南](operator-guide.md) 为准；版本交接与旧实施计划见 [历史归档](../archive/README.md)。
+> 适用版本：**v2.4.0**。第一次使用建议先看 [新手教程](beginner-guide.md)，本文更偏向运行、部署、数据恢复和三端接线。
+
+当前比赛操作以 [操作指南](operator-guide.md) 为准；Auto BP 细节见 [屏幕识别指南](screen-recognition.md)；版本交接与旧实施计划见 [历史归档](../archive/README.md)。
 
 基于 `qiqi47/HOK_Ban_Pick`，保留原英雄 ID、名称、图片、位置与关系数据和 MIT 许可。
 源码与执行目录：`vite-project/`。原单机组件保留在仓库中，新入口为 `src/BroadcastApp.tsx`。
@@ -12,7 +14,7 @@
 要求 Node.js 24（开发验证版本 24.14.1）。在 PowerShell 中进入 `vite-project`：
 
 ```powershell
-npm install
+npm ci
 npm run build
 npm run server
 ```
@@ -39,6 +41,8 @@ Vite 转发 `/api` 与 `/ws` 到 3001 端口；开发模式前端自动使用上
 5. Undo 撤销最后一次比赛操作，包括设置、选禁和重置；延迟设置不进入 Undo。
 6. Reset Draft 只清 BP；Reset Match 清队伍、比分与局数。两者都可以 Undo。
 7. 修改 Caster delay，支持直接输入 0–3600 秒及 ±1/5/10 秒微调。
+8. BP 输入模式可选手动或 **Screen recognition**。屏幕识别使用浏览器窗口采集、18 个独立 Ban/Pick 框、可保存的校准预设和审核后提交；识别异常时可随时展开手动英雄选择备用。
+9. BP 完成后“最终阵容归属 / 换英雄检测”会继续复用 10 个 Pick 框识别选手交换英雄，并只更新最终 assignments，不改写原始 BP 历史。
 
 多个操作员同时操作时，服务器拒绝过期版本的指令并回传最新状态。
 操作未确认前禁用按钮；断线时不离线排队、不自动重放选禁，防止恢复后意外执行旧操作。
@@ -137,14 +141,15 @@ npm run test:e2e
 
 上线前彩排：走完两套 BP、修改比分、刷新页面、断开网络至少 30 秒、重启后端，
 确认 Overlay 恢复、Caster 无实时剧透；再测量 B站→解说→Discord 的真实音画偏差。
-本版不包含游戏识别、OCR、OBS 场景控制、赛事编排和自动视频同步。
+若使用 Auto BP，还应使用比赛当天相同的游戏/模拟器布局测试 Pick、双 Pick、Ban、空 Ban、Pick→Ban 边界和 BP 后换英雄。当前识别依赖视觉素材，不等于游戏 API；游戏 UI 或头像素材更新后可能需要重新校准。
+本版仍不包含 OCR、OBS 场景控制、赛事编排和自动视频同步。
 
 实现参考：[ws 官方文档](https://github.com/websockets/ws/blob/master/README.md)、[Vite 代理文档](https://vite.dev/config/server-options.html#server-proxy)。
 
 ## 最后一步已完成：英雄名单与头像补齐
 
 默认采用每队 4 Ban / 5 Pick 的赛事模式。本轮新增 21 条英雄/形态记录及全部本地头像，
-目前共 116 条有效记录，保留旧有效 ID 与旧名搜索别名。图标显示不依赖外部网站。
+目前共 118 条有效记录，保留旧有效 ID 与旧名搜索别名。图标显示不依赖外部网站。
 未核实的新英雄关系保持“暂无数据”；Flowborn 形态及联动英雄以实际比赛房间为准。
 顺序和原则见 [WORKFLOW.md](../archive/planning/workflow-2026-09-17.md)，
 同步内容与来源见 [HERO-DATA-AUDIT.md](../research/hero-data-audit-2026-09-16.md)、
