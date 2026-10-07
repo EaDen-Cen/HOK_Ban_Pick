@@ -224,6 +224,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const stopWindowCapture=useCallback(()=>{
     const stream=streamRef.current;
     streamRef.current=undefined;
+    if(getSharedWindowCaptureStream()===stream) setSharedWindowCaptureStream(undefined);
     if(stream) stream.getTracks().forEach(track=>track.stop());
     if(videoRef.current) videoRef.current.srcObject=null;
     setVideoReady(false);
@@ -354,6 +355,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         return;
       }
       streamRef.current=stream;
+      setSharedWindowCaptureStream(stream);
       const video=videoRef.current;
       if(!video) throw new Error('Preview unavailable');
       video.srcObject=stream;
@@ -377,6 +379,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       track.addEventListener('ended',()=>{
         if(!mounted.current) return;
         streamRef.current=undefined;
+        if(getSharedWindowCaptureStream()===stream) setSharedWindowCaptureStream(undefined);
         setVideoReady(false);
         setWindowInfo(undefined);
         setCalibratingSlot(undefined);
