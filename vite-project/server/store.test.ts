@@ -241,7 +241,8 @@ test('reset match clears progress while preserving tournament configuration', ()
     bpInputMode:'screen' as const,
   };
   apply(s,{type:'settings',settings});
-  pick(s,heroes[0].id);
+  const opening=phases(s.data.state.draftMode,s.data.state.firstPickSide)[s.data.state.currentPhase];
+  apply(s,{type:'draft_action',...opening,heroId:heroes[0].id});
   apply(s,{type:'score',team:'blue',delta:1});
   apply(s,{type:'reset_match'});
 
