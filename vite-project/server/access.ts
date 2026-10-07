@@ -100,14 +100,25 @@ export class AccessManager {
   configure(input:unknown){
     if(!input||typeof input!=='object') throw new Error('accessConfigInvalid');
     const value=input as Record<string,unknown>;
-    const passwords=roles.map(role=>value[role]);
-    if(passwords.some(password=>!validPassword(password))) throw new Error('accessPasswordInvalid');
-    if(new Set(passwords as string[]).size!==passwords.length) throw new Error('accessPasswordsMustDiffer');
+    const updates=roles
+      .map(role=>({role,password:value[role]}))
+      .filter(item=>typeof item.password==='string'&&item.password.length>0) as Array<{role:Role;password:string}>;
+    if(!updates.length) throw new Error('accessConfigInvalid');
+    if(updates.some(item=>!validPassword(item.password))) throw new Error('accessPasswordInvalid');
+
+    for(const item of updates){
+      for(const other of roles){
+        if(other!==item.role&&this.verify(other,item.password)) throw new Error('accessPasswordsMustDiffer');
+      }
+    }
+    if(new Set(updates.map(item=>item.password)).size!==updates.length) throw new Error('accessPasswordsMustDiffer');
+
     const next:AccessFile={
       version:1,
-      roles:Object.fromEntries(roles.map((role,index)=>[role,credential(passwords[index] as string)])),
+      roles:{...this.data.roles},
       updatedAt:Date.now(),
     };
+    for(const item of updates) next.roles[item.role]=credential(item.password);
     mkdirSync(dirname(this.file),{recursive:true});
     const temporary=`${this.file}.tmp`;
     writeFileSync(temporary,JSON.stringify(next));
