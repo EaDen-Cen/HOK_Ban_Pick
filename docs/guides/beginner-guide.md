@@ -63,9 +63,9 @@ vite-project\start-bp-simulator.bat
 采集页  http://127.0.0.1:5173/tools/bp-simulator
 ```
 
-控制页负责推进 BP、双选、空 Ban、自动脚本和换英雄；采集页保持干净，给 Auto BP 抓取。
+控制页负责推进 BP、双选、空 Ban、自动脚本和换英雄；采集页保持干净，给 Auto BP 抓取。随机当前组/随机全部会避开已经 Ban/Pick 的英雄；如果 Broadcast Control 已运行，还可以点击 **同步 Control 规则**，让 Simulator 继承 Normal / Player / Global 规则和跨局历史。
 
-自动脚本可以设置一个**随机等待范围**，例如 0.9–1.8 秒，让每一步不会按照完全固定的节奏推进。
+自动脚本可以设置一个**随机等待范围**，例如 0.9–1.8 秒。这个随机时间只模拟选手思考/预选英雄的时间；英雄锁定后，Simulator 会快速进入下一轮，不会再次随机等待。
 
 测试结束后双击：
 
@@ -115,7 +115,7 @@ npm run server
 然后打开：
 
 ```text
-http://127.0.0.1:3001/control#token=local-control
+http://127.0.0.1:3001/control
 ```
 
 ## 第 5 步：建立第一场比赛
@@ -132,6 +132,18 @@ http://127.0.0.1:3001/control#token=local-control
 8. 保存。
 
 第一次测试建议使用 BO1 + Match BP。
+
+### 本机与公网密码
+
+通过 `localhost` / `127.0.0.1` 打开的 Control、Caster、Overlay 会自动信任，不需要输入密码。
+
+如果要让解说、OBS 或其他电脑通过 Cloudflare/域名访问，在本机 Control 顶部打开 **远程访问密码**，分别设置：
+
+- 导播密码；
+- 解说密码；
+- Overlay 密码。
+
+三者必须不同。服务器保存的是带盐的密码哈希，不保存可读明文。远程 Overlay 如果没有认证信息，会显示登录页，而不是静默黑屏。
 
 ## 第 6 步：第一次配置 Auto BP
 
@@ -162,6 +174,8 @@ http://127.0.0.1:3001/control#token=local-control
 - Auto Watch。
 
 打开 **自动监视** 后，程序会持续扫描。
+
+如果真实素材已经验证得足够稳定，可以在 **比赛设置 → BP 输入模式 → 屏幕识别 → 屏幕识别高级设置** 中开启 **高置信度自动录入**，并把阈值设在 50%–100% 之间。达到阈值且锁定条件也成立时会直接写入 BP，不再弹审核窗口。这个开关不会绕过锁定判断、重复英雄检查或服务器 BP 规则；第一次正式比赛建议先保持关闭或使用较高阈值。
 
 ### Pick
 
@@ -200,7 +214,7 @@ BP 完成以后会出现最终阵容/换英雄区域。
 添加 Browser Source：
 
 ```text
-http://127.0.0.1:3001/overlay/draft#token=local-overlay
+http://127.0.0.1:3001/overlay/draft
 ```
 
 推荐尺寸：
@@ -209,14 +223,14 @@ http://127.0.0.1:3001/overlay/draft#token=local-overlay
 1920 × 1080
 ```
 
-公网比赛应使用生成的 HTTPS 地址和独立 Overlay token。
+公网比赛使用生成的 HTTPS 地址；第一次访问时输入在 Control 里设置的 Overlay 密码。
 
 ## 第 10 步：给解说 Caster 页面
 
 本机开发地址：
 
 ```text
-http://127.0.0.1:3001/caster#token=local-caster
+http://127.0.0.1:3001/caster
 ```
 
 Caster 是只读的，并按照 Control 设置的延迟显示比赛数据。
@@ -251,7 +265,7 @@ vite-project\data\
 vite-project\artifacts\
 ```
 
-18 框校准与预设保存在 Director 浏览器的 localStorage 中，所以更换浏览器配置、清除站点数据或换电脑前，应重新确认校准。
+18 框校准与预设保存在 Director 浏览器的 localStorage 中，所以更换浏览器配置、清除站点数据或换电脑前，应重新确认校准。远程访问密码哈希保存在 `data/access-config.json`，备份比赛数据时应和 `match.json`、队伍资料库、上传图片一起备份。
 
 ## 常见问题
 
@@ -288,3 +302,4 @@ vite-project\artifacts\
 - [Auto BP / 屏幕识别指南](screen-recognition.md)
 - [Windows 启动器说明](windows-launcher.md)
 - [系统结构](../design/architecture.md)
+- [API 与扩展接口](../design/api.md)
