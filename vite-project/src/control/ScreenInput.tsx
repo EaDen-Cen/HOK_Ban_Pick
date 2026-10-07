@@ -141,7 +141,8 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const target=useMemo(()=>captureTargetForState(state,slots),[state,slots]);
   const turnTargets=useMemo(()=>captureTargetsForCurrentTurn(state,slots),[state,slots]);
   const nextOpponentPickProbe=useMemo(()=>captureProbeForNextOpponentPick(state,slots),[state,slots]);
-  const useHighlightRelease=phase?.action==='pick'&&(!nextOpponentPickProbe||immediateNextTurnIsBan(state.draftMode,state.firstPickSide,state.currentPhase));
+  const manualBoundaryPick=phase?.action==='pick'&&immediateNextTurnIsBan(state.draftMode,state.firstPickSide,state.currentPhase);
+  const useHighlightRelease=phase?.action==='pick'&&!nextOpponentPickProbe;
   const activeTargetKeys=useMemo(()=>new Set(turnTargets.map(item=>item.key)),[turnTargets]);
 
   const label=useCallback((id:number)=>{
@@ -510,6 +511,13 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
           return;
         }
 
+        if(manualBoundaryPick){
+          setMessage(zh
+            ? '当前 Pick 组已经稳定，但这一手之后立即进入第二轮 Ban，没有“下一个对手 Pick 位”可以立刻作为唯一锁定信号。为避免误判，本轮不自动确认；请使用右侧手动英雄选择完成这一手。'
+            : 'Current Pick group is stable, but the draft immediately enters the second Ban round, so there is no opponent Pick slot available as the sole immediate lock signal. Auto-confirm is disabled here; record this Pick manually.');
+          return;
+        }
+
         if(useHighlightRelease){
           if(!highlightRelease.locked){
             setMessage(zh
@@ -641,7 +649,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       busyRef.current=false;
       if(mounted.current) setBusy(false);
     }
-  },[captureSlotLabel,disabled,label,nextOpponentPickProbe,phase,phaseKey,recognizeWindowRegion,state.committedGameId,t,target,turnTargets,useHighlightRelease,zh]);
+  },[captureSlotLabel,disabled,label,manualBoundaryPick,nextOpponentPickProbe,phase,phaseKey,recognizeWindowRegion,state.committedGameId,t,target,turnTargets,useHighlightRelease,zh]);
 
   useEffect(()=>{
     if(!autoWatch||result||disabled||!phase||state.committedGameId||busy||!videoReady) return;
