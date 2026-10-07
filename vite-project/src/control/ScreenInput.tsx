@@ -13,6 +13,7 @@ import {
 } from './bpCaptureLayout';
 import { detectEmptyBan, EMPTY_BAN_GRACE_MS, fingerprintDistance, type EmptyBanStability } from './emptyBanDetection';
 import { updateHeroRecognitionStability, type HeroRecognitionStability } from './heroRecognitionStability';
+import { freshHeroLockStability, updateHeroLockStability, type HeroLockStability } from './heroLockDetection';
 import { regionFromDrag, regionToPixels, type NormalizedCaptureRegion } from './windowCaptureGeometry';
 import { nextCaptureSlotKey, nudgeCaptureRegion, type CalibrationDelta } from './precisionCalibration';
 import { phaseName } from '../shared/display';
@@ -114,6 +115,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const dragStart=useRef<{x:number;y:number}|null>(null);
   const emptyStability=useRef<EmptyBanStability>(freshEmptyStability());
   const heroStability=useRef<HeroRecognitionStability>(freshHeroStability());
+  const heroLockStability=useRef<HeroLockStability>(freshHeroLockStability());
   const phaseStartedAt=useRef(Date.now());
   const emptyPromptedPhase=useRef('');
   const lockBaseline=useRef<{phaseKey:string;fingerprint:string}>({phaseKey:'',fingerprint:''});
@@ -300,6 +302,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   useEffect(()=>{
     emptyStability.current=freshEmptyStability();
     heroStability.current=freshHeroStability();
+    heroLockStability.current=freshHeroLockStability();
     phaseStartedAt.current=Date.now();
     emptyPromptedPhase.current='';
     lockBaseline.current={phaseKey,fingerprint:''};
@@ -383,7 +386,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       pixels.x,pixels.y,pixels.width,pixels.height,
       0,0,canvas.width,canvas.height,
     );
-    return canvas.toDataURL('image/jpeg',.9);
+    return canvas.toDataURL('image/png');
   },[target,t,videoReady]);
 
   const capture=useCallback(async()=>{
@@ -420,6 +423,14 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       const heroEvidence=updateHeroRecognitionStability(heroStability.current,phaseKey,candidates);
       heroStability.current=heroEvidence.stability;
       const top=heroEvidence.top;
+      const heroLock=updateHeroLockStability(heroLockStability.current,{
+        phaseKey,
+        heroId:top?.heroId,
+        lockFingerprint:data.lockFingerprint,
+        stabilityCount:heroEvidence.stability.count,
+        requiredScans:heroEvidence.requiredScans,
+      });
+      heroLockStability.current=heroLock.stability;
       const elapsedMs=Date.now()-phaseStartedAt.current;
 
       if(phase.action==='ban' && data.lockFingerprint && !lockBaseline.current.fingerprint){
@@ -440,7 +451,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       });
       emptyStability.current=empty.stability;
 
-      if(heroEvidence.accepted&&top){
+      if(heroEvidence.accepted&&top&&heroLock.locked){
         setSelected(top.heroId);
         setCandidateStatus(t('captureHeroStable',{
           hero:label(top.heroId),
@@ -453,17 +464,25 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       }
 
       if(top){
-        setCandidateStatus(t('captureHeroCandidate',{
-          hero:label(top.heroId),
-          confidence:Math.round(top.confidence*100),
-          count:heroEvidence.stability.count,
-          required:heroEvidence.requiredScans || '—',
-        }));
+        if(heroEvidence.accepted&&!heroLock.locked){
+          setCandidateStatus(zh
+            ? label(top.heroId)+' · '+Math.round(top.confidence*100)+'% · 英雄已稳定，等待锁定'
+            : label(top.heroId)+' · '+Math.round(top.confidence*100)+'% · stable, waiting for lock');
+        }else{
+          setCandidateStatus(t('captureHeroCandidate',{
+            hero:label(top.heroId),
+            confidence:Math.round(top.confidence*100),
+            count:heroEvidence.stability.count,
+            required:heroEvidence.requiredScans || '—',
+          }));
+        }
       }else{
         setCandidateStatus(t('captureNoCandidate'));
       }
 
-      if(empty.suspected){
+      if(heroEvidence.accepted&&top&&!heroLock.locked){
+        setMessage(zh?'英雄已稳定，等待游戏内锁定标记。':'Hero stable; waiting for the in-game lock cue.');
+      }else if(empty.suspected){
         emptyPromptedPhase.current=phaseKey;
         setResult({kind:'empty-ban',candidates,preview:data.preview,at:Date.now()});
         setMessage(t('emptyBanSuspected',{count:3}));
@@ -491,9 +510,9 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   },[captureMode,captureWindowFrame,disabled,label,nativeRegion,phase,phaseKey,revision,state.committedGameId,t,token,zh]);
 
   useEffect(()=>{
-    if(!autoWatch||result||disabled||!phase||state.committedGameId) return;
+    if(!autoWatch||result||disabled||!phase||state.committedGameId||busy) return;
     if(captureMode==='window'&&!videoReady) return;
-    const timer=setTimeout(()=>{void capture();},busy?800:1400);
+    const timer=setTimeout(()=>{void capture();},350);
     return()=>clearTimeout(timer);
   },[autoWatch,busy,capture,captureMode,disabled,phase,result,state.committedGameId,videoReady]);
 
@@ -502,6 +521,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     localStorage.setItem('hok-capture-mode',mode);
     emptyStability.current=freshEmptyStability();
     heroStability.current=freshHeroStability();
+    heroLockStability.current=freshHeroLockStability();
     setResult(undefined);
     setMessage('');
     setCandidateStatus('');
