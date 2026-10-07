@@ -291,13 +291,13 @@ export default function BroadcastApp() {
         </>}>
           {state.bpInputMode === 'screen'
             ? <div className="screen-recognition-workspace">
-                <ScreenInput state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />
-                <details className="manual-picker-fallback" onToggle={event=>setManualFallbackOpen(event.currentTarget.open)}>
-                  <summary>{t('manualFallbackTitle')}</summary>
-                  <p className="muted">{t('manualFallbackHint')}</p>
-                  <ControlHeroPicker state={state} disabled={disabled} active={manualFallbackOpen && !showSettings && !showTeamSettings && !showHeroArtEditor} send={send} acknowledged={acknowledged} />
-                </details>
-              </div>
+              <ScreenInput state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />
+              <details className="manual-picker-fallback" onToggle={event=>setManualFallbackOpen(event.currentTarget.open)}>
+                <summary>{t('manualFallbackTitle')}</summary>
+                <p className="muted">{t('manualFallbackHint')}</p>
+                <ControlHeroPicker state={state} disabled={disabled} active={manualFallbackOpen && !showSettings && !showTeamSettings && !showHeroArtEditor} send={send} acknowledged={acknowledged} />
+              </details>
+            </div>
             : <ControlHeroPicker state={state} disabled={disabled} active={!showSettings && !showTeamSettings && !showHeroArtEditor} send={send} acknowledged={acknowledged} />}
         </ControlDraftWorkspace>
         {showTeamSettings && <TeamSettingsDialog label={t('teamSettings')} closeLabel={t('closeTeamSettings')} onClose={() => setShowTeamSettings(false)}>
