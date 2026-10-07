@@ -265,7 +265,7 @@ export function LineupAssignments({
   };
   const resultFor=(side:Side,index:number)=>results.find(result=>result.side===side&&result.playerIndex===index);
 
-  return <section className="panel lineup-sync">
+  return <section className={`panel lineup-sync ${draftReady?'':'lineup-sync-capture-only'}`}>
     <video ref={videoRef} className="lineup-capture-video" playsInline muted />
     {draftReady&&<>
     <div className="lineup-sync-head">
