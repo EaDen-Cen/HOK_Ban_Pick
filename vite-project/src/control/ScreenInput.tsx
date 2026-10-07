@@ -707,19 +707,31 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       setMessage(zh?'结果已过期，请重新读取。':'Result expired. Capture again.');
       return;
     }
+    if(result.kind==='pick-group'){
+      const heroIds=result.entries.map(entry=>groupSelected[entry.key]??entry.candidates[0]?.heroId);
+      if(heroIds.some(heroId=>heroId===undefined)){
+        setMessage(zh?'同时选人结果不完整，请继续扫描。':'The simultaneous pick result is incomplete; keep scanning.');
+        return;
+      }
+      closeReview();
+      send({type:'draft_pick_group',team:result.team,heroIds:heroIds as number[]});
+      return;
+    }
     closeReview();
     if(result.kind==='empty-ban') send({type:'skip_ban',team:phase.team});
     else send({type:'draft_action',heroId:selected,team:phase.team,action:phase.action});
   };
 
-  const currentSlotText=target
-    ? t('captureCurrentSlot',{
-      side:t(target.side==='blue'?'blueSide':'redSide'),
-      action:t(target.action==='ban'?'banAction':'pickAction'),
-      current:target.slotIndex+1,
-      total:target.slotCount,
-    })
-    : t('draftComplete');
+  const currentSlotText=phase?.action==='pick'&&turnTargets.length>1
+    ? `${t(phase.team==='blue'?'blueSide':'redSide')} · ${t('pickAction')} · ${turnTargets.map(item=>`P${item.slotIndex+1}`).join(' + ')}`
+    : target
+      ? t('captureCurrentSlot',{
+        side:t(target.side==='blue'?'blueSide':'redSide'),
+        action:t(target.action==='ban'?'banAction':'pickAction'),
+        current:target.slotIndex+1,
+        total:target.slotCount,
+      })
+      : t('draftComplete');
 
   const renderSlotButtons=(side:'blue'|'red',action:'ban'|'pick')=>{
     const count=action==='ban'?4:5;
@@ -733,7 +745,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
           disabled={!videoReady}
           className={[
             calibratingSlot===key?'selected':'',
-            target?.key===key?'active':'',
+            activeTargetKeys.has(key)?'active':'',
           ].filter(Boolean).join(' ')}
           onClick={()=>calibratingSlot===key&&!precisionMode?setCalibratingSlot(undefined):selectCalibrationSlot(key)}
         >{action==='ban'?'B':'P'}{index+1}</button>;
@@ -794,7 +806,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
             <video ref={videoRef} playsInline muted />
             {videoReady&&captureSlotKeys.map(key=><div
               key={key}
-              className={`capture-explicit-slot ${key.startsWith('blue')?'blue':'red'} ${key.includes('Ban')?'ban':'pick'} ${target?.key===key?'active':''} ${calibratingSlot===key?'editing':''}`}
+              className={`capture-explicit-slot ${key.startsWith('blue')?'blue':'red'} ${key.includes('Ban')?'ban':'pick'} ${activeTargetKeys.has(key)?'active':''} ${calibratingSlot===key?'editing':''}`}
               style={percentageStyle(slots[key])}
             ><span>{captureSlotLabel(key)}</span></div>)}
             {!videoReady&&<div className="window-capture-placeholder">{t('windowCaptureChooseHint')}</div>}
@@ -806,7 +818,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
             {captureSlotKeys.map(key=><button
               type="button"
               key={key}
-              className={[calibratingSlot===key?'selected':'',target?.key===key?'active':''].filter(Boolean).join(' ')}
+              className={[calibratingSlot===key?'selected':'',activeTargetKeys.has(key)?'active':''].filter(Boolean).join(' ')}
               onClick={()=>selectCalibrationSlot(key)}
             >{captureSlotLabel(key)}</button>)}
           </div>
@@ -882,12 +894,31 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       {result.kind==='empty-ban'?<>
         <h2>{t('emptyBanReviewTitle')}</h2>
         <p>{t('emptyBanReviewHintOnce')}</p>
+        <p>{currentSlotText}</p>
+        <img src={result.preview} alt={zh?'当前槽位截图':'Current slot capture'}/>
+      </>:result.kind==='pick-group'?<>
+        <h2>{zh?(result.entries.length>1?'确认同时选人结果':'确认 Pick 结果'):(result.entries.length>1?'Review simultaneous picks':'Review pick')}</h2>
+        <p>{zh?'检测到下一轮已经开始（或最后一手已变暗），因此当前 Pick 组视为已锁定。':'The next turn started (or the final slot dimmed), so the current pick turn is treated as locked.'}</p>
+        <div className="pick-group-review">
+          {result.entries.map(entry=><div className="pick-group-review-entry" key={entry.key}>
+            <strong>{captureSlotLabel(entry.key)}</strong>
+            <label>{zh?'候选英雄':'Candidate'}
+              <select
+                value={groupSelected[entry.key]??entry.candidates[0]?.heroId??''}
+                onChange={event=>setGroupSelected(current=>({...current,[entry.key]:Number(event.target.value)}))}
+              >
+                {entry.candidates.map(candidate=><option key={candidate.heroId} value={candidate.heroId}>{label(candidate.heroId)} · {Math.round(candidate.confidence*100)}%</option>)}
+              </select>
+            </label>
+            <img src={entry.preview} alt={captureSlotLabel(entry.key)}/>
+          </div>)}
+        </div>
       </>:<>
         <h2>{zh?'识别到：':'Recognized: '}{label(selected)}</h2>
         <label>{zh?'候选英雄（相似度，不代表准确率）':'Candidates (similarity, not accuracy)'}<select value={selected} onChange={event=>setSelected(Number(event.target.value))}>{result.candidates.map(candidate=><option key={candidate.heroId} value={candidate.heroId}>{label(candidate.heroId)} · {Math.round(candidate.confidence*100)}%</option>)}</select></label>
+        <p>{currentSlotText}</p>
+        <img src={result.preview} alt={zh?'当前槽位截图':'Current slot capture'}/>
       </>}
-      <p>{currentSlotText}</p>
-      <img src={result.preview} alt={zh?'当前槽位截图':'Current slot capture'}/>
       <div className="capture-review-actions">
         <button disabled={disabled||!phase} onClick={submitReview}>{result.kind==='empty-ban'?t('emptyBanConfirm'):(zh?'确认并提交':'Confirm and submit')}</button>
         <button onClick={closeReview}>{zh?'拒绝 / 继续监视':'Reject / keep watching'}</button>
