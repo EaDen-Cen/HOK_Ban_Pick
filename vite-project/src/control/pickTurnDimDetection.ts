@@ -17,9 +17,13 @@ export interface PickTurnDimResult {
 }
 
 /**
- * Final-pick fallback for HOK: there is no next draft slot to probe after P5.
- * Once every current pick candidate is stable, freeze the slot brightness and
- * treat a sustained darkening of the portrait(s) as the lock transition.
+ * Highlight-release fallback for HOK Pick turns that cannot be confirmed by an
+ * immediately-following opponent Pick (round boundary / final pick).
+ *
+ * The live client brightens the active player row while selecting. Locking does
+ * NOT add a dark overlay; it removes that active highlight and returns the row
+ * to its normal brightness. We freeze the highlighted luma once the hero is
+ * stable, then require a sustained decrease back toward normal.
  */
 export function updatePickTurnDimState(
   previous:PickTurnDimState,
@@ -53,8 +57,8 @@ export function updatePickTurnDimState(
 
   const baseline=samePhase&&previous.baselineLuma ? previous.baselineLuma : current;
   const drop=Math.max(0,(baseline-current)/Math.max(baseline,1));
-  const dimmed=drop>=(input.dropRatio??.10);
-  const dimCount=dimmed?(samePhase?previous.dimCount+1:1):0;
+  const highlightReleased=drop>=(input.dropRatio??.08);
+  const dimCount=highlightReleased?(samePhase?previous.dimCount+1:1):0;
   return {
     state:{phaseKey:input.phaseKey,baselineLuma:baseline,dimCount},
     locked:dimCount>=(input.confirmScans??2),
