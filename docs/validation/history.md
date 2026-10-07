@@ -4,6 +4,35 @@
 
 # 验证记录
 
+## v2.4.0 Auto BP 实测与发布前验证（2026-10-07）
+
+自动验证：
+
+- PR #29–#34 连续覆盖 Auto BP 锁定、双 Pick、Pick→Ban 边界、空 Ban、换英雄、18 框预设和 Control 布局重构。
+- 最新 Auto BP Control 布局 PR #34 的 Build、Tests、Lint、Hero validation 全部通过。
+- 单元测试覆盖普通 Pick Turn、同时双 Pick、next-opponent-Pick probe、Pick 行高亮恢复、空 Ban grace、低置信假英雄、18 框预设序列化和最终阵容 assignments。
+
+人工 / 模拟器实测：
+
+- Pick 头像匹配从早期约 40%–50% 不稳定状态提升到稳定素材下约 85%+。
+- Ban 在圆形 mask 调整后，多数正常英雄相似度约 80%–90%+；这些数值是模板相似度，不是统计准确率。
+- 普通 Pick 已验证不会仅因预选头像稳定而提前提交，而是等待对手下一 Pick 真正出现预选。
+- 红方 Pick→Ban 边界已改为检测当前选角行高亮恢复；后续实测通过。
+- 同时双 Pick 已按一个 Draft Turn 识别和提交。
+- 空 Ban 保护时间缩短至约 4–5 秒，约 35% 的空槽假英雄匹配不再阻塞空 Ban。
+- BP 完成后的换英雄检测已修复隐藏 video 生命周期问题，并完成“立即识别并应用”工作流。
+- 18 个独立框可保存为本机预设并完整恢复。
+- Auto BP 工作区重新布局后，高频识别刷新不再造成页面持续上下跳动。
+
+仍需在每次正式赛事前复测：
+
+- 游戏版本更新后的 Ban 锁定 cue；
+- 真实比赛客户端头像素材；
+- 不同分辨率 / UI Scale；
+- 长时间 OBS、Caster Delay、Cloudflare 与音画链路。
+
+本次 v2.4.0 作为首个公开 Release 基线，仍把 Auto BP 定位为导播辅助输入；手动录入保留为比赛安全 fallback。
+
 ## 文档目录整理验证（2026-09-23）
 
 - 基线：main `bbcf24807596c75046ebb3e8a82d775c760c4dd6`；提交前再次核对远端 main 未变化。
