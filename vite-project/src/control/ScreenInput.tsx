@@ -439,6 +439,104 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     setBusy(true);
     setMessage('');
     try{
+      if(captureMode==='window'&&phase.action==='pick'){
+        const responses=await Promise.all(turnTargets.map(item=>recognizeWindowRegion(item.region)));
+        if(!mounted.current) return;
+
+        const scanned=turnTargets.map((item,index)=>{
+          const data=responses[index];
+          const candidates=data.candidates??[];
+          const stabilityKey=`${phaseKey}:${item.key}`;
+          const evidence=updateHeroRecognitionStability(
+            pickSlotStability.current[item.key]??freshHeroStability(),
+            stabilityKey,
+            candidates,
+          );
+          pickSlotStability.current[item.key]=evidence.stability;
+          return {item,data,candidates,evidence};
+        });
+
+        const allStable=scanned.length>0&&scanned.every(entry=>entry.evidence.accepted&&entry.evidence.top);
+        const heroIds=scanned.map(entry=>entry.evidence.top?.heroId).filter((id):id is number=>id!==undefined);
+        const distinctHeroes=heroIds.length===scanned.length&&new Set(heroIds).size===heroIds.length;
+        const lumas=scanned.map(entry=>entry.data.meanLuma??0);
+
+        const dim=updatePickTurnDimState(pickTurnDimState.current,{
+          phaseKey,
+          meanLumas:lumas,
+          candidatesStable:allStable&&distinctHeroes,
+        });
+        pickTurnDimState.current=dim.state;
+
+        const status=scanned.map(entry=>{
+          const top=entry.evidence.top;
+          if(!top) return `${captureSlotLabel(entry.item.key)} · —`;
+          const progress=entry.evidence.requiredScans
+            ? `${entry.evidence.stability.count}/${entry.evidence.requiredScans}`
+            : '—';
+          return `${captureSlotLabel(entry.item.key)} · ${label(top.heroId)} ${Math.round(top.confidence*100)}% · ${progress}`;
+        }).join(' | ');
+        setCandidateStatus(status||t('captureNoCandidate'));
+
+        if(!allStable){
+          setMessage(zh
+            ? (turnTargets.length>1?'当前为同时选人阶段，正在等待两个 Pick 位都稳定。':'正在等待当前 Pick 位英雄稳定。')
+            : (turnTargets.length>1?'Simultaneous pick turn: waiting for both slots to stabilize.':'Waiting for the current pick to stabilize.'));
+          return;
+        }
+        if(!distinctHeroes){
+          setMessage(zh?'同时选人阶段识别到了重复英雄，请继续扫描或重新校准槽位。':'The simultaneous pick turn resolved to duplicate heroes; keep scanning or recalibrate.');
+          return;
+        }
+
+        let turnAdvanced=false;
+        if(nextTurnProbe){
+          const probeData=await recognizeWindowRegion(nextTurnProbe.region);
+          const probeEvidence=updateHeroRecognitionStability(
+            nextTurnStability.current,
+            `${phaseKey}:next:${nextTurnProbe.key}`,
+            probeData.candidates??[],
+          );
+          nextTurnStability.current=probeEvidence.stability;
+          turnAdvanced=probeEvidence.accepted&&(probeEvidence.top?.confidence??0)>=.45;
+          if(!turnAdvanced){
+            const nextTop=probeEvidence.top;
+            setMessage(zh
+              ? `当前 Pick 组已稳定，等待下一轮 ${captureSlotLabel(nextTurnProbe.key)} 开始预选${nextTop?`（当前 ${Math.round(nextTop.confidence*100)}%）`:''}。`
+              : `Current pick group is stable; waiting for ${captureSlotLabel(nextTurnProbe.key)} to begin preselecting${nextTop?` (${Math.round(nextTop.confidence*100)}%)`:''}.`);
+            return;
+          }
+        }else{
+          turnAdvanced=dim.locked;
+          if(!turnAdvanced){
+            setMessage(zh
+              ? `最后一个 Pick 已稳定，等待锁定后的画面变暗（亮度下降 ${Math.round(dim.dropRatio*100)}%）。`
+              : `Final pick is stable; waiting for the post-lock dim transition (luma drop ${Math.round(dim.dropRatio*100)}%).`);
+            return;
+          }
+        }
+
+        const selections=Object.fromEntries(scanned.map(entry=>[
+          entry.item.key,
+          entry.evidence.top!.heroId,
+        ]));
+        setGroupSelected(selections);
+        setResult({
+          kind:'pick-group',
+          team:phase.team,
+          entries:scanned.map(entry=>({
+            key:entry.item.key,
+            candidates:entry.candidates,
+            preview:entry.data.preview,
+          })),
+          at:Date.now(),
+        });
+        setMessage(zh
+          ? (nextTurnProbe?'检测到下一轮已经开始，当前 Pick 组视为已锁定。':'检测到最后 Pick 锁定后的画面变暗。')
+          : (nextTurnProbe?'Next turn activity detected; current pick group is treated as locked.':'Final-pick dim transition detected.'));
+        return;
+      }
+
       let data:RecognitionResponse;
       if(captureMode==='window'){
         const image=captureWindowFrame();
