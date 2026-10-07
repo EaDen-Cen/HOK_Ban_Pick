@@ -45,6 +45,31 @@ function validateScores(blue: number, red: number, format: MatchState['seriesFor
   const wins = (Number(format.slice(2)) + 1) / 2;
   if (blue > wins || red > wins || (blue === wins && red === wins)) throw new Error('比分或局数不符合当前赛制');
 }
+function casterViewState(current: MatchState, delayed?: MatchState): MatchState {
+  const view = copy(delayed ?? initialState());
+
+  // Team/tournament metadata is not gameplay-sensitive. Keep it live so the
+  // caster desk is useful immediately, while picks, bans, scores and history
+  // continue to follow the configured caster delay.
+  view.blueTeam = copy(current.blueTeam);
+  view.redTeam = copy(current.redTeam);
+  view.seriesFormat = current.seriesFormat;
+  view.stage = current.stage;
+  view.language = current.language;
+  view.overlayLayout = current.overlayLayout;
+  view.scoreDisplay = current.scoreDisplay;
+  view.bpInputMode = current.bpInputMode;
+  view.showHeroName = current.showHeroName;
+  view.artSourceMode = current.artSourceMode;
+  view.heroArtOverrides = copy(current.heroArtOverrides || {});
+  view.heroDataOverrides = copy(current.heroDataOverrides || {});
+  view.draftMode = current.draftMode;
+  view.firstPickSide = current.firstPickSide;
+  view.sideSwapMode = current.sideSwapMode;
+  view.draftRuleMode = current.draftRuleMode;
+  view.flowbornFormsIndependent = current.flowbornFormsIndependent;
+  return view;
+}
 function validateLineup(state: MatchState, requireComplete = state.draftComplete) {
   for (const side of ['blue', 'red'] as const) {
     const picks = state[`${side}Picks`];
@@ -85,7 +110,7 @@ export class Store {
 
       return {
         type: 'match_state_update',
-        state: copy(event?.resultingState ?? initialState()),
+        state: casterViewState(this.data.state, event?.resultingState),
         revision: event?.revision ?? 0,
         casterDelaySeconds: this.data.delay,
       };
@@ -241,6 +266,22 @@ export class Store {
     case 'reset_match': {
       next.history.push(copy(state));
       const reset = initialState();
+
+      // Reset match progress but preserve tournament configuration. This mirrors
+      // the proven LoL workflow: clearing a match should not force the director
+      // to rebuild event identity, BO format, BP rules or presentation settings.
+      reset.stage = state.stage;
+      reset.seriesFormat = state.seriesFormat;
+      reset.draftMode = state.draftMode;
+      reset.draftRuleMode = state.draftRuleMode;
+      reset.flowbornFormsIndependent = state.flowbornFormsIndependent;
+      reset.firstPickSide = state.firstPickSide;
+      reset.sideSwapMode = state.sideSwapMode;
+      reset.language = state.language;
+      reset.overlayLayout = state.overlayLayout;
+      reset.scoreDisplay = state.scoreDisplay;
+      reset.bpInputMode = state.bpInputMode;
+
       reset.heroArtOverrides = copy(state.heroArtOverrides || {});
       reset.heroDataOverrides = copy(state.heroDataOverrides || {});
       reset.showHeroName = state.showHeroName ?? true;
@@ -399,8 +440,35 @@ export class Store {
         if (!Array.isArray(override.aliases) || override.aliases.length > 20) throw new Error('heroDataOverrideInvalid');
         override.aliases.forEach(alias => shortText(alias, 60));
       }
+      if (override.imageLink !== undefined) {
+        if (!override.imageLink.trim()) throw new Error('heroDataOverrideInvalid');
+        portraitURL(override.imageLink);
+      }
+      if (override.artLink !== undefined) {
+        if (!override.artLink.trim()) throw new Error('heroDataOverrideInvalid');
+        portraitURL(override.artLink);
+      }
+
+      // Persist only fields that differ from the generated roster baseline.
+      // This keeps future hero-data syncs free to update fields the director
+      // never actually overrode.
+      const normalized: typeof override = {};
+      if (override.englishName !== undefined && override.englishName.trim() !== baseHero.englishName) normalized.englishName = override.englishName.trim();
+      if (override.chineseName !== undefined && override.chineseName.trim() !== baseHero.chineseName) normalized.chineseName = override.chineseName.trim();
+      if (override.occupation !== undefined && override.occupation !== baseHero.occupation) normalized.occupation = override.occupation;
+      if (override.altOccupation !== undefined && override.altOccupation !== (baseHero.altOccupation ?? '')) normalized.altOccupation = override.altOccupation;
+      if (override.aliases !== undefined) {
+        const aliases = [...new Set(override.aliases.map(alias => alias.trim()).filter(Boolean))];
+        if (JSON.stringify(aliases) !== JSON.stringify(baseHero.aliases ?? [])) normalized.aliases = aliases;
+      }
+      if (override.imageLink !== undefined && override.imageLink !== baseHero.imageLink) normalized.imageLink = override.imageLink;
+      if (override.artLink !== undefined && override.artLink !== (baseHero.artLink ?? '')) normalized.artLink = override.artLink;
+
       next.history.push(copy(state));
-      state.heroDataOverrides = { ...(state.heroDataOverrides || {}), [String(action.heroId)]: copy(override) };
+      const map = { ...(state.heroDataOverrides || {}) };
+      if (Object.keys(normalized).length) map[String(action.heroId)] = copy(normalized);
+      else delete map[String(action.heroId)];
+      state.heroDataOverrides = map;
       break;
     }
     case 'reset_hero_data_override': {
