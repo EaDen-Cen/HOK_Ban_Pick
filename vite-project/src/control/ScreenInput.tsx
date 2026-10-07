@@ -417,12 +417,20 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     return canvas.toDataURL('image/png');
   },[target?.region,t,videoReady]);
 
-  const recognizeWindowRegion=useCallback(async(region:NormalizedCaptureRegion)=>{
+  const recognizeWindowRegion=useCallback(async(
+    region:NormalizedCaptureRegion,
+    options?:{allowedHeroIds?:number[];shape?:'square'|'circle'},
+  )=>{
     const image=captureWindowFrame(region);
     const response=await fetch('/api/recognize-frame',{
       method:'POST',
       headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({image,revision}),
+      body:JSON.stringify({
+        image,
+        revision,
+        allowedHeroIds:options?.allowedHeroIds,
+        shape:options?.shape??'square',
+      }),
       signal:AbortSignal.timeout(25000),
     });
     const data:RecognitionResponse=await response.json();
