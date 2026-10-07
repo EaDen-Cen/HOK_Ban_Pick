@@ -145,6 +145,31 @@ npm run server
 | 119 | 元流之子（辅助） | Flowborn (Roamer) |
 <!-- HERO-SYNC:ROSTER:END -->
 
+## BP 屏幕采集模拟器
+
+为了测试 Auto BP，不必每次进入真实游戏房间。仓库提供一套与正式比赛状态完全隔离的 **BP Simulator**：
+
+```powershell
+cd vite-project
+npm run simulator
+```
+
+Windows 也可以直接运行：
+
+```text
+vite-project/start-bp-simulator.bat
+```
+
+入口：
+
+```text
+http://127.0.0.1:5173/tools/bp-simulator
+```
+
+然后在 HOK Control 的 Auto BP 中选择模拟器窗口作为采集来源。模拟器可复现 Pick、圆形 Ban、锁定标记、空 Ban、蓝/红先手、不同头像尺寸与完整 BP phase 顺序；按 `H` 可以隐藏控制区，只保留干净的采集画面。
+
+LoL 项目中值得移植的功能优化及本次实际移植内容见 [HOK / LoL 功能对照审计](docs/research/lol-feature-parity-audit-2026-10-06.md)。
+
 ## 文档导航
 
 | 需要做什么 | 文档 |
