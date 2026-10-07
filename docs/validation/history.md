@@ -4,6 +4,19 @@
 
 # 验证记录
 
+## v1.0.0 Release Candidate 自动验证（2026-10-07）
+
+- 分支：`release/v1.0.0`，PR #35。
+- GitHub Actions `validate-pr` 已通过：
+  - Install dependencies
+  - Hero validation
+  - TypeScript / Vite production build
+  - Server / unit tests
+  - ESLint
+- 本次自动测试包含新增的 Simulator 随机等待区间 helper；既有 BP、Auto BP、存储与规则测试继续通过。
+- 本次 RC 还包含现场操作相关修改：Auto BP“手动确认当前最高候选”、英雄数据编辑器头像网格、Simulator 后台启停、换英雄自动同步重试与文档重写。
+- 上述浏览器/Windows 启动脚本与真实游戏画面仍建议在合并/打 tag 前做一次人工 smoke test。自动 CI 不能代替真实 HOK、浏览器窗口采集、OBS 与 Windows BAT/PowerShell 的现场验收。
+
 ## 文档目录整理验证（2026-09-23）
 
 - 基线：main `bbcf24807596c75046ebb3e8a82d775c760c4dd6`；提交前再次核对远端 main 未变化。
