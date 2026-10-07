@@ -11,7 +11,7 @@ export interface EmptyBanDetection {
   lockCueDetected: boolean;
 }
 
-export const EMPTY_BAN_GRACE_MS = 4500;
+export const EMPTY_BAN_GRACE_MS = 4000;
 export const EMPTY_BAN_LOCK_DISTANCE = 10;
 export const EMPTY_BAN_MAX_HERO_CONFIDENCE = .50;
 
