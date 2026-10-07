@@ -19,7 +19,7 @@ export function simulatorSlotForPhase(
     .slice(0,phaseIndex)
     .filter(item=>item.team===phase.team&&item.action===phase.action)
     .length;
-  return {...phase,slotIndex,phaseIndex};
+  return {side:phase.team,action:phase.action,slotIndex,phaseIndex};
 }
 
 export function simulatorSlotKey(slot:SimulatorPhaseSlot) {
