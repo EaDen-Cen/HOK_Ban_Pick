@@ -3,8 +3,11 @@ import heroes from '../components/HeroList';
 import { phases, type Side } from '../shared/types';
 import {
   simulatorAllSlotKeys,
+  simulatorNextTurnPhase,
+  simulatorPreviousTurnPhase,
   simulatorSlotForPhase,
   simulatorSlotKey,
+  simulatorSlotsForTurn,
   swapSimulatorPickHeroes,
 } from './bpSimulatorModel';
 import { useBpSimulatorState } from './bpSimulatorState';
@@ -26,9 +29,11 @@ export function BpSimulatorControl() {
   const [swapB,setSwapB]=useState(1);
 
   const sequence=useMemo(()=>phases(state.mode,state.firstPickSide),[state.mode,state.firstPickSide]);
-  const active=simulatorSlotForPhase(state.mode,state.firstPickSide,state.phaseIndex);
-  const activeKey=active?simulatorSlotKey(active):'';
-  const activeLocked=activeKey?state.locked.includes(activeKey):false;
+  const activeSlots=simulatorSlotsForTurn(state.mode,state.firstPickSide,state.phaseIndex);
+  const active=activeSlots[0];
+  const activeKeys=activeSlots.map(simulatorSlotKey);
+  const activeKey=activeKeys[0]??'';
+  const activeLocked=activeKeys.length>0&&activeKeys.every(key=>state.locked.includes(key));
 
   const patch=(partial:Partial<typeof state>)=>update(current=>({...current,...partial}));
 
@@ -59,31 +64,37 @@ export function BpSimulatorControl() {
   }));
 
   const toggleCurrentLock=()=> {
-    if(!activeKey) return;
-    update(current=>({
-      ...current,
-      locked:current.locked.includes(activeKey)
-        ? current.locked.filter(key=>key!==activeKey)
-        : unique([...current.locked,activeKey]),
-    }));
+    if(!activeKeys.length) return;
+    update(current=>{
+      const currentKeys=simulatorSlotsForTurn(current.mode,current.firstPickSide,current.phaseIndex).map(simulatorSlotKey);
+      const allLocked=currentKeys.length>0&&currentKeys.every(key=>current.locked.includes(key));
+      return {
+        ...current,
+        locked:allLocked
+          ? current.locked.filter(key=>!currentKeys.includes(key))
+          : unique([...current.locked,...currentKeys]),
+      };
+    });
   };
 
   const nextPhase=()=> {
-    if(!activeKey||!activeLocked) return;
+    if(!activeKeys.length||!activeLocked) return;
     update(current=>({
       ...current,
-      phaseIndex:Math.min(phases(current.mode,current.firstPickSide).length,current.phaseIndex+1),
+      phaseIndex:Math.min(
+        phases(current.mode,current.firstPickSide).length,
+        simulatorNextTurnPhase(current.mode,current.firstPickSide,current.phaseIndex),
+      ),
     }));
   };
 
   const previousPhase=()=>update(current=>{
-    const next=Math.max(0,current.phaseIndex-1);
-    const nextActive=simulatorSlotForPhase(current.mode,current.firstPickSide,next);
-    const key=nextActive?simulatorSlotKey(nextActive):'';
+    const next=simulatorPreviousTurnPhase(current.mode,current.firstPickSide,current.phaseIndex);
+    const previousKeys=simulatorSlotsForTurn(current.mode,current.firstPickSide,next).map(simulatorSlotKey);
     return {
       ...current,
       phaseIndex:next,
-      locked:key?current.locked.filter(item=>item!==key):current.locked,
+      locked:current.locked.filter(item=>!previousKeys.includes(item)),
       autoPlay:false,
     };
   });
@@ -99,13 +110,20 @@ export function BpSimulatorControl() {
   };
 
   const randomizeCurrent=()=> {
-    if(!activeKey||activeLocked) return;
-    const used=new Set(Object.values(state.slotHeroes));
-    const pool=heroes.filter(hero=>!used.has(hero.id));
-    const source=pool.length?pool:heroes;
-    const hero=source[Math.floor(Math.random()*source.length)];
-    if(!hero) return;
-    update(current=>({...current,slotHeroes:{...current.slotHeroes,[activeKey]:hero.id}}));
+    if(!activeKeys.length||activeLocked) return;
+    update(current=>{
+      const currentKeys=simulatorSlotsForTurn(current.mode,current.firstPickSide,current.phaseIndex).map(simulatorSlotKey);
+      const used=new Set(Object.entries(current.slotHeroes)
+        .filter(([key])=>!currentKeys.includes(key))
+        .map(([,heroId])=>heroId));
+      const pool=[...heroes].filter(hero=>!used.has(hero.id)).sort(()=>Math.random()-.5);
+      const slotHeroes={...current.slotHeroes};
+      currentKeys.forEach((key,index)=>{
+        const hero=pool[index]??heroes[index%heroes.length];
+        if(hero) slotHeroes[key]=hero.id;
+      });
+      return {...current,slotHeroes};
+    });
   };
 
   const randomizeAll=()=> {
@@ -142,13 +160,17 @@ export function BpSimulatorControl() {
     const timer=window.setTimeout(()=>{
       update(current=>{
         const currentSequence=phases(current.mode,current.firstPickSide);
-        const currentActive=simulatorSlotForPhase(current.mode,current.firstPickSide,current.phaseIndex);
-        if(!currentActive) return {...current,autoPlay:false};
-        const key=simulatorSlotKey(currentActive);
-        if(!current.locked.includes(key)) {
-          return {...current,locked:unique([...current.locked,key])};
+        const currentSlots=simulatorSlotsForTurn(current.mode,current.firstPickSide,current.phaseIndex);
+        if(!currentSlots.length) return {...current,autoPlay:false};
+        const keys=currentSlots.map(simulatorSlotKey);
+        const allLocked=keys.every(key=>current.locked.includes(key));
+        if(!allLocked) {
+          return {...current,locked:unique([...current.locked,...keys])};
         }
-        const next=Math.min(currentSequence.length,current.phaseIndex+1);
+        const next=Math.min(
+          currentSequence.length,
+          simulatorNextTurnPhase(current.mode,current.firstPickSide,current.phaseIndex),
+        );
         return {...current,phaseIndex:next,autoPlay:next<currentSequence.length&&current.autoPlay};
       });
     },state.intervalMs);
@@ -220,17 +242,17 @@ export function BpSimulatorControl() {
       </div>
 
       <div className="sim-phase-readout">
-        <strong>{active?(active.side==='blue'?'蓝方':'红方')+' · '+(active.action==='ban'?'BAN':'PICK')+' '+(active.slotIndex+1):'BP 已完成'}</strong>
+        <strong>{active?(active.side==='blue'?'蓝方':'红方')+' · '+(active.action==='ban'?'BAN ':'PICK ')+activeSlots.map(slot=>(active.action==='ban'?'B':'P')+(slot.slotIndex+1)).join(' + '):'BP 已完成'}</strong>
         <span>Phase {Math.min(state.phaseIndex+1,sequence.length)}/{sequence.length}</span>
-        <span>{activeKey||'—'}</span>
-        <span className={activeLocked?'locked':'unlocked'}>{activeLocked?'LOCKED':'PRESELECT / UNLOCKED'}</span>
+        <span>{activeKeys.join(' + ')||'—'}</span>
+        <span className={activeLocked?'locked':'unlocked'}>{activeLocked?'LOCKED / 等待下一轮':'PRESELECT / UNLOCKED'}</span>
       </div>
 
       <div className="sim-actions large">
         <button onClick={previousPhase} disabled={state.phaseIndex<=0}>← 上一步</button>
-        <button onClick={toggleCurrentLock} disabled={!activeKey}>{activeLocked?'解除锁定':'锁定当前英雄'}</button>
+        <button onClick={toggleCurrentLock} disabled={!activeKeys.length}>{activeLocked?'解除当前组锁定':'锁定当前组'}</button>
         <button onClick={toggleEmptyBan} disabled={active?.action!=='ban'} className={activeKey&&state.emptyBans.includes(activeKey)?'active':''}>切换空 Ban</button>
-        <button onClick={nextPhase} disabled={!activeKey||!activeLocked}>下一阶段 →</button>
+        <button onClick={nextPhase} disabled={!activeKeys.length||!activeLocked}>让下一轮开始选人 →</button>
         <button onClick={()=>patch({autoPlay:!state.autoPlay})} className={state.autoPlay?'active':''}>{state.autoPlay?'暂停自动脚本':'启动自动脚本'}</button>
         <button onClick={completeDraft}>直接完成 BP（换人测试）</button>
       </div>
@@ -238,23 +260,26 @@ export function BpSimulatorControl() {
 
     <section className="sim-control-panel">
       <h2>当前预选英雄</h2>
-      <div className="sim-current-hero-control">
-        <label>当前槽位英雄
-          <select
-            value={activeKey?state.slotHeroes[activeKey]??'':''}
-            disabled={!activeKey||activeLocked}
-            onChange={event=>activeKey&&update(current=>({
-              ...current,
-              slotHeroes:{...current.slotHeroes,[activeKey]:Number(event.target.value)},
-            }))}
-          >
-            {heroes.map(hero=><option key={hero.id} value={hero.id}>{hero.chineseName} · {hero.englishName}</option>)}
-          </select>
-        </label>
-        <button onClick={randomizeCurrent} disabled={!activeKey||activeLocked}>随机预选（不锁定）</button>
+      <div className="sim-current-pick-group">
+        {activeSlots.map(slot=>{
+          const key=simulatorSlotKey(slot);
+          return <label key={key}>{slot.action==='ban'?'B':'P'}{slot.slotIndex+1}
+            <select
+              value={state.slotHeroes[key]??''}
+              disabled={activeLocked}
+              onChange={event=>update(current=>({
+                ...current,
+                slotHeroes:{...current.slotHeroes,[key]:Number(event.target.value)},
+              }))}
+            >
+              {heroes.map(hero=><option key={hero.id} value={hero.id}>{hero.chineseName} · {hero.englishName}</option>)}
+            </select>
+          </label>;
+        })}
+        <button onClick={randomizeCurrent} disabled={!activeKeys.length||activeLocked}>随机当前组预选</button>
         <button onClick={randomizeAll}>随机全部英雄</button>
       </div>
-      <p className="sim-control-note">预选英雄会立即显示在 BP 画面，但只有点击“锁定当前英雄”后才出现锁定 cue。这样可以直接验证识别器不会在预选阶段提前提交。</p>
+      <p className="sim-control-note">双选阶段会同时显示两个可编辑 Pick 位。Pick 锁定后不再显示锁图标，而是让已锁定槽位整体变暗；点击“让下一轮开始选人”后，下一个 Pick/Ban 位会出现预选英雄，Auto BP 应据此判断上一组已经锁定。</p>
     </section>
 
     <section className="sim-control-panel">

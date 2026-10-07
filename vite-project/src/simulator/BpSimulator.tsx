@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import heroes from '../components/HeroList';
 import { phases, type Side } from '../shared/types';
-import { simulatorBanVisualKeys, simulatorSlotForPhase, simulatorSlotKey } from './bpSimulatorModel';
+import { simulatorBanVisualKeys, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn } from './bpSimulatorModel';
 import { useBpSimulatorState } from './bpSimulatorState';
 import './bpSimulator.css';
 
@@ -23,8 +23,11 @@ function LockCue() {
 export function BpSimulator() {
   const [state]=useBpSimulatorState();
   const sequence=useMemo(()=>phases(state.mode,state.firstPickSide),[state.mode,state.firstPickSide]);
-  const active=simulatorSlotForPhase(state.mode,state.firstPickSide,state.phaseIndex);
+  const activeSlots=simulatorSlotsForTurn(state.mode,state.firstPickSide,state.phaseIndex);
+  const active=activeSlots[0];
+  const activeKeys=useMemo(()=>new Set(activeSlots.map(simulatorSlotKey)),[activeSlots]);
   const activeKey=active?simulatorSlotKey(active):'';
+  const activeLocked=activeSlots.length>0&&activeSlots.every(slot=>state.locked.includes(simulatorSlotKey(slot)));
 
   const phaseByKey=useMemo(()=>{
     const map=new Map<string,number>();
@@ -37,8 +40,8 @@ export function BpSimulator() {
 
   const visibleState=(key:string)=>{
     const slotPhase=phaseByKey.get(key);
-    const visible=slotPhase!==undefined&&slotPhase<=state.phaseIndex;
-    const isCurrent=key===activeKey;
+    const visible=slotPhase!==undefined&&(slotPhase<state.phaseIndex||activeKeys.has(key));
+    const isCurrent=activeKeys.has(key);
     const isLocked=(slotPhase!==undefined&&slotPhase<state.phaseIndex)||state.locked.includes(key);
     return {visible,isCurrent,isLocked,empty:state.emptyBans.includes(key)};
   };
@@ -96,7 +99,6 @@ export function BpSimulator() {
       <div className="sim-pick-avatar" style={{width:state.pickSize,height:state.pickSize}}>
         {stateForSlot.visible&&<img src={heroImage(id)} alt={heroName(id)} />}
         {!stateForSlot.visible&&<span className="sim-player-placeholder">{index+1}</span>}
-        {stateForSlot.isLocked&&<LockCue />}
       </div>
       <div className="sim-player-copy">
         <strong>{side==='blue'?'BLUE':'RED'}.P{index+1}</strong>
@@ -131,7 +133,7 @@ export function BpSimulator() {
         <header className="sim-game-title">
           <span>Phase</span>
           <strong>{actionLabel}</strong>
-          <small>{active?((active.side==='blue'?'BLUE':'RED')+' · '+(active.slotIndex+1)):'DRAFT COMPLETE'}</small>
+          <small>{active?((active.side==='blue'?'BLUE':'RED')+' · '+activeSlots.map(slot=>'P'+(slot.slotIndex+1)).join(' + ')):'DRAFT COMPLETE'}</small>
         </header>
 
         <nav className="sim-role-tabs" aria-hidden="true">
@@ -150,16 +152,16 @@ export function BpSimulator() {
 
         <div className="sim-game-actions">
           <button className="ghost">REQUEST</button>
-          <button className={'primary '+(activeKey&&state.locked.includes(activeKey)?'locked':'')}>
-            {activeKey&&state.locked.includes(activeKey)?'LOCKED':actionLabel.toUpperCase()}
+          <button className={'primary '+(activeLocked?'locked':'')}>
+            {activeLocked?'LOCKED':actionLabel.toUpperCase()}
           </button>
           <button className="ghost">PRESELECT</button>
         </div>
       </section>
 
       <div className="sim-bottom-status">
-        <span>{activeKey||'DRAFT COMPLETE'}</span>
-        <strong>{activeKey&&state.locked.includes(activeKey)?'LOCKED':'PRESELECT'}</strong>
+        <span>{activeSlots.length?activeSlots.map(simulatorSlotKey).join(' + '):'DRAFT COMPLETE'}</span>
+        <strong>{activeLocked?'LOCKED / TRANSITIONED':'PRESELECT'}</strong>
         <small>F: FULLSCREEN · C: CONTROL</small>
       </div>
     </section>

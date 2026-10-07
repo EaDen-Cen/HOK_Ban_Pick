@@ -137,6 +137,7 @@ export type MatchSettings = Pick<
 export type Action =
   | { type: 'load_team_preset'; side: Side; presetId: string }
   | { type: 'draft_action'; team: Side; action: 'ban' | 'pick'; heroId: number }
+  | { type: 'draft_pick_group'; team: Side; heroIds: number[] }
   | { type: 'skip_ban'; team: Side }
   | { type: 'undo' | 'reset_draft' | 'reset_match' }
   | { type: 'commit_game' | 'next_game' | 'swap_sides' }

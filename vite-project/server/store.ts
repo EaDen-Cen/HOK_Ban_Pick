@@ -4,6 +4,7 @@ import { dirname } from 'node:path';
 import heroes from '../src/components/HeroList.js';
 import { initialState, phases, type Action, type MatchState, type Role, type Snapshot } from '../src/shared/types.js';
 import { currentGame, draftHeroGroupKey, draftHeroUsed, draftRestriction, normalizeState, pickRestriction, playerIdentity, ruleLocked, seriesFinished } from '../src/shared/draftRules.js';
+import { draftTurnAtPhase } from '../src/shared/draftTurns.js';
 
 interface Event { id: string; timestamp: number; type: string; resultingState: MatchState; revision: number }
 interface Data { version: 1; state: MatchState; events: Event[]; history: MatchState[]; revision: number; delay: number; ids: string[] }
@@ -149,6 +150,35 @@ export class Store {
       }
       next.history.push(copy(state));
       state[action.side === 'blue' ? 'blueTeam' : 'redTeam'] = { id: preset.id, name: preset.name, logo: preset.logo, players: [...preset.players], playerRoles: [...preset.playerRoles], playerPortraits: [...preset.playerPortraits] };
+      break;
+    }
+    case 'draft_pick_group': {
+      if (state.committedGameId) throw new Error('gameAlreadyCommitted');
+      if (state.draftRuleMode === 'player' && [...state.blueTeam.players, ...state.redTeam.players].some(player => !playerIdentity(player))) throw new Error('playerMissing');
+      if (state.currentPhase === 0 && (seriesFinished(state) || state.draftHistory.some(game => game.gameNumber >= state.gameNumber))) throw new Error('updateScoreBeforeNext');
+      const turn = draftTurnAtPhase(state.draftMode, state.firstPickSide, state.currentPhase);
+      if (!turn || turn.action !== 'pick' || turn.team !== action.team) throw new Error('当前选禁阶段不支持此操作，请确认轮次和队伍');
+      if (!Array.isArray(action.heroIds) || action.heroIds.length !== turn.phaseIndexes.length || action.heroIds.length < 1 || action.heroIds.length > 2) throw new Error('pickGroupInvalid');
+      next.history.push(copy(state));
+      state.draftGameNumber ??= state.gameNumber;
+      for (const heroId of action.heroIds) {
+        const phase = phases(state.draftMode, state.firstPickSide)[state.currentPhase];
+        if (!phase || phase.action !== 'pick' || phase.team !== action.team) throw new Error('pickGroupInvalid');
+        if (!heroes.some(h => h.id === heroId)) throw new Error('找不到该英雄');
+        if (draftHeroUsed(state, heroId)) {
+          const selected = [...state.blueBans, ...state.redBans, ...state.bluePicks, ...state.redPicks]
+            .find(id => id !== null && draftHeroGroupKey(state, id) === draftHeroGroupKey(state, heroId));
+          const groupedFlowborn = !state.flowbornFormsIndependent && selected !== undefined && selected !== heroId;
+          throw new Error(groupedFlowborn ? 'flowbornAlreadyUsed' : '该英雄已被选择或禁用');
+        }
+        const reason = draftRestriction(state, phase.team, 'pick', heroId);
+        if (reason) throw new Error(reason);
+        state[`${phase.team}Picks`].push(heroId);
+        const assignmentIndex = state[`${phase.team}Picks`].length - 1;
+        state[`${phase.team}Assignments`][assignmentIndex] = heroId;
+        state.currentPhase++;
+      }
+      state.draftComplete = state.currentPhase === phases(state.draftMode, state.firstPickSide).length;
       break;
     }
     case 'draft_action': {

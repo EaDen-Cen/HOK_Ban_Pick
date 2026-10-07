@@ -1,4 +1,5 @@
 import { phases, type MatchState, type Side } from '../shared/types.js';
+import { draftTurnAtPhase, previousDraftTurnStart } from '../shared/draftTurns.js';
 
 export interface SimulatorPhaseSlot {
   side: Side;
@@ -27,6 +28,35 @@ export function simulatorSlotForPhase(
     .filter(item=>item.team===phase.team&&item.action===phase.action)
     .length;
   return {side:phase.team,action:phase.action,slotIndex,phaseIndex};
+}
+
+
+export function simulatorSlotsForTurn(
+  mode:MatchState['draftMode'],
+  firstPickSide:Side,
+  phaseIndex:number,
+) {
+  const turn=draftTurnAtPhase(mode,firstPickSide,phaseIndex);
+  if(!turn) return [];
+  return turn.phaseIndexes
+    .map(index=>simulatorSlotForPhase(mode,firstPickSide,index))
+    .filter((slot):slot is SimulatorPhaseSlot=>!!slot);
+}
+
+export function simulatorNextTurnPhase(
+  mode:MatchState['draftMode'],
+  firstPickSide:Side,
+  phaseIndex:number,
+) {
+  return draftTurnAtPhase(mode,firstPickSide,phaseIndex)?.endPhaseExclusive ?? phases(mode,firstPickSide).length;
+}
+
+export function simulatorPreviousTurnPhase(
+  mode:MatchState['draftMode'],
+  firstPickSide:Side,
+  phaseIndex:number,
+) {
+  return previousDraftTurnStart(mode,firstPickSide,phaseIndex);
 }
 
 export function simulatorSlotKey(slot:SimulatorPhaseSlot) {

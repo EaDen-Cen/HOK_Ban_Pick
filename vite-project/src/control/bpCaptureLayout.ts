@@ -1,4 +1,5 @@
 import { phases, type MatchState, type Side } from '../shared/types.js';
+import { draftTurnAtPhase, nextDraftTurn } from '../shared/draftTurns.js';
 import { normalizeCaptureRegion, type NormalizedCaptureRegion } from './windowCaptureGeometry.js';
 
 export type CaptureSlotKey =
@@ -109,13 +110,14 @@ export function slotMeta(key:CaptureSlotKey) {
   };
 }
 
-function previousSlotIndex(
-  state:Pick<MatchState,'draftMode'|'firstPickSide'|'currentPhase'>,
+function previousSlotIndexAtPhase(
+  state:Pick<MatchState,'draftMode'|'firstPickSide'>,
+  phaseIndex:number,
   side:Side,
   action:'ban'|'pick',
 ) {
   return phases(state.draftMode,state.firstPickSide)
-    .slice(0,state.currentPhase)
+    .slice(0,phaseIndex)
     .filter(phase=>phase.team===side&&phase.action===action)
     .length;
 }
@@ -124,13 +126,14 @@ export function slotCountFor(state:Pick<MatchState,'draftMode'>, action:'ban'|'p
   return action==='pick' ? 5 : (state.draftMode==='match' ? 4 : 2);
 }
 
-export function captureTargetForState(
-  state:Pick<MatchState,'draftMode'|'firstPickSide'|'currentPhase'>,
+export function captureTargetForPhaseIndex(
+  state:Pick<MatchState,'draftMode'|'firstPickSide'>,
   slots:CaptureSlots,
+  phaseIndex:number,
 ):CaptureTarget|undefined {
-  const phase=phases(state.draftMode,state.firstPickSide)[state.currentPhase];
+  const phase=phases(state.draftMode,state.firstPickSide)[phaseIndex];
   if(!phase) return undefined;
-  const slotIndex=previousSlotIndex(state,phase.team,phase.action);
+  const slotIndex=previousSlotIndexAtPhase(state,phaseIndex,phase.team,phase.action);
   const slotCount=slotCountFor(state,phase.action);
   const key=`${phase.team}${phase.action==='ban'?'Ban':'Pick'}${slotIndex+1}` as CaptureSlotKey;
   return {
@@ -141,4 +144,30 @@ export function captureTargetForState(
     slotCount,
     region:slots[key],
   };
+}
+
+export function captureTargetForState(
+  state:Pick<MatchState,'draftMode'|'firstPickSide'|'currentPhase'>,
+  slots:CaptureSlots,
+):CaptureTarget|undefined {
+  return captureTargetForPhaseIndex(state,slots,state.currentPhase);
+}
+
+export function captureTargetsForCurrentTurn(
+  state:Pick<MatchState,'draftMode'|'firstPickSide'|'currentPhase'>,
+  slots:CaptureSlots,
+):CaptureTarget[] {
+  const turn=draftTurnAtPhase(state.draftMode,state.firstPickSide,state.currentPhase);
+  if(!turn) return [];
+  return turn.phaseIndexes
+    .map(phaseIndex=>captureTargetForPhaseIndex(state,slots,phaseIndex))
+    .filter((target):target is CaptureTarget=>!!target);
+}
+
+export function captureProbeForNextTurn(
+  state:Pick<MatchState,'draftMode'|'firstPickSide'|'currentPhase'>,
+  slots:CaptureSlots,
+):CaptureTarget|undefined {
+  const turn=nextDraftTurn(state.draftMode,state.firstPickSide,state.currentPhase);
+  return turn ? captureTargetForPhaseIndex(state,slots,turn.startPhase) : undefined;
 }
