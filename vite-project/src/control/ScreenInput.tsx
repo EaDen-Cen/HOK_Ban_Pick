@@ -482,6 +482,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
 
       if(heroEvidence.accepted&&top&&!heroLock.locked){
         setMessage(zh?'英雄已稳定，等待游戏内锁定标记。':'Hero stable; waiting for the in-game lock cue.');
+        return;
       }else if(empty.suspected){
         emptyPromptedPhase.current=phaseKey;
         setResult({kind:'empty-ban',candidates,preview:data.preview,at:Date.now()});
