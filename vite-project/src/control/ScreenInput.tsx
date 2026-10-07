@@ -136,6 +136,69 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     });
   },[t]);
 
+  const buildCalibrationPreview=useCallback((region:NormalizedCaptureRegion)=>{
+    const video=videoRef.current;
+    if(!videoReady||!video||!video.videoWidth||!video.videoHeight) return '';
+    const pixels=regionToPixels(region,video.videoWidth,video.videoHeight);
+    const maxSide=260;
+    const scale=Math.min(1,maxSide/Math.max(pixels.width,pixels.height));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(pixels.width*scale));
+    canvas.height=Math.max(1,Math.round(pixels.height*scale));
+    const context=canvas.getContext('2d');
+    if(!context) return '';
+    context.imageSmoothingEnabled=false;
+    context.drawImage(video,pixels.x,pixels.y,pixels.width,pixels.height,0,0,canvas.width,canvas.height);
+    return canvas.toDataURL('image/png');
+  },[videoReady]);
+
+  const persistCalibrationSlot=useCallback((key:CaptureSlotKey,region:NormalizedCaptureRegion)=>{
+    const updated={...slots,[key]:region};
+    setSlots(updated);
+    localStorage.setItem(SLOTS_STORAGE,JSON.stringify(updated));
+    setCalibrationPreview(buildCalibrationPreview(region));
+    return updated;
+  },[buildCalibrationPreview,slots]);
+
+  const selectCalibrationSlot=useCallback((key:CaptureSlotKey)=>{
+    setCalibratingSlot(key);
+    setCalibrationPreview(buildCalibrationPreview(slots[key]));
+  },[buildCalibrationPreview,slots]);
+
+  const enterPrecisionCalibration=useCallback(async()=>{
+    if(!videoReady) return;
+    const key=calibratingSlot??target?.key??captureSlotKeys[0];
+    selectCalibrationSlot(key);
+    setCalibrationZoom(2);
+    setPrecisionMode(true);
+    try{
+      const workspace=precisionWorkspace.current;
+      if(workspace?.requestFullscreen&&document.fullscreenElement!==workspace) await workspace.requestFullscreen();
+    }catch{
+      // The fixed-position precision workspace still works when Fullscreen API is unavailable.
+    }
+  },[calibratingSlot,selectCalibrationSlot,target?.key,videoReady]);
+
+  const exitPrecisionCalibration=useCallback(async()=>{
+    setPrecisionMode(false);
+    if(document.fullscreenElement===precisionWorkspace.current){
+      try{ await document.exitFullscreen(); }catch{ /* already leaving fullscreen */ }
+    }
+  },[]);
+
+  const adjustCalibration=useCallback((delta:CalibrationDelta)=>{
+    const key=calibratingSlot;
+    const video=videoRef.current;
+    if(!key||!videoReady||!video?.videoWidth||!video.videoHeight) return;
+    const region=nudgeCaptureRegion(slots[key],video.videoWidth,video.videoHeight,delta);
+    persistCalibrationSlot(key,region);
+  },[calibratingSlot,persistCalibrationSlot,slots,videoReady]);
+
+  const moveCalibrationSelection=useCallback((direction:1|-1)=>{
+    const current=calibratingSlot??target?.key??captureSlotKeys[0];
+    selectCalibrationSlot(nextCaptureSlotKey(current,direction));
+  },[calibratingSlot,selectCalibrationSlot,target?.key]);
+
   const stopWindowCapture=useCallback(()=>{
     const stream=streamRef.current;
     streamRef.current=undefined;
