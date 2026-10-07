@@ -18,7 +18,7 @@ npm run server
 
 Windows 现场使用可直接双击 `vite-project/start-broadcast.bat`；启动器会准备依赖、构建网页、启动服务器和 Cloudflare Quick Tunnel。结束时双击 `stop-broadcast.bat`。
 
-本机开发入口：[操作台](http://127.0.0.1:3001/control#token=local-control)、[解说台](http://127.0.0.1:3001/caster#token=local-caster)、[OBS](http://127.0.0.1:3001/overlay/draft#token=local-overlay)。这些口令仅用于本机开发；公网部署按运行指南配置独立口令。
+本机入口：[操作台](http://127.0.0.1:3001/control)、[解说台](http://127.0.0.1:3001/caster)、[OBS Overlay](http://127.0.0.1:3001/overlay/draft)。通过 `localhost` / `127.0.0.1` 打开的本机页面会自动信任，不需要密码。需要公网访问时，在本机 Control 的 **远程访问密码** 面板分别设置 Control / Caster / Overlay 密码；Overlay 未认证时会显示登录页。
 
 <!-- HERO-SYNC:ROSTER:START -->
 ## 程序内英雄池
@@ -177,7 +177,9 @@ http://127.0.0.1:5173/tools/bp-simulator-control
 http://127.0.0.1:5173/tools/bp-simulator
 ```
 
-模拟器可复现 Pick、双选、圆形 Ban、空 Ban、蓝/红先手、换英雄与完整 BP phase 顺序；自动脚本支持随机等待时间范围。然后在 HOK Control 的 Auto BP 中选择 Simulator 的采集画面窗口即可。
+模拟器可复现 Pick、双选、圆形 Ban、空 Ban、蓝/红先手、换英雄与完整 BP phase 顺序。随机选角会避开当前 BP 已用英雄，并可从 Control 同步 Normal / Player / Global 规则与跨局历史；自动脚本的随机等待只模拟选手思考/预选时间，锁定后会快速切到下一轮。然后在 HOK Control 的 Auto BP 中选择 Simulator 的采集画面窗口即可。
+
+Auto BP 默认采用“轻量优先”的识别策略：浏览器只上传最高 256px 的头像裁切、使用 JPEG、先尝试少量中心尺度，低置信度时才运行偏移 fallback，并缓存短时间内完全相同的帧。Sharp 默认只使用 2 个工作线程，尽量给 OBS 编码和游戏/模拟器留出 CPU 余量。比赛设置里还可开启 **高置信度自动录入**，阈值可在 50%–100% 之间设置；它只跳过审核弹窗，不会绕过锁定判断和 BP 规则。
 
 LoL 项目中值得移植的功能优化及本次实际移植内容见 [HOK / LoL 功能对照审计](docs/research/lol-feature-parity-audit-2026-10-06.md)。
 
@@ -189,12 +191,13 @@ LoL 项目中值得移植的功能优化及本次实际移植内容见 [HOK / Lo
 | 安装、三端接入、延迟、备份和部署 | [运行指南](docs/guides/getting-started.md) |
 | 比赛流程、快捷 BP、照片、队伍库及替补 | [操作指南](docs/guides/operator-guide.md) |
 | Windows 一键启动、Simulator 启停及 Cloudflare | [启动器说明](docs/guides/windows-launcher.md) |
-| Auto BP、18 框校准、预设、锁定与换英雄 | [屏幕识别指南](docs/guides/screen-recognition.md) |
+| Auto BP、18 框校准、自动录入阈值、锁定与换英雄 | [屏幕识别指南](docs/guides/screen-recognition.md) |
 | v1.0.0 功能与已知边界 | [v1.0.0 发布说明](docs/releases/v1.0.0.md) |
 | 理解源码目录和状态流 | [系统结构](docs/design/architecture.md) |
+| 接入桌面软件或未来识别 Provider | [API 与扩展接口](docs/design/api.md) |
 | 查看项目阶段与未来路线 | [项目里程碑](MILESTONES.md) |
 | 查看历次测试及未验收范围 | [验证记录](docs/validation/history.md) |
-| 查英雄资料来源 | [研究索引](docs/research/README.md) |\n| 自动检查英雄名单更新 | [英雄数据自动同步](docs/research/hero-sync.md) |
+| 查英雄资料来源 | [研究索引](docs/research/README.md) || 自动检查英雄名单更新 | [英雄数据自动同步](docs/research/hero-sync.md) |
 | 查旧交接、旧计划和原项目介绍 | [历史归档](docs/archive/README.md) |
 | 查全部文档、旧路径去向及维护规则 | [文档总索引](docs/README.md) |
 
