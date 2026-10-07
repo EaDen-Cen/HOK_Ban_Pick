@@ -15,8 +15,9 @@ HOK Broadcast 已从单纯的英雄 BP 页面发展为一套包含 **导播操�
 Control
    │
    ├── Match / Team / BP 操作
-   ├── 快捷英雄录入
-   └── 队伍与选手资料管理
+   ├── 手动 / Auto BP
+   ├── 最终阵容与换英雄
+   └── 队伍、英雄与远程访问设置
    │
    ▼
 Node.js + WebSocket Server
@@ -25,7 +26,8 @@ Node.js + WebSocket Server
    ├── Undo / Persistence
    ├── Draft History
    ├── Caster Delay Timeline
-   ├── Team Presets
+   ├── Team Presets / Access Passwords
+   ├── Recognition Provider API
    └── Player Portrait Uploads
    │
    ├──────────────► Caster
@@ -453,6 +455,11 @@ docs/
 - BP 完成后的最终阵容与换英雄自动同步；
 - 独立 BP Simulator、选手互换和随机自动脚本；
 - Windows 后台 Simulator 启停脚本；
+- Simulator 按实际 BP 规则随机选角，并可同步 Control 的 Global / Player 历史规则；
+- 高置信度识别可由导播设置 50%–100% 阈值并自动录入；
+- 本机页面免密码，远程 Control / Caster / Overlay 使用用户自定义独立密码；
+- Overlay 在远程未认证时显示登录页，不再静默黑屏；
+- 识别链路加入分阶段模板搜索、重复帧缓存、请求降采样和 CPU 并发限制；
 - 新手教程与 v1.0.0 发布说明。
 
 ---
@@ -654,6 +661,34 @@ HOK Broadcast Director.exe
 
 ---
 
+## M17 — Recognition Provider API / AI 辅助识别
+
+**状态：🧩 API 扩展点已预留；模型方案待真实素材评估**
+
+v1.0.0 保持本地 `template-v1` 为默认识别器，并提供 provider capability API。未来如果真实比赛素材表明模板匹配仍存在难以覆盖的 UI、皮肤或动画变化，可以增加新的 provider，而不重写 BP 状态机。
+
+候选方向：
+
+- 更轻量的本地图像分类模型；
+- GPU 可用时的本地推理；
+- 可选 AI-assisted provider；
+- 离线批量校准/训练工具；
+- provider A/B 测试与性能统计；
+- 对低置信度画面调用更重的 provider，高置信度继续走轻量模板匹配。
+
+边界原则：
+
+- AI/provider 只负责给出英雄候选和置信度；
+- 锁定判断、BP phase、重复英雄、Global/Player 规则继续由现有程序负责；
+- AI 不直接拥有修改比赛状态的权限；
+- 默认优先本地、低延迟、低 CPU 成本；
+- 只有实测证明收益明显时才把更重模型带进导播机。
+
+接口说明：[docs/design/api.md](docs/design/api.md)
+
+---
+
+
 # 长期目标
 
 项目长期方向不是单纯做一个“BP 网页”，而是一套可以被社区赛事反复使用的轻量赛事导播系统：
@@ -705,5 +740,6 @@ HOK Broadcast System
 | M13 | 固定公网部署 | 📋 |
 | M14 | Hero Database 持续维护 | 🔁 |
 | M15 | Production Reliability | 📋 |
-| M16 | Desktop Director App | 🚧 |
+| M16 | Desktop Director App / 可分发软件 | 🚧 |
+| M17 | Recognition Provider API / AI 辅助识别 | 🧩 |
 
