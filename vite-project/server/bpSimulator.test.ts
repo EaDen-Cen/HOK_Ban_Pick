@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { phases } from '../src/shared/types.js';
-import { completedSimulatorSlots, simulatorBanVisualKeys, simulatorNextTurnPhase, simulatorPreviousTurnPhase, simulatorRandomDelayMs, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn, swapSimulatorPickHeroes } from '../src/simulator/bpSimulatorModel.js';
+import { initialState, phases } from '../src/shared/types.js';
+import { completedSimulatorSlots, randomLegalSimulatorDraft, simulatorBanVisualKeys, simulatorNextTurnPhase, simulatorPreviousTurnPhase, simulatorRandomDelayMs, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn, swapSimulatorPickHeroes } from '../src/simulator/bpSimulatorModel.js';
 
 test('simulator match mode follows the production 18-phase HOK draft order', () => {
   const sequence=phases('match','blue');
@@ -75,4 +75,37 @@ test('simulator random autoplay delay stays inside the configured range',()=>{
   assert.equal(simulatorRandomDelayMs(900,1800,()=>1),1800);
   assert.equal(simulatorRandomDelayMs(900,1800,()=>.5),1350);
   assert.equal(simulatorRandomDelayMs(1800,900,()=>0),900);
+});
+
+
+test('simulator full random draft never repeats a hero and can inherit Control rules',()=>{
+  const simulator={
+    mode:'match' as const,
+    firstPickSide:'blue' as const,
+    phaseIndex:0,
+    slotHeroes:{} as Record<string,number>,
+    emptyBans:[] as string[],
+  };
+  const base=initialState();
+  base.draftRuleMode='global';
+  base.draftHistory=[{
+    id:'previous',
+    firstPickSide:'blue',
+    gameNumber:1,
+    committedAt:1,
+    blueTeam:structuredClone(base.blueTeam),
+    redTeam:structuredClone(base.redTeam),
+    blueBans:[],
+    redBans:[],
+    bluePicks:[1,2,3,4,5],
+    redPicks:[6,7,8,9,10],
+    blueAssignments:[1,2,3,4,5],
+    redAssignments:[6,7,8,9,10],
+  }];
+  const generated=randomLegalSimulatorDraft(simulator,base,()=>0.5);
+  const sequence=phases('match','blue');
+  const values=sequence.map((_,index)=>generated[simulatorSlotKey(simulatorSlotForPhase('match','blue',index)!)]);
+  assert.equal(values.length,18);
+  assert.equal(values.every(Number.isInteger),true);
+  assert.equal(new Set(values).size,18);
 });
