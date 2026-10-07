@@ -13,7 +13,7 @@ import {
   type CaptureSlots,
   type LegacyCaptureZones,
 } from './bpCaptureLayout';
-import { detectEmptyBan, EMPTY_BAN_GRACE_MS, fingerprintDistance, type EmptyBanStability } from './emptyBanDetection';
+import { detectEmptyBan, EMPTY_BAN_GRACE_MS, EMPTY_BAN_MAX_HERO_CONFIDENCE, fingerprintDistance, type EmptyBanStability } from './emptyBanDetection';
 import { updateHeroRecognitionStability, type HeroRecognitionStability } from './heroRecognitionStability';
 import { freshHeroLockStability, updateHeroLockStability, type HeroLockStability } from './heroLockDetection';
 import { freshPickSlotActivationState, updatePickSlotActivation, type PickSlotActivationState } from './pickSlotActivation';
@@ -141,8 +141,8 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const target=useMemo(()=>captureTargetForState(state,slots),[state,slots]);
   const turnTargets=useMemo(()=>captureTargetsForCurrentTurn(state,slots),[state,slots]);
   const nextOpponentPickProbe=useMemo(()=>captureProbeForNextOpponentPick(state,slots),[state,slots]);
-  const manualBoundaryPick=phase?.action==='pick'&&immediateNextTurnIsBan(state.draftMode,state.firstPickSide,state.currentPhase);
-  const useHighlightRelease=phase?.action==='pick'&&!nextOpponentPickProbe;
+  const pickToBanBoundary=phase?.action==='pick'&&immediateNextTurnIsBan(state.draftMode,state.firstPickSide,state.currentPhase);
+  const useHighlightRelease=phase?.action==='pick'&&(pickToBanBoundary||!nextOpponentPickProbe);
   const activeTargetKeys=useMemo(()=>new Set(turnTargets.map(item=>item.key)),[turnTargets]);
 
   const label=useCallback((id:number)=>{
@@ -511,18 +511,11 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
           return;
         }
 
-        if(manualBoundaryPick){
-          setMessage(zh
-            ? '当前 Pick 组已经稳定，但这一手之后立即进入第二轮 Ban，没有“下一个对手 Pick 位”可以立刻作为唯一锁定信号。为避免误判，本轮不自动确认；请使用右侧手动英雄选择完成这一手。'
-            : 'Current Pick group is stable, but the draft immediately enters the second Ban round, so there is no opponent Pick slot available as the sole immediate lock signal. Auto-confirm is disabled here; record this Pick manually.');
-          return;
-        }
-
         if(useHighlightRelease){
           if(!highlightRelease.locked){
             setMessage(zh
-              ? `当前 Pick 已稳定；此处后续没有可立即观察的对手 Pick，等待选手行从选角高亮恢复到正常亮度（当前亮度回落 ${Math.round(highlightRelease.dropRatio*100)}%）。`
-              : `Current pick is stable. No opponent Pick becomes active immediately here, so waiting for the active-row highlight to return to normal (current luma drop ${Math.round(highlightRelease.dropRatio*100)}%).`);
+              ? `当前 Pick 已稳定；${pickToBanBoundary?'下一阶段直接进入 Ban':'已无下一个对手 Pick'}，等待选手行从选角高亮恢复到正常亮度（当前亮度回落 ${Math.round(highlightRelease.dropRatio*100)}%）。`
+              : `Current pick is stable; ${pickToBanBoundary?'the next stage is Ban':'there is no next opponent Pick'}, so waiting for the active-row highlight to return to normal (current luma drop ${Math.round(highlightRelease.dropRatio*100)}%).`);
             return;
           }
         }else{
@@ -581,6 +574,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         ? fingerprintDistance(lockBaseline.current.fingerprint,data.lockFingerprint)
         : undefined;
 
+      const trustedBanHero=(top?.confidence??0)>=.60;
       const empty=detectEmptyBan(emptyStability.current,{
         phaseKey,
         isBan:phase.action==='ban',
@@ -592,7 +586,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       });
       emptyStability.current=empty.stability;
 
-      if(heroEvidence.accepted&&top&&heroLock.locked){
+      if(heroEvidence.accepted&&top&&trustedBanHero&&heroLock.locked){
         setSelected(top.heroId);
         setCandidateStatus(t('captureHeroStable',{
           hero:label(top.heroId),
@@ -605,7 +599,11 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       }
 
       if(top){
-        if(heroEvidence.accepted&&!heroLock.locked){
+        if(!trustedBanHero){
+          setCandidateStatus(zh
+            ? `${label(top.heroId)} · ${Math.round(top.confidence*100)}% · 低相似度，按空 Ban 候选处理`
+            : `${label(top.heroId)} · ${Math.round(top.confidence*100)}% · low similarity; treated as an empty-Ban candidate`);
+        }else if(heroEvidence.accepted&&!heroLock.locked){
           setCandidateStatus(zh
             ? label(top.heroId)+' · '+Math.round(top.confidence*100)+'% · 英雄已稳定，等待锁定'
             : label(top.heroId)+' · '+Math.round(top.confidence*100)+'% · stable, waiting for lock');
@@ -621,13 +619,13 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         setCandidateStatus(t('captureNoCandidate'));
       }
 
-      if(heroEvidence.accepted&&top&&!heroLock.locked){
-        setMessage(zh?'英雄已稳定，等待游戏内锁定标记。':'Hero stable; waiting for the in-game lock cue.');
-        return;
-      }else if(empty.suspected){
+      if(empty.suspected){
         emptyPromptedPhase.current=phaseKey;
         setResult({kind:'empty-ban',candidates,preview:data.preview,at:Date.now()});
-        setMessage(t('emptyBanSuspected',{count:3}));
+        setMessage(t('emptyBanSuspected',{count:2}));
+        return;
+      }else if(heroEvidence.accepted&&top&&trustedBanHero&&!heroLock.locked){
+        setMessage(zh?'英雄已稳定，等待游戏内锁定标记。':'Hero stable; waiting for the in-game lock cue.');
         return;
       }
 
@@ -636,7 +634,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         setMessage(t('emptyBanGraceWaiting',{seconds:remaining}));
       }else if(phase.action==='ban'&&emptyPromptedPhase.current===phaseKey){
         setMessage(t('emptyBanSuppressed'));
-      }else if(phase.action==='ban'&&empty.lockCueDetected&&(top?.confidence??0)<.34){
+      }else if(phase.action==='ban'&&empty.lockCueDetected&&(top?.confidence??0)<EMPTY_BAN_MAX_HERO_CONFIDENCE){
         setMessage(t('emptyBanLockCueWaiting',{count:empty.stability.count}));
       }else if(phase.action==='ban'){
         setMessage(t('emptyBanAwaitLockCue'));
@@ -649,7 +647,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
       busyRef.current=false;
       if(mounted.current) setBusy(false);
     }
-  },[captureSlotLabel,disabled,label,manualBoundaryPick,nextOpponentPickProbe,phase,phaseKey,recognizeWindowRegion,state.committedGameId,t,target,turnTargets,useHighlightRelease,zh]);
+  },[captureSlotLabel,disabled,label,nextOpponentPickProbe,phase,phaseKey,pickToBanBoundary,recognizeWindowRegion,state.committedGameId,t,target,turnTargets,useHighlightRelease,zh]);
 
   useEffect(()=>{
     if(!autoWatch||result||disabled||!phase||state.committedGameId||busy||!videoReady) return;
