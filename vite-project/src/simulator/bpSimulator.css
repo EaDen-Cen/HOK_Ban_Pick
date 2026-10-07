@@ -72,3 +72,26 @@ linear-gradient(90deg,rgba(4,44,84,.95) 0,rgba(15,65,112,.65) 17%,transparent 39
   padding-bottom:7px;
   color:#8da1b8;
 }
+
+
+.sim-control-rule-sync{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:5px 8px;
+  align-items:end;
+  min-width:0;
+}
+.sim-control-rule-sync>span{
+  grid-column:1/-1;
+  color:#9db0c7;
+  font-size:11px;
+}
+.sim-control-rule-sync>small{
+  grid-column:1/-1;
+  color:#8da1b8;
+  line-height:1.35;
+}
+@media(max-width:760px){
+  .sim-control-rule-sync{grid-template-columns:1fr}
+  .sim-control-rule-sync>button{width:100%}
+}
