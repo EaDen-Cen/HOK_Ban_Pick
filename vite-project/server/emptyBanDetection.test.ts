@@ -27,7 +27,7 @@ test('low hero confidence alone can never become an empty ban',()=>{
   }
 });
 
-test('empty ban waits about 4.5 seconds then requires lock cue plus two stable low-confidence frames', () => {
+test('empty ban waits about 4 seconds then requires lock cue plus two stable low-confidence frames', () => {
   let state=empty();
   const waiting=detectEmptyBan(state,{
     phaseKey:'1:0:blue:ban',
