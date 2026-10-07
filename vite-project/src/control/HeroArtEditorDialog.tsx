@@ -4,6 +4,7 @@ import heroes from '../components/HeroList';
 import { heroesForState } from '../shared/heroData';
 import { defaultHeroArtCrop, heroArtCrop } from '../data/heroArtFocus';
 import { translator } from '../shared/i18n';
+import { heroMatchesSearch } from './heroSearch';
 import type { Action, HeroArtCrop, HeroArtLayout, HeroArtOverride, HeroDataOverride, MatchState } from '../shared/types';
 
 const targetAspect: Record<HeroArtLayout, number> = {
@@ -142,6 +143,7 @@ export function HeroArtEditorDialog({
   const effectiveHeroes = useMemo(() => heroesForState(state), [state.heroDataOverrides]);
   const initialId = currentPicks[0] ?? heroes[0]?.id ?? 1;
   const [heroId, setHeroId] = useState(initialId);
+  const [heroQuery, setHeroQuery] = useState('');
 
   const makeDraft = (id: number): HeroArtOverride => {
     const runtime = state.heroArtOverrides?.[String(id)];
@@ -162,6 +164,8 @@ export function HeroArtEditorDialog({
       occupation: runtime?.occupation ?? base?.occupation ?? '',
       altOccupation: runtime?.altOccupation ?? base?.altOccupation ?? '',
       aliases: runtime?.aliases ?? base?.aliases ?? [],
+      imageLink: runtime?.imageLink ?? base?.imageLink ?? '',
+      artLink: runtime?.artLink ?? base?.artLink ?? '',
     };
   };
   const [dataDraft, setDataDraft] = useState<HeroDataOverride>(() => makeDataDraft(initialId));
@@ -174,13 +178,19 @@ export function HeroArtEditorDialog({
   }, []);
 
   const hero = useMemo(() => effectiveHeroes.find(item => item.id === heroId) ?? effectiveHeroes[0], [effectiveHeroes, heroId]);
+  const filteredHeroes = useMemo(
+    () => effectiveHeroes.filter(item => heroMatchesSearch(item, heroQuery, state.language)),
+    [effectiveHeroes, heroQuery, state.language],
+  );
   if (!hero) return null;
 
   const panel = draft.panel ?? defaultHeroArtCrop('panel');
   const side = draft.side ?? defaultHeroArtCrop('side');
-  const forcedLegacy = state.artSourceMode === 'legacy' || draft.useLegacyImage === true || !hero.artLink;
-  const source = forcedLegacy ? hero.imageLink : hero.artLink!;
-  const fullSource = hero.artLink || hero.imageLink;
+  const draftPortrait = dataDraft.imageLink?.trim() || hero.imageLink;
+  const draftArt = dataDraft.artLink?.trim() || hero.artLink;
+  const forcedLegacy = state.artSourceMode === 'legacy' || draft.useLegacyImage === true || !draftArt;
+  const source = forcedLegacy ? draftPortrait : draftArt!;
+  const fullSource = draftArt || draftPortrait;
   const heroName = state.language === 'zh' ? hero.chineseName : hero.englishName;
 
   const resetLayout = (layout: HeroArtLayout) => {
