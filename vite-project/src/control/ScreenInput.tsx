@@ -593,21 +593,64 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
         <span className={videoReady?'window-capture-status connected':'window-capture-status'}>{videoReady?'●':'○'} {windowInfo?.label||t('windowCaptureDisconnected')}</span>
       </div>
 
-      <div
-        className={`window-capture-preview ${videoReady?'ready':''} ${calibratingSlot?'calibrating':''}`}
-        style={videoReady&&windowInfo?.width&&windowInfo?.height?{aspectRatio:`${windowInfo.width}/${windowInfo.height}`}:undefined}
-        onPointerDown={pointerDown}
-        onPointerMove={pointerMove}
-        onPointerUp={pointerUp}
-        onPointerCancel={()=>{dragStart.current=null;}}
-      >
-        <video ref={videoRef} playsInline muted />
-        {videoReady&&captureSlotKeys.map(key=><div
-          key={key}
-          className={`capture-explicit-slot ${key.startsWith('blue')?'blue':'red'} ${key.includes('Ban')?'ban':'pick'} ${target?.key===key?'active':''} ${calibratingSlot===key?'editing':''}`}
-          style={percentageStyle(slots[key])}
-        ><span>{captureSlotLabel(key)}</span></div>)}
-        {!videoReady&&<div className="window-capture-placeholder">{t('windowCaptureChooseHint')}</div>}
+      <div ref={precisionWorkspace} className={`precision-calibration-workspace ${precisionMode?'active':''}`}>
+        {precisionMode&&<div className="precision-calibration-toolbar">
+          <div className="precision-calibration-title">
+            <span>{t('precisionCalibrationTitle')}</span>
+            <strong>{calibratingSlot?captureSlotLabel(calibratingSlot):t('captureNoActiveSlot')}</strong>
+          </div>
+          <div className="precision-zoom-controls" role="group" aria-label={t('precisionZoom')}>
+            <button type="button" onClick={()=>setCalibrationZoom(value=>Math.max(1,Math.round((value-.25)*100)/100))}>−</button>
+            <button type="button" onClick={()=>setCalibrationZoom(1)}>{t('precisionFit')}</button>
+            {[1.5,2,3,4].map(value=><button type="button" key={value} className={calibrationZoom===value?'selected':''} onClick={()=>setCalibrationZoom(value)}>{Math.round(value*100)}%</button>)}
+            <button type="button" onClick={()=>setCalibrationZoom(value=>Math.min(4,Math.round((value+.25)*100)/100))}>+</button>
+          </div>
+          <div className="precision-calibration-nav">
+            <button type="button" onClick={()=>moveCalibrationSelection(-1)}>← {t('precisionPreviousSlot')}</button>
+            <button type="button" className="primary" onClick={()=>moveCalibrationSelection(1)}>{t('precisionNextSlot')} →</button>
+            <button type="button" onClick={()=>void exitPrecisionCalibration()}>{t('precisionExit')}</button>
+          </div>
+        </div>}
+
+        <div className="precision-preview-scroll">
+          <div
+            className={`window-capture-preview ${videoReady?'ready':''} ${calibratingSlot?'calibrating':''}`}
+            style={{
+              ...(videoReady&&windowInfo?.width&&windowInfo?.height?{aspectRatio:`${windowInfo.width}/${windowInfo.height}`}:{}),
+              ...(precisionMode?{width:`${calibrationZoom*100}%`}:{}),
+            }}
+            onPointerDown={pointerDown}
+            onPointerMove={pointerMove}
+            onPointerUp={pointerUp}
+            onPointerCancel={()=>{dragStart.current=null;}}
+          >
+            <video ref={videoRef} playsInline muted />
+            {videoReady&&captureSlotKeys.map(key=><div
+              key={key}
+              className={`capture-explicit-slot ${key.startsWith('blue')?'blue':'red'} ${key.includes('Ban')?'ban':'pick'} ${target?.key===key?'active':''} ${calibratingSlot===key?'editing':''}`}
+              style={percentageStyle(slots[key])}
+            ><span>{captureSlotLabel(key)}</span></div>)}
+            {!videoReady&&<div className="window-capture-placeholder">{t('windowCaptureChooseHint')}</div>}
+          </div>
+        </div>
+
+        {precisionMode&&<div className="precision-calibration-footer">
+          <div className="precision-slot-strip">
+            {captureSlotKeys.map(key=><button
+              type="button"
+              key={key}
+              className={[calibratingSlot===key?'selected':'',target?.key===key?'active':''].filter(Boolean).join(' ')}
+              onClick={()=>selectCalibrationSlot(key)}
+            >{captureSlotLabel(key)}</button>)}
+          </div>
+          <div className="precision-calibration-help">
+            <span>{t('precisionKeyboardHint')}</span>
+            {calibrationPreview&&<figure className="precision-crop-preview">
+              <figcaption>{t('precisionActualInput')}</figcaption>
+              <img src={calibrationPreview} alt={t('precisionActualInput')} />
+            </figure>}
+          </div>
+        </div>}
       </div>
 
       <div className="explicit-slot-calibration">
