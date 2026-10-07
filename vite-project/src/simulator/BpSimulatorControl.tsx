@@ -3,7 +3,6 @@ import heroes from '../components/HeroList';
 import { phases, type MatchState, type Side } from '../shared/types';
 import { normalizeState } from '../shared/draftRules';
 import {
-  simulatorAllSlotKeys,
   simulatorNextTurnPhase,
   simulatorPreviousTurnPhase,
   simulatorRandomDelayMs,
