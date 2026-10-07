@@ -466,33 +466,27 @@ docs/
 
 # 当前验证基线
 
-最近记录的主要自动验证包括：
+v1.0.0 最终加固以 PR #36 为当前验证基线。
 
-- TypeScript / Vite Build
-- ESLint
-- Server Tests
-- Playwright Browser E2E
-- Normal / Player / Global BP
-- Blue / Red First Pick
-- Move Teams / Colors Only
-- Draft History
-- Undo / Delay / Reconnect
-- Panel / Side Overlay
-- Mobile Layout
-- Player Portrait Upload
-- Team Library
-- Substitute / Quick Substitution
+GitHub Actions run #105 已完成：
 
-在 2026-09-23 的最近功能回归记录中：
+- Hero data validation：通过；
+- TypeScript / Server TypeScript / Vite production build：通过；
+- Node/server/unit tests：137 total，136 passed，1 skipped，0 failed；
+- ESLint：0 errors，0 warnings。
 
-- **42 项服务端测试通过**
-- **15 组浏览器场景覆盖现有流程**
+当前自动测试覆盖既有 BP 状态机、Normal / Player / Global、蓝红先手、延迟、Undo、存储、队伍资料库，以及新增的远程密码/本机信任、Simulator 合法随机 BP 和 Auto BP 识别相关回归。
 
-这些属于当时的验证结果，不替代未来每次改动后的重新测试。
+仍必须实机验证：
 
-完整记录：
+- Windows 浏览器窗口采集；
+- 真实 HOK 当前版本头像、Ban 圆形图与锁定视觉；
+- 高置信度自动录入阈值；
+- OBS 编码同时运行时的 CPU/GPU 占用与掉帧；
+- Cloudflare / 固定域名的远程登录；
+- 长时间 BO3 / BO5 与异地解说音画链路。
 
-[docs/validation/history.md](docs/validation/history.md)
+完整记录：[docs/validation/history.md](docs/validation/history.md)
 
 ---
 
