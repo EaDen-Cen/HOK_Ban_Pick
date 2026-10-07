@@ -85,6 +85,8 @@ export interface MatchState {
   overlayLayout: OverlayLayout;
   scoreDisplay?: 'number' | 'boxes';
   bpInputMode?: 'manual' | 'screen';
+  recognitionAutoAccept?: boolean;
+  recognitionThreshold?: number;
   showHeroName: boolean;
   artSourceMode: 'auto' | 'legacy';
   heroArtOverrides: Record<string, HeroArtOverride>;
@@ -130,6 +132,8 @@ export type MatchSettings = Pick<
   | 'overlayLayout'
   | 'scoreDisplay'
   | 'bpInputMode'
+  | 'recognitionAutoAccept'
+  | 'recognitionThreshold'
   | 'showHeroName'
   | 'artSourceMode'
 >;
@@ -192,6 +196,8 @@ export const initialState = (): MatchState => ({
   overlayLayout: 'panel',
   scoreDisplay: 'number',
   bpInputMode: 'manual',
+  recognitionAutoAccept: false,
+  recognitionThreshold: 90,
   showHeroName: true,
   artSourceMode: 'auto',
   heroArtOverrides: {},

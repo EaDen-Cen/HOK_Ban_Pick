@@ -74,5 +74,24 @@ test('HTTP/WS auth, realtime broadcast, delayed REST/WS, read-only roles and rec
     await wait(() => caster.messages.some(m => m.revision === 1));
     const latest = await (await fetch(base + '/api/match', { headers: { Authorization: 'Bearer test-caster' } })).json() as Snapshot;
     assert.deepEqual(latest.state.blueBans, [46]);
+    const localAccess=await (await fetch(base+'/api/access?role=overlay')).json() as {local:boolean;token:string};
+    assert.equal(localAccess.local,true);assert.equal(localAccess.token,'test-overlay');
+    const forwardedAccess=await (await fetch(base+'/api/access',{headers:{'X-Forwarded-For':'198.51.100.1'}})).json() as {local:boolean;token?:string};
+    assert.equal(forwardedAccess.local,false);assert.equal(forwardedAccess.token,undefined);
+    assert.equal((await fetch(base+'/tools/bp-simulator')).status,200);
+    assert.equal((await fetch(base+'/api/v1/capabilities',{headers:{Authorization:'Bearer test-control'}})).status,200);
+    const passwordBody=JSON.stringify({password:'remote-password-test'});
+    const updateAccess=(token:string)=>fetch(base+'/api/access',{method:'PUT',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:passwordBody});
+    assert.equal((await updateAccess('test-caster')).status,403);
+    assert.equal((await updateAccess('test-control')).status,200);
+    await wait(()=>caster.messages.some(message=>message.type==='access_token_update'));
+    const casterRotation=caster.messages.find(message=>message.type==='access_token_update')!;
+    assert.equal((await fetch(base+'/api/match',{headers:{Authorization:'Bearer test-caster'}})).status,401);
+    assert.equal((await fetch(base+'/api/match',{headers:{Authorization:'Bearer '+casterRotation.token}})).status,200);
+    const login=await fetch(base+'/api/access?role=overlay',{method:'POST',headers:{'Content-Type':'application/json'},body:passwordBody});
+    assert.equal(login.status,200);
+    const overlayToken=(await login.json() as {token:string}).token;
+    const newOverlay=await connect(overlayToken);assert.equal(newOverlay.messages[0].revision,2);
+    assert.equal((await fetch(base+'/api/access?role=caster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:overlayToken})})).status,401);
   } finally { for (const ws of sockets) ws.terminate(); proc.kill(); }
 });

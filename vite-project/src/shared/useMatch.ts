@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Action, Role, Snapshot } from './types';
 const api = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 const wsURL = import.meta.env.VITE_WS_URL || `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws`;
-export function useMatch(role: Role, token: string) {
+export function useMatch(role: Role, token: string, onToken?: (token:string)=>void) {
   const [snapshot, setSnapshot] = useState<Snapshot>();
   const [status, setStatus] = useState('Connecting');
   const [error, setError] = useState('');
@@ -46,6 +46,7 @@ export function useMatch(role: Role, token: string) {
           lastReceived = Date.now();
           const msg = JSON.parse(event.data);
           if (msg.type === 'match_state_update') { authenticated = true; clearTimeout(connectTimeout); attempts = 0; setSnapshot(msg); setStatus('Connected'); }
+          else if (msg.type === 'access_token_update') onToken?.(msg.token);
           else if (msg.type === 'error') { setError(msg.error); if (msg.id === pendingID.current) clearPending(); }
           else if (msg.type === 'ack' && msg.id === pendingID.current) {
             if (pendingAction.current) setAcknowledged({ id: msg.id, action: pendingAction.current });
@@ -67,7 +68,7 @@ export function useMatch(role: Role, token: string) {
     function schedule() { timer = setTimeout(connect, Math.min(10000, 500 * 2 ** attempts++) + Math.random() * 300); }
     void connect();
     return () => { stopped = true; clearTimeout(timer); clearTimeout(pendingTimer.current); abort?.abort(); active?.close(); pendingID.current = undefined; setPending(false); };
-  }, [role, token]);
+  }, [role, token, onToken]);
   function send(action: Action) {
     if (role !== 'control' || status !== 'Connected' || !snapshot || pendingID.current || socket.current?.readyState !== WebSocket.OPEN) return;
     setError(''); const id = crypto.randomUUID(); pendingID.current = id; pendingAction.current = action; setPending(true);

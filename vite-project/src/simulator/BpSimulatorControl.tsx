@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import heroes from '../components/HeroList';
-import { phases, type Side } from '../shared/types';
+import { useAccess } from '../shared/access';
+import { useMatch } from '../shared/useMatch';
+import { initialState, phases, type Side } from '../shared/types';
 import {
   simulatorAllSlotKeys,
+  randomizeSimulatorSlots,
   simulatorNextTurnPhase,
   simulatorPreviousTurnPhase,
   simulatorRandomDelayMs,
@@ -25,6 +28,14 @@ function unique<T>(values:T[]) {
 
 export function BpSimulatorControl() {
   const [state,update]=useBpSimulatorState();
+  const access=useAccess('control');
+  const {snapshot}=useMatch('control',access.token,access.saveToken);
+  const rules=snapshot?.state ?? initialState();
+  const [ruleError,setRuleError]=useState('');
+  const randomize=(current:typeof state, keys:string[],autoPlay=current.autoPlay)=>{
+    try { const slotHeroes=randomizeSimulatorSlots(current.slotHeroes,current.mode,current.firstPickSide,rules,new Set(keys),current.emptyBans); setRuleError(''); return {...current,slotHeroes,autoPlay}; }
+    catch(error){setRuleError(error instanceof Error?error.message:'No legal candidates');return {...current,autoPlay:false};}
+  };
   const [swapSide,setSwapSide]=useState<Side>('blue');
   const [swapA,setSwapA]=useState(0);
   const [swapB,setSwapB]=useState(1);
@@ -110,32 +121,10 @@ export function BpSimulatorControl() {
     }));
   };
 
-  const randomizeCurrent=()=> {
-    if(!activeKeys.length||activeLocked) return;
-    update(current=>{
-      const currentKeys=simulatorSlotsForTurn(current.mode,current.firstPickSide,current.phaseIndex).map(simulatorSlotKey);
-      const used=new Set(Object.entries(current.slotHeroes)
-        .filter(([key])=>!currentKeys.includes(key))
-        .map(([,heroId])=>heroId));
-      const pool=[...heroes].filter(hero=>!used.has(hero.id)).sort(()=>Math.random()-.5);
-      const slotHeroes={...current.slotHeroes};
-      currentKeys.forEach((key,index)=>{
-        const hero=pool[index]??heroes[index%heroes.length];
-        if(hero) slotHeroes[key]=hero.id;
-      });
-      return {...current,slotHeroes};
-    });
-  };
-
-  const randomizeAll=()=> {
-    const shuffled=[...heroes].sort(()=>Math.random()-.5);
-    const slotHeroes={...state.slotHeroes};
-    simulatorAllSlotKeys.forEach((key,index)=>{
-      const hero=shuffled[index%shuffled.length];
-      if(hero) slotHeroes[key]=hero.id;
-    });
-    patch({slotHeroes});
-  };
+  const randomizeCurrent=()=>update(current=>randomize(current,
+    simulatorSlotsForTurn(current.mode,current.firstPickSide,current.phaseIndex).map(simulatorSlotKey)));
+  const randomizeAll=()=>update(current=>randomize(current,
+    simulatorAllSlotKeys.filter(key=>!current.locked.includes(key))));
 
   const completeDraft=()=>update(current=>{
     const currentSequence=phases(current.mode,current.firstPickSide);
@@ -158,7 +147,7 @@ export function BpSimulatorControl() {
 
   useEffect(()=>{
     if(!state.autoPlay||state.phaseIndex>=sequence.length) return;
-    const delay=simulatorRandomDelayMs(state.intervalMinMs,state.intervalMaxMs);
+    const delay=activeLocked ? 120 : simulatorRandomDelayMs(state.intervalMinMs,state.intervalMaxMs);
     const timer=window.setTimeout(()=>{
       update(current=>{
         const currentSequence=phases(current.mode,current.firstPickSide);
@@ -179,6 +168,7 @@ export function BpSimulatorControl() {
     return()=>window.clearTimeout(timer);
   },[
     sequence.length,
+    activeLocked,
     state.autoPlay,
     state.firstPickSide,
     state.intervalMaxMs,
@@ -221,6 +211,9 @@ export function BpSimulatorControl() {
 
     <section className="sim-control-panel">
       <h2>比赛与阶段</h2>
+      <p className="sim-control-note">{snapshot?'已连接 Control，随机选角遵循当前比赛 BP 历史与元流之子规则。':'未连接 Control，按普通 BP 规则模拟。'}</p>
+      <button disabled={!snapshot} onClick={()=>{if(snapshot) update(current=>randomize({...current,mode:rules.draftMode,firstPickSide:rules.firstPickSide,phaseIndex:0,locked:[],emptyBans:[],autoPlay:false},[...simulatorAllSlotKeys]));}}>读取 Control 模式并重置模拟</button>
+      {ruleError&&<p role="alert">{ruleError}</p>}
       <div className="sim-control-grid separated">
         <label>BP 模式
           <select value={state.mode} onChange={event=>setDraftMode(event.target.value as typeof state.mode)}>
@@ -282,7 +275,7 @@ export function BpSimulatorControl() {
         <button onClick={toggleCurrentLock} disabled={!activeKeys.length}>{activeLocked?'解除当前组锁定':'锁定当前组'}</button>
         <button onClick={toggleEmptyBan} disabled={active?.action!=='ban'} className={activeKey&&state.emptyBans.includes(activeKey)?'active':''}>切换空 Ban</button>
         <button onClick={nextPhase} disabled={!activeKeys.length||!activeLocked}>让下一轮开始选人 →</button>
-        <button onClick={()=>patch({autoPlay:!state.autoPlay})} className={state.autoPlay?'active':''}>{state.autoPlay?'暂停自动脚本':'启动自动脚本'}</button>
+        <button onClick={()=>update(current=>current.autoPlay?{...current,autoPlay:false}:randomize(current,simulatorAllSlotKeys.filter(key=>!current.locked.includes(key)),true))} className={state.autoPlay?'active':''}>{state.autoPlay?'暂停自动脚本':'启动自动脚本'}</button>
         <button onClick={completeDraft}>直接完成 BP（换人测试）</button>
       </div>
     </section>

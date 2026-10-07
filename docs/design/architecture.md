@@ -1,6 +1,6 @@
 # 系统结构
 
-[文档索引](../README.md) · 依据 main 基线 `bbcf248` 的目录与代码核对。
+[文档索引](../README.md)
 
 | 位置（仓库根目录起） | 职责 |
 | --- | --- |
@@ -19,6 +19,16 @@
 
 操作台经共享连接提交带修订号的操作，由服务器验证和持久化后确认并广播。Control 与 Overlay 使用实时状态，Caster 从事件时间轴读取延迟快照；延迟的是数据，不是视频。
 
-服务器默认读取 `vite-project/data/match.json`，同级保存 `team-presets.json` 与 `uploads/player-portraits/`。`DATA_FILE` 可改变数据基准位置，`UPLOAD_DIR` 可另指定照片目录；迁移应覆盖全部数据。队伍资料载入比赛时复制阵容并保留稳定身份，现场修改不会自动覆盖资料库。
+服务器默认读取 `vite-project/data/match.json`，同级保存 `access.json`、`team-presets.json` 与 `uploads/player-portraits/`。`DATA_FILE` 可改变数据基准位置，`UPLOAD_DIR` 可另指定照片目录；迁移应覆盖全部数据。队伍资料载入比赛时复制阵容并保留稳定身份，现场修改不会自动覆盖资料库。
 
-源码、配置、启动器、研究 JSON、图片及数据目录本次均未移动。`.idea/`、`.DS_Store` 属现有开发环境文件，本次保留。完整比赛操作见 [操作指南](../guides/operator-guide.md)，存储和部署边界见 [运行指南](../guides/getting-started.md)。
+## 性能与扩展边界
+
+- WebSocket 仍按 200ms 检查延迟事件；各角色按比赛修订号和可见延迟事件版本缓存序列化快照。没有变化时不重新复制或序列化状态。
+- 延迟事件查询使用二分查找，避免每轮复制并反转事件数组。
+- 识别保留多裁剪算法，去掉中间图片编码，缓存完全一致的证据，最多同时计算 4 个浏览器识别请求。
+- 屏幕识别、英雄编辑器和模拟器页面按需加载。
+- `server/access.ts` 保存随机角色 token、密码盐和 scrypt 哈希，数据位于 `data/access.json`；环境变量只用于初始配置。
+- `server/recognitionProvider.ts` 定义未来 AI 提供者的请求/证据接口。当前只有 `local-template-v1`；没有调用 AI 服务。
+- `/api/v1/capabilities` 返回识别协议能力；`/api/v1/recognition/frame` 与已有 `/api/recognize-frame` 共用权限、修订号和响应结构。
+
+详细协议见 [API 接口](api.md)，性能复测见 `vite-project/scripts/benchmark-recognition.ts`。

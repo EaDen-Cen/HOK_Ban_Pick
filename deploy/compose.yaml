@@ -5,9 +5,7 @@ services:
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
-      CONTROL_TOKEN: ${CONTROL_TOKEN:?Set CONTROL_TOKEN}
-      CASTER_TOKEN: ${CASTER_TOKEN:?Set CASTER_TOKEN}
-      OVERLAY_TOKEN: ${OVERLAY_TOKEN:?Set OVERLAY_TOKEN}
+      ACCESS_PASSWORD: ${ACCESS_PASSWORD:?Set ACCESS_PASSWORD}
       ALLOWED_ORIGINS: https://${DOMAIN:?Set DOMAIN}
     volumes:
       - match_data:/app/data

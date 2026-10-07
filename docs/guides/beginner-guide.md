@@ -65,7 +65,7 @@ vite-project\start-bp-simulator.bat
 
 控制页负责推进 BP、双选、空 Ban、自动脚本和换英雄；采集页保持干净，给 Auto BP 抓取。
 
-自动脚本可以设置一个**随机等待范围**，例如 0.9–1.8 秒，让每一步不会按照完全固定的节奏推进。
+自动脚本可以设置一个**随机等待范围**，例如 0.9–1.8 秒，模拟选手思考时间；锁定后使用固定 120ms 切换，不再等待另一段随机时间。
 
 测试结束后双击：
 
@@ -115,7 +115,7 @@ npm run server
 然后打开：
 
 ```text
-http://127.0.0.1:3001/control#token=local-control
+http://127.0.0.1:3001/control
 ```
 
 ## 第 5 步：建立第一场比赛
@@ -200,7 +200,7 @@ BP 完成以后会出现最终阵容/换英雄区域。
 添加 Browser Source：
 
 ```text
-http://127.0.0.1:3001/overlay/draft#token=local-overlay
+http://127.0.0.1:3001/overlay/draft
 ```
 
 推荐尺寸：
@@ -216,7 +216,7 @@ http://127.0.0.1:3001/overlay/draft#token=local-overlay
 本机开发地址：
 
 ```text
-http://127.0.0.1:3001/caster#token=local-caster
+http://127.0.0.1:3001/caster
 ```
 
 Caster 是只读的，并按照 Control 设置的延迟显示比赛数据。
@@ -288,3 +288,9 @@ vite-project\artifacts\
 - [Auto BP / 屏幕识别指南](screen-recognition.md)
 - [Windows 启动器说明](windows-launcher.md)
 - [系统结构](../design/architecture.md)
+
+## 远程登录与自动识别设置
+
+本机直接打开 Control / Caster / Overlay，无需在网址添加密码。远程访问前，在 Control 顶栏打开“访问与网站设置”保存密码，再生成只读分享链接。Overlay 缺少凭据时会显示登录窗口。
+
+比赛设置选择屏幕识别后展开高级项，可启用高相似度自动输入并设置 50%–100% 阈值。先使用模拟器校准；相似度不是准确率，自动输入仍等待稳定与锁定证据。

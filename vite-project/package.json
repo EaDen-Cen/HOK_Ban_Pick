@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && tsc -p tsconfig.server.json && vite build",
-    "server": "tsx --env-file-if-exists=.env server/server.ts",
-    "test": "tsx --test server/*.test.ts scripts/hero-sync/*.test.ts",
+    "server": "node --env-file-if-exists=.env --import tsx server/server.ts",
+    "test": "node --import tsx --test server/*.test.ts scripts/hero-sync/*.test.ts",
     "test:e2e": "playwright test",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -17,7 +17,8 @@
     "hero:validate": "tsx scripts/hero-sync/validate.ts",
     "simulator": "vite --open /tools/bp-simulator-control",
     "simulator:server": "vite --host 127.0.0.1 --strictPort",
-    "simulator:stage": "vite --open /tools/bp-simulator"
+    "simulator:stage": "vite --open /tools/bp-simulator",
+    "benchmark:recognition": "node --import tsx scripts/benchmark-recognition.ts"
   },
   "dependencies": {
     "react": "^18.3.1",
