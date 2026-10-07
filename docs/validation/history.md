@@ -4,6 +4,19 @@
 
 # 验证记录
 
+## v1.0.0 Final Hardening 自动验证（2026-10-07）
+
+- PR：#36，基于已合并的 #35 继续做 v1.0.0 发布前加固。
+- GitHub Actions run #105 / `validate-pr` 全部通过：
+  - dependency install ✅
+  - Hero data validation ✅
+  - TypeScript + server TypeScript + Vite production build ✅
+  - 137 项 Node/server/unit tests：136 passed、1 skipped、0 failed ✅
+  - ESLint：0 errors、0 warnings ✅
+- 本轮测试覆盖新增的远程密码持久化/本机信任、Simulator 随机 BP 规则、既有 capture/recognition fixtures、BP 状态机、队伍库、延迟与存储回归。
+- 识别性能改动保持现有测试素材的识别回归通过：256px JPEG 输入、中心尺度 fast path、困难帧 fallback、重复帧 cache、Sharp 线程限制与最终阵容并发限制均完成 Build/Test/Lint。
+- 自动化不能替代真实比赛素材、Windows Browser Capture、OBS 编码负载与 Cloudflare/域名登录流程；合并前仍建议执行一次导播机 smoke test。
+
 ## v1.0.0 Release Candidate 自动验证（2026-10-07）
 
 - 分支：`release/v1.0.0`，PR #35。
