@@ -233,6 +233,69 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     };
   },[]);
 
+  useEffect(()=>{
+    const onFullscreenChange=()=>{
+      if(document.fullscreenElement!==precisionWorkspace.current&&precisionMode) setPrecisionMode(false);
+    };
+    document.addEventListener('fullscreenchange',onFullscreenChange);
+    return()=>document.removeEventListener('fullscreenchange',onFullscreenChange);
+  },[precisionMode]);
+
+  useEffect(()=>{
+    if(!precisionMode) return;
+    const onKeyDown=(event:KeyboardEvent)=>{
+      const element=event.target;
+      if(element instanceof HTMLInputElement||element instanceof HTMLSelectElement||element instanceof HTMLTextAreaElement) return;
+
+      if(event.key==='Escape'){
+        event.preventDefault();
+        void exitPrecisionCalibration();
+        return;
+      }
+      if(event.key==='Enter'){
+        event.preventDefault();
+        moveCalibrationSelection(1);
+        return;
+      }
+      if(event.key==='['){
+        event.preventDefault();
+        moveCalibrationSelection(-1);
+        return;
+      }
+      if(event.key===']'){
+        event.preventDefault();
+        moveCalibrationSelection(1);
+        return;
+      }
+      if(event.key==='+'||event.key==='='){
+        event.preventDefault();
+        setCalibrationZoom(value=>Math.min(4,Math.round((value+.25)*100)/100));
+        return;
+      }
+      if(event.key==='-'){
+        event.preventDefault();
+        setCalibrationZoom(value=>Math.max(1,Math.round((value-.25)*100)/100));
+        return;
+      }
+
+      if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+      event.preventDefault();
+      if(event.shiftKey){
+        if(event.key==='ArrowLeft') adjustCalibration({dw:-1});
+        if(event.key==='ArrowRight') adjustCalibration({dw:1});
+        if(event.key==='ArrowUp') adjustCalibration({dh:-1});
+        if(event.key==='ArrowDown') adjustCalibration({dh:1});
+      }else{
+        if(event.key==='ArrowLeft') adjustCalibration({dx:-1});
+        if(event.key==='ArrowRight') adjustCalibration({dx:1});
+        if(event.key==='ArrowUp') adjustCalibration({dy:-1});
+        if(event.key==='ArrowDown') adjustCalibration({dy:1});
+      }
+    };
+    window.addEventListener('keydown',onKeyDown);
+    return()=>window.removeEventListener('keydown',onKeyDown);
+  },[adjustCalibration,exitPrecisionCalibration,moveCalibrationSelection,precisionMode]);
+
 
   useEffect(()=>{
     emptyStability.current=freshEmptyStability();
