@@ -107,13 +107,60 @@ async function captureFeatureVariants(source: Buffer, shape:MatchShape='square')
   return variants;
 }
 
+const TRUSTED_REMOTE_HERO_IMAGE_HOSTS=new Set([
+  'world.honorofkings.com',
+  'camp.honorofkings.com',
+]);
+
+export function trustedRemoteHeroImage(value:string) {
+  try {
+    const url=new URL(value);
+    return url.protocol==='https:' && TRUSTED_REMOTE_HERO_IMAGE_HOSTS.has(url.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
+async function heroTemplateSource(imageLink:string) {
+  if(imageLink.startsWith('/')) return fileURLToPath(new URL(`../public${imageLink}`,import.meta.url));
+  if(!trustedRemoteHeroImage(imageLink)) throw new Error(`Untrusted remote hero portrait: ${imageLink}`);
+
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),8000);
+  try {
+    const response=await fetch(imageLink,{
+      signal:controller.signal,
+      redirect:'follow',
+      headers:{'user-agent':'HOK-Broadcast/1.0'},
+    });
+    if(!response.ok) throw new Error(`Remote hero portrait HTTP ${response.status}`);
+    const buffer=Buffer.from(await response.arrayBuffer());
+    if(!buffer.length||buffer.length>8*1024*1024) throw new Error('Invalid remote hero portrait size');
+    return buffer;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 let templates: Promise<{heroId:number; square:Float64Array; circle:Float64Array}[]> | undefined;
 export async function recognizeImage(buffer: Buffer, allowedHeroIds?: number[], shape:MatchShape='square') {
   templates ??= Promise.all(heroes.map(async h=>{
-    const source=fileURLToPath(new URL(`../public${h.imageLink}`,import.meta.url));
-    const [square,circle]=await Promise.all([features(source,'square'),features(source,'circle')]);
-    return {heroId:h.id,square,circle};
-  })).catch(error=>{templates=undefined;throw error;});
+    try {
+      const source=await heroTemplateSource(h.imageLink);
+      const [square,circle]=await Promise.all([features(source,'square'),features(source,'circle')]);
+      return {heroId:h.id,square,circle};
+    } catch(error) {
+      // Existing local portraits are a release invariant and must still fail
+      // loudly. A newly released hero may temporarily use an official remote
+      // image until the scheduled sync can commit a local /heroesImg asset.
+      // If that remote source is unavailable, skip only that template so the
+      // rest of Auto BP remains usable and the hero can still be entered
+      // manually.
+      if(trustedRemoteHeroImage(h.imageLink)) return undefined;
+      throw error;
+    }
+  })).then(rows=>rows.filter((row):row is NonNullable<typeof row>=>Boolean(row)))
+    .catch(error=>{templates=undefined;throw error;});
   const variants=await captureFeatureVariants(buffer,shape);
   const allowed = allowedHeroIds === undefined ? undefined : new Set(allowedHeroIds);
   return (await templates)
