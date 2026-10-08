@@ -160,7 +160,7 @@ export function BpSimulator() {
   const actionLabel=active?.action==='ban'?'Ban':active?.action==='pick'?'Pick':'Complete';
 
   return <main className="bp-simulator-stage-page" aria-label="HOK BP capture simulator">
-    <ViewportCanvas width={1600} height={900} className="bp-simulator-stage">
+    <ViewportCanvas width={1600} height={900} className={'bp-simulator-stage '+(state.testMode==='player-order'?'sim-player-id-test':'')}>
       <div className="sim-side-wash blue" />
       <div className="sim-side-wash red" />
 
