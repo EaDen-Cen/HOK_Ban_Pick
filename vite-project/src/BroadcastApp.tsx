@@ -298,9 +298,6 @@ export default function BroadcastApp() {
             </div>
           </section>
 
-          <PostGamePanel state={state} token={token} disabled={disabled} send={send} />
-          <LiveGamePanel state={state} disabled={disabled} send={send} />
-          <RecoveryPanel token={token} zh={state.language==='zh'} />
           <DraftLifecycle state={state} send={send} disabled={disabled} />
           {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><MatchSettingsPanel key={JSON.stringify([state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode, state.recognitionAutoAccept, state.recognitionThreshold, state.showHeroName, state.artSourceMode])} state={state} send={send} disabled={disabled} /></SettingsDialog>}
           <PlayerSlotAlignment state={state} token={token} disabled={disabled} send={send} />
@@ -321,6 +318,11 @@ export default function BroadcastApp() {
           <TeamSettingsPanel key={JSON.stringify([state.blueTeam, state.redTeam])} state={state} send={send} disabled={disabled} token={token} />
         </TeamSettingsDialog>}
         {showHeroArtEditor && <Suspense fallback={<p>{t('connectingServer')}</p>}><HeroArtEditorDialog state={state} send={send} disabled={disabled} onClose={() => setShowHeroArtEditor(false)} /></Suspense>}
+        <section className="control-secondary-tools" aria-label={lang==='zh'?'赛后与维护工具':'Post-game and maintenance tools'}>
+          <PostGamePanel state={state} token={token} disabled={disabled} send={send} />
+          <LiveGamePanel state={state} disabled={disabled} send={send} />
+          <RecoveryPanel token={token} zh={state.language==='zh'} />
+        </section>
       </>}
       <DraftHistory state={state} />
       <Analysis state={state} lang={lang} />
