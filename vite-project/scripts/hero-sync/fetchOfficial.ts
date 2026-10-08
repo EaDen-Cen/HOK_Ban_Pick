@@ -61,6 +61,47 @@ function officialAssetUrl(raw: string, pageUrl: string) {
 }
 
 /**
+ * Pick the official "HERO DATA" portrait. These portraits are much closer to
+ * the in-game square-icon composition than the wide key art, but may include a
+ * decorative circular frame. UI-only iconCrop metadata removes that frame.
+ */
+export function extractOfficialHeroPortrait(html: string, pageUrl: string, expectedEnglishName: string) {
+  const skinIndex = html.search(/SKIN\s+APPRECIATION/i);
+  const scope = skinIndex > 0 ? html.slice(0, skinIndex) : html;
+  const normalizedName = normalizeName(expectedEnglishName);
+  const candidates: Array<{ url: string; score: number }> = [];
+
+  for (const match of scope.matchAll(/<img\b[^>]*>/gi)) {
+    const tag = match[0];
+    const raw =
+      attr(tag, 'data-original') ||
+      attr(tag, 'data-src') ||
+      attr(tag, 'data-lazy-src') ||
+      attr(tag, 'src');
+    if (!raw) continue;
+    const url = officialAssetUrl(raw, pageUrl);
+    if (!url) continue;
+
+    const alt = decodeHtml(attr(tag, 'alt') || '');
+    const title = decodeHtml(attr(tag, 'title') || '');
+    const className = attr(tag, 'class') || '';
+    const id = attr(tag, 'id') || '';
+    const descriptor = `${alt} ${title} ${className} ${id}`;
+    const normalizedDescriptor = normalizeName(descriptor);
+
+    let score = 0;
+    if (/hero[ _-]?data/i.test(descriptor)) score += 180;
+    if (normalizedDescriptor.includes(normalizedName)) score += 120;
+    if (/(portrait|avatar|head)/i.test(descriptor)) score += 50;
+    if (/(skin|skill|logo|qrcode|qr-code|button|btn)/i.test(descriptor)) score -= 200;
+    if (score >= 180) candidates.push({ url, score });
+  }
+
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0]?.url;
+}
+
+/**
  * Pick the page's main hero/key art rather than skin appreciation, skill icons,
  * QR codes or small avatar assets. The browser will crop this art to whatever
  * card aspect ratio the overlay uses.
@@ -163,8 +204,9 @@ export async function fetchOfficialHeroEvidence(campId: number, expectedEnglishN
   const englishName = englishHtml ? titleFromHtml(englishHtml) : undefined;
   const chineseName = chineseHtml ? titleFromHtml(chineseHtml) : undefined;
   const confirmed = Boolean(englishName && normalizeName(englishName) === normalizeName(expectedEnglishName));
+  const portraitUrl = englishHtml ? extractOfficialHeroPortrait(englishHtml, englishUrl, expectedEnglishName) : undefined;
   const artUrl = englishHtml ? extractOfficialHeroArt(englishHtml, englishUrl, expectedEnglishName) : undefined;
-  return { campId, englishName, chineseName, artUrl, englishUrl, chineseUrl, confirmed };
+  return { campId, englishName, chineseName, portraitUrl, artUrl, englishUrl, chineseUrl, confirmed };
 }
 
 
