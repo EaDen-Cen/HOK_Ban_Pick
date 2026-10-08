@@ -2,6 +2,8 @@
 
 # 安装、运行与部署指南
 
+> v1.0.0 Release Candidate 状态：核心 BP / Auto BP / Player ID / 换英雄链路已完成软件验证。**局内 HUD 仍是测试功能**，自动数据读取与真实 OBS 长时间运行尚未完成正式验收。
+
 第一次使用建议先看 [新手上手教程](beginner-guide.md)。当前比赛操作以 [操作指南](operator-guide.md) 为准；Auto BP 见 [屏幕识别指南](screen-recognition.md)；版本交接与旧实施计划见 [历史归档](../archive/README.md)。
 
 基于 `qiqi47/HOK_Ban_Pick`，保留原英雄 ID、名称、图片、位置与关系数据和 MIT 许可。
@@ -21,7 +23,9 @@ npm run server
 
 - 操作台：http://127.0.0.1:3001/control
 - 解说台：http://127.0.0.1:3001/caster
-- OBS：http://127.0.0.1:3001/overlay/draft
+- Draft Overlay：http://127.0.0.1:3001/overlay/draft
+- 实验性 Game HUD：http://127.0.0.1:3001/overlay/game-hud
+- MVP Overlay：http://127.0.0.1:3001/overlay/mvp
 
 开发热更新：另一个终端运行 `npm run dev`，打开 http://localhost:5173/control。
 Vite 转发 `/api` 与 `/ws` 到 3001 端口。浏览器通过 `/api/access` 获取经服务器验证的本机角色凭据，前端不包含固定口令。前端默认同域连接，跨域地址可通过 `.env` 中的
@@ -118,6 +122,14 @@ VPS 需要域名、80/443 端口和 Docker Compose。将域名解析到 VPS 后�
 角色 token 自动生成，旧部署仍可显式配置环境变量 token；`ALLOWED_ORIGINS` 填写前端完整 HTTPS origin。密码修改后，已连接页面更新角色 token；离线页面需重新登录或使用新分享链接。
 token 经 Authorization 头和 WS 初始认证消息发送，分享链接使用 fragment，避免出现在 HTTP 请求 URL。
 
+## Player ID、HUD 与赛后页面
+
+屏幕识别模式会复用 Auto BP 的采集窗口，在开局并行识别双方 10 个 Player ID，并把游戏画面的 P1–P5 映射到赛前 roster。ID 区域可以独立保存命名预设；手动修正后可以用“恢复自动识别”重新交给 OCR。当前 Simulator 最佳完整核查约 1.8 秒，边缘帧会在不降低原阈值的前提下做两帧一致性复核。
+
+`/overlay/game-hud` 已支持队伍身份、系列赛进度、人头、推塔和中立资源，但**仍处于测试阶段**。当前局内统计主要由 Control 人工维护，自动读取真实游戏 HUD、赛事机长期运行和 OBS 遮挡/缩放仍需实机验收。正式比赛应继续保留官方观战 UI 或人工比分兜底。
+
+`/overlay/mvp` 与赛后报告基础链路已接入，可在投票确定 MVP 后展示结构化数据卡；自动判页和全部真实结算页面识别仍属于后续验收。
+
 ## 验证
 
 比赛设置中的“界面语言”控制整套界面和英雄名称。选择中文或英文并保存后，按钮、设置、状态、错误、阵容分析与直播画面统一切换，每处只显示当前语言；搜索始终支持中英文。
@@ -134,9 +146,8 @@ npm run test:e2e
 测试启动独立 3101 端口，数据写入 `artifacts/e2e-时间戳.json`，不会更改正式 `data/match.json`。
 测试截图位于 `artifacts/`。
 
-上线前彩排：走完两套 BP、修改比分、刷新页面、断开网络至少 30 秒、重启后端，
-确认 Overlay 恢复、Caster 无实时剧透；再测量 B站→解说→Discord 的真实音画偏差。
-Auto BP 已支持浏览器窗口采集、18 槽位校准/预设、Pick/Ban 识别、空 Ban 与最终阵容换英雄同步；详细限制见 [屏幕识别指南](screen-recognition.md)。本版仍不包含 OCR、OBS 场景自动控制、赛事编排和自动视频同步。
+上线前彩排：走完两套 BP、Player ID 队内乱序识别、换英雄、修改比分、刷新页面、断开网络至少 30 秒、重启后端，确认 Draft Overlay 恢复、Caster 无实时剧透；再测量 B站→解说→Discord 的真实音画偏差。若启用实验性 HUD，必须单独验证 OBS 长时间运行并保留人工/官方比分兜底。
+Auto BP 已支持浏览器窗口采集、18 槽位校准/预设、Pick/Ban 识别、空 Ban、P1–P5 Player ID 本地 OCR 自动对齐、独立 ID 区域预设与最终阵容换英雄同步；详细限制见 [屏幕识别指南](screen-recognition.md)。本版**已包含本地 OCR**，但仍不包含 OBS 场景自动控制、赛事编排和自动视频同步。
 
 实现参考：[ws 官方文档](https://github.com/websockets/ws/blob/master/README.md)、[Vite 代理文档](https://vite.dev/config/server-options.html#server-proxy)。
 
