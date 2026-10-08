@@ -6,23 +6,36 @@ import { normalizeCaptureRegion, regionToPixels, type NormalizedCaptureRegion } 
 import { getSharedWindowCaptureStream, subscribeSharedWindowCapture } from './sharedWindowCapture';
 
 const storage='hok-window-capture-slots-v3';
+const playerIdRegionVersion='hok-player-id-region-layout-v2';
 
 function readSlots(): CaptureSlots {
-  try{return normalizeCaptureSlots(JSON.parse(localStorage.getItem(storage)||'null')??defaultCaptureSlots);}
-  catch{return normalizeCaptureSlots(defaultCaptureSlots);}
+  try{
+    const parsed=JSON.parse(localStorage.getItem(storage)||'null')??defaultCaptureSlots;
+    // Reset only the first experimental ID rectangles once. Keep all 18 BP
+    // hero boxes and every later v2 calibration.
+    if(localStorage.getItem(playerIdRegionVersion)!=='2'){
+      if(parsed&&typeof parsed==='object'&&'playerIds' in parsed) delete parsed.playerIds;
+      localStorage.setItem(storage,JSON.stringify(parsed));
+      localStorage.setItem(playerIdRegionVersion,'2');
+    }
+    return normalizeCaptureSlots(parsed);
+  }catch{return normalizeCaptureSlots(defaultCaptureSlots);}
 }
 
 function defaultIdRegion(slots: CaptureSlots, side: Side, index: number): NormalizedCaptureRegion {
-  const pick=slots[`${side}Pick${index+1}` as CaptureSlotKey];
-  const width=Math.min(.18,1-pick.x-pick.width);
-  return {
-    x:side==='blue'?pick.x+pick.width:Math.max(0,pick.x-.18),
-    y:pick.y+pick.height*.65,
-    width:side==='blue'?Math.max(.02,width):.18,
-    height:Math.max(.02,pick.height*.3),
-  };
+  const pick=slots[(side+'Pick'+(index+1)) as CaptureSlotKey];
+  const gap=.004;
+  const desiredWidth=.16;
+  const height=Math.max(.032,Math.min(.065,pick.height*.52));
+  const y=pick.y+Math.max(0,(pick.height-height)/2);
+  const x=side==='blue'?pick.x+pick.width+gap:pick.x-desiredWidth-gap;
+  return normalizeCaptureRegion({
+    x:Math.max(0,Math.min(1-desiredWidth,x)),
+    y:Math.max(0,Math.min(1-height,y)),
+    width:desiredWidth,
+    height,
+  });
 }
-
 function idRegion(slots: CaptureSlots, side: Side, index: number): NormalizedCaptureRegion {
   const key=`${side}${index+1}`;
   return slots.playerIds?.[key]??defaultIdRegion(slots,side,index);
