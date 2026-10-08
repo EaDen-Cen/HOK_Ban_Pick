@@ -400,7 +400,7 @@ export function BpSimulatorControl() {
       <div className="sim-player-test-toolbar">
         <label>ID 压力测试集
           <select value={state.playerProfile} onChange={event=>patch({playerProfile:event.target.value as SimulatorPlayerProfile,playerRosterPrepared:false,scene:'lobby'})}>
-            <option value="mixed">混合：英文 + 简中 + 日文</option>
+            <option value="mixed">混合：英文 + 简中</option>
             <option value="latin">英文 / 数字 / 符号</option>
             <option value="zh">简体中文</option>
             <option value="confusable">OCR 易混淆：O/0、I/l/1、S/5</option>
