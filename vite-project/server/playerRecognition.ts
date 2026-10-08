@@ -42,29 +42,25 @@ export class PlayerRecognitionProvider {
     this.busy=true;
     const start=performance.now();
     try {
-      const width=720, rowHeight=72;
+      const width=640, rowHeight=64;
       const crops:Buffer[]=await Promise.all((images as string[]).map(async(image:string)=>{
         const input=Buffer.from(image.split(',')[1],'base64');
         const meta=await sharp(input,{limitInputPixels:1000000}).metadata();
         if (!meta.width || !meta.height || meta.width>2048 || meta.height>512) throw new Error('ID crop too large');
 
-        // HOK and the Simulator both render light IDs on dark UI. Tesseract is
-        // markedly more stable with dark glyphs on a light field, so detect
-        // the crop polarity before resizing. Keeping greyscale (not hard
-        // thresholding) preserves thin CJK strokes.
-        const grey=sharp(input).flatten({background:'#fff'}).greyscale().normalize();
-        const stats=await grey.clone().stats();
+        // Preserve the proven light-background pipeline exactly. For HOK's
+        // normal dark UI, only flip polarity before the same final resize so
+        // Tesseract receives dark glyphs on a light field.
+        const flattened=sharp(input).flatten({background:'#fff'});
+        const stats=await flattened.clone().greyscale().normalize().stats();
         const darkBackground=(stats.channels[0]?.mean??255)<135;
-        let prepared=grey;
-        if(darkBackground) prepared=prepared.negate();
-        return prepared
-          .resize(width-40,48,{fit:'contain',background:'#fff',withoutEnlargement:false})
-          .sharpen()
-          .png()
-          .toBuffer();
+        const prepared=darkBackground
+          ? flattened.clone().greyscale().normalize().negate().resize(width-32,40,{fit:'contain',background:'#fff'})
+          : flattened.clone().resize(width-32,40,{fit:'contain',background:'#fff'}).greyscale().normalize();
+        return prepared.png().toBuffer();
       }));
       const page=await sharp({create:{width,height:rowHeight*10,channels:3,background:'#fff'}})
-        .composite(crops.map((input,i)=>({input,left:20,top:i*rowHeight+12})))
+        .composite(crops.map((input,i)=>({input,left:16,top:i*rowHeight+12})))
         .png()
         .toBuffer();
       const result=await this.worker.recognize(page,{}, {text:true,blocks:true});
