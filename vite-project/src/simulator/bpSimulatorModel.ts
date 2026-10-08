@@ -17,6 +17,64 @@ export const simulatorAllSlotKeys = [
   'redPick1','redPick2','redPick3','redPick4','redPick5',
 ] as const;
 
+export type SimulatorTestMode = 'bp' | 'lineup' | 'player-order';
+export type SimulatorScene = 'lobby' | 'draft';
+export type SimulatorPlayerProfile = 'mixed' | 'latin' | 'zh' | 'ja' | 'confusable';
+
+const PLAYER_ID_POOLS: Record<SimulatorPlayerProfile,string[]> = {
+  latin: [
+    'EaDen-01','Nova.O','L1ght','Zero0','K1ng','Aster_7','Raven-X','Miko99','BlueJay','Frost.5',
+    'Orbit_1','Echo-0','NexusV','Pixel8','Solaris',
+  ],
+  zh: [
+    '逐风','北辰','星河','小满','阿杰','千夜','凌霄','沐风','青岚','长安',
+    '云归','听雨','白榆','南星','知夏',
+  ],
+  ja: [
+    'アキラ','ユウキ','レン','サクラ','ハル','ミナト','ソラ','カイト','ナオ','ヒカル',
+    'リク','ユナ','レイ','シン','アオイ',
+  ],
+  confusable: [
+    'Nova0','NovaO','L1ght','LIght','lIine','line1','B8ta','Beta','S5tar','Star5',
+    'O0O','I1I','ZeroO','0cean','Ocean0',
+  ],
+  mixed: [
+    'EaDen-01','Nova.O','L1ght','Zero0','K1ng',
+    '逐风','北辰','星河','小满','青岚',
+    'アキラ','ユウキ','レン','サクラ','ハル',
+    'Aster_7','Raven-X','Pixel8','长安','听雨',
+  ],
+};
+
+function shuffled<T>(values:readonly T[],random:()=>number) {
+  const output=[...values];
+  for(let index=output.length-1;index>0;index--) {
+    const target=Math.floor(Math.min(.999999,Math.max(0,random()))*(index+1));
+    [output[index],output[target]]=[output[target],output[index]];
+  }
+  return output;
+}
+
+export function simulatorPlayerTestRoster(
+  profile:SimulatorPlayerProfile,
+  random:()=>number=Math.random,
+) {
+  const selected=shuffled(PLAYER_ID_POOLS[profile],random).slice(0,10);
+  if(selected.length<10) throw new Error('Simulator player ID pool is too small');
+  return {blue:selected.slice(0,5),red:selected.slice(5,10)};
+}
+
+/** Shuffle only inside one team. Force a non-identity order so a test run always exercises alignment. */
+export function simulatorRandomPlayerOrder(random:()=>number=Math.random) {
+  const order=shuffled([0,1,2,3,4],random);
+  if(order.every((value,index)=>value===index)) [order[0],order[1]]=[order[1],order[0]];
+  return order;
+}
+
+export function simulatorPlayerOrdersMatch(actual:readonly number[],expected:readonly number[]) {
+  return actual.length===5&&expected.length===5&&actual.every((value,index)=>value===expected[index]);
+}
+
 export function simulatorSlotForPhase(
   mode: MatchState['draftMode'],
   firstPickSide: Side,
