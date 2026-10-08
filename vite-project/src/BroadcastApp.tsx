@@ -36,6 +36,7 @@ const HeroArtEditorDialog=lazy(()=>import('./control/HeroArtEditorDialog').then(
 import { LineupAssignments } from './control/LineupAssignments';
 import { Score } from './shared/Score';
 import { DraftHistory } from './shared/DraftHistory';
+import { heroIconStyle } from './shared/heroIcon';
 import { DraftLifecycle } from './control/DraftLifecycle';
 import { DraftOverlay } from './overlay/DraftOverlay';
 const name = (state: MatchState, id: number, lang: Language) => { const h = heroForState(state, id); return h ? (lang === 'zh' ? h.chineseName : h.englishName) : '—'; };
@@ -43,7 +44,7 @@ function HeroSlot({ state, id, ban = false, lang }: { state: MatchState; id?: nu
   const t = translator(lang);
   const skipped = ban && id === null;
   return <div className={`hero-slot ${ban ? 'ban' : ''} ${id ? 'filled' : ''} ${skipped ? 'skipped-ban' : ''}`} key={id ?? (skipped ? 'skipped' : 'empty')}>
-    {id ? <><img src={heroForState(state,id)?.imageLink} alt={name(state,id, lang)} /><span>{name(state,id, lang)}</span>{ban && <b className="ban-mark">╱</b>}</>
+    {id ? (() => { const hero = heroForState(state,id); return <><img src={hero?.imageLink} alt={name(state,id, lang)} style={heroIconStyle(hero)} /><span>{name(state,id, lang)}</span>{ban && <b className="ban-mark">╱</b>}</>; })()
       : <span className={skipped ? 'empty skipped-ban-label' : 'empty'}>{skipped ? t('emptyBan') : t(ban ? 'ban' : 'emptyPick')}</span>}
   </div>;
 }
