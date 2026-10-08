@@ -1,5 +1,14 @@
 > [文档索引](../README.md) · 除特别注明外，文件路径以仓库根目录为基准，npm 命令在 `vite-project/` 中执行。
 
+## 2026-10-08：119 位英雄 Release-order ID 迁移
+
+- 依据 World of Honor of Kings 英雄页的 **Launch Time** 顺序，将全部 119 位当前英雄改为从旧到新连续 ID `1..119`；ID 越大代表越晚上架。
+- Flowborn 在官网是一个条目，程序中 5 个可独立 BP 的形态保持相邻并按 Camp ID 581→585 固定排序。
+- Annette / Florentino / Lorion 与 Devara 按 Plus 2.0 同批英雄处理，采用固定 tie order；Wang Wei 为当前最新 `ID 119`。
+- Control 的“上线时间（新→旧）”改为直接按 hero ID 降序，覆盖率从依赖 `releaseDate` 的 0/119 变为完整 119/119。
+- Match store schema 从 v1 升到 v2；旧存档的 bans、picks、assignments、history、post-game heroId、heroArtOverrides 和 heroDataOverrides 会自动迁移。
+- 已人工整理的 `public/heroesImg/` 文件名保持不变，逻辑 hero ID 与资产文件名彻底解耦，避免再次批量改动图片。
+
 ## 2026-10-08：Wang Wei 小头像来源修正
 
 - 现场截图确认 Wang Wei 的 `imageLink` 指向官网带装饰圆框的人物肖像，导致 Hero Picker / Ban 小头像直接显示金色圆框。
@@ -10,7 +19,7 @@
 ## 2026-10-08：Wang Wei / Hero Art 公共裁切同步
 
 - PR #51 修复新英雄同步的一个来源故障边界：此前辅助目录已列出 Wang Wei（Camp 138），但英雄详情页返回 HTTP 502，旧流程因此跳过。现在新英雄先由官方 HOK 英雄页确认身份；辅助详情临时不可用时，可用已确认的官方 Key Art 作为临时图片来源。
-- 程序内英雄增至 **119 个有效条目**；新增本地 ID 120：**Wang Wei / 王维 / Mid Lane / Camp 138**。Counter / Combo 保持未验证状态，不自动抓取。
+- 程序内英雄增至 **119 个有效条目**；新增英雄 **Wang Wei / 王维 / Mid Lane / Camp 138**；在后续 release-order 迁移中其程序 ID 调整为 **119**。Counter / Combo 保持未验证状态，不自动抓取。
 - Wang Wei 当前使用官方 HOK 远程 portrait/key art 作为过渡素材。模板识别只信任 `world.honorofkings.com` / `camp.honorofkings.com`；远程素材不可达时只跳过该临时模板，不拖垮其余 Auto BP。后续 Hero Sync 取得稳定 Icon 后应转为本地 `/heroesImg`。
 - Panel / Side 裁切公共默认值从 `heroArtFocus.ts` 拆到 Git 跟踪的 `src/data/heroArtFocusOverrides.ts`。Control 保存的现场覆盖仍在 `data/match.json -> state.heroArtOverrides`，不会自动提交到仓库。
 - 新增 `npm run hero:crop-sync` 与 Windows `sync-hero-crops.bat`：只提升已知英雄的 Panel / Side x/y/scale，不导出比赛、队伍、选手、访问凭据、heroDataOverrides 或 `useLegacyImage`，并且只生成本地 Git diff，不自动 push。
