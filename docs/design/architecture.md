@@ -52,3 +52,13 @@
 ## 选手对齐、恢复、HUD 与赛后 MVP
 
 已接入每局选手槽位映射、常驻本地 OCR、备份/停机恢复、实验性局内 HUD 和赛后数据草稿/MVP 页面。HUD 仍在测试阶段。参见 [功能与操作说明](../guides/player-alignment-recovery-hud.md) 与 [项目里程碑](../../MILESTONES.md)。
+
+## 后续 Broadcast Data Engine 设计方向
+
+M21–M25 将逐步构建基于现有 MatchState 的统一数据模型：`MatchData`（队伍、BO、选手、当前局）、`LiveGameData`（时间、人头、塔、资源、经济；与现有 LiveGameStats 兼容）、`PostGameData`（赛后十人数据；与现有 PostGameReport 兼容），避免引入第二份竞争性的权威赛事状态。
+
+采集适配层按实时观战与赛后多页面分开处理；OCR/图像匹配的输出先进入带 `source / capturedAt / confidence / verified` 及原始截图证据的候选层，经连续帧/异常值/跨页一致性检查后才可发布。人工修正能冻结单字段，且始终提供恢复自动与回退。M12A 的 Player Slot Order 是将游戏屏幕位置绑定到正式选手身份的唯一关键映射；不得直接凭 OCR 猜选手身份。
+
+OBS Browser Source、Caster、Control、十人结算和 MVP 卡从一致的可信快照渲染。KPL 的图形排版是信息展示参考，不意味着存在我们可直接使用的比赛官方 API。后续音频自动化应通过可控的 OBS/音频总线接口实现 Fade、Ducking 和场景控制，必须有手动覆盖、音量安全状态和断连保护，不得阻塞 Auto BP、直播画面采集或造成音画不同步。
+
+见 [M21–M25 具体里程碑与验收标准](../../MILESTONES.md)。**M19 Game HUD 仍为实验功能，M20 自动判页尚未通过实机验收。**
