@@ -13,6 +13,7 @@ import { mergeRuntimeHeroArtFocus, renderHeroArtFocusOverrides } from './artFocu
 import type { CatalogHero, SourceSnapshot } from './types.js';
 import heroes from '../../src/components/HeroList.js';
 import { sortHeroes } from '../../src/control/heroSort.js';
+import { heroIconStyle } from '../../src/shared/heroIcon.js';
 
 const local = (overrides: Partial<Hero> = {}): Hero => ({
   id: 1,
@@ -60,6 +61,15 @@ test('Wang Wei uses a close-cropped official portrait for square icons and keeps
   assert.equal(wangWei.imageLink, wangWei.recognitionImageLink);
   assert.match(wangWei.artLink || '', /17895496027563\.jpg$/);
   assert.deepEqual(wangWei.iconCrop, { x: 62, y: 36, scale: 1.65 });
+});
+
+test('temporary icon crop is disabled after a proper replacement icon takes over', () => {
+  const wangWei = heroes.find(hero => hero.id === 120)!;
+  assert.equal(heroIconStyle(wangWei)?.transform, 'scale(1.65)');
+  assert.equal(
+    heroIconStyle({ ...wangWei, imageLink: '/heroesImg/120.png' }),
+    undefined,
+  );
 });
 
 test('normalization matches historical aliases without creating a duplicate hero', () => {
