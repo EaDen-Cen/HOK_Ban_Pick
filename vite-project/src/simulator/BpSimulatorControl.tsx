@@ -217,6 +217,8 @@ export function BpSimulatorControl() {
     testMode,
     scene:testMode==='player-order'?'lobby':'draft',
     autoPlay:false,
+    bluePlayerOrder:testMode==='player-order'?current.bluePlayerOrder:[0,1,2,3,4],
+    redPlayerOrder:testMode==='player-order'?current.redPlayerOrder:[0,1,2,3,4],
     playerOrderTestStartedAt:null,
     playerOrderTestCompletedAt:null,
   }));
