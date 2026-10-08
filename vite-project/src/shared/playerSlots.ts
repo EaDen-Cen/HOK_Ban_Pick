@@ -13,19 +13,36 @@ export function playerAtSlot(state: MatchState, side: Side, slot: number) {
 
 // Preserve punctuation for exact matching; confusion folding only affects similarity.
 export const normalizePlayerText = (value: string) => value.normalize('NFKC').toLowerCase().replace(/\s/g,'');
-function similarity(a: string, b: string) {
+function normalizedSimilarity(a:string,b:string) {
   if (!a || !b) return 0;
-  const exactA = normalizePlayerText(a), exactB = normalizePlayerText(b);
-  if (exactA === exactB) return 1;
-  const fold = (value: string) => value.replace(/[0o]/g,'o').replace(/[1il|]/g,'l').replace(/[5s]/g,'s').replace(/[8b]/g,'b');
-  const x = [...fold(exactA)], y = [...fold(exactB)];
-  let row = y.map((_,i)=>i+1); row.unshift(0);
-  for (let i=1;i<=x.length;i++) {
+  const exactA=normalizePlayerText(a), exactB=normalizePlayerText(b);
+  if (exactA===exactB) return 1;
+  const fold=(value:string)=>value.replace(/[0o]/g,'o').replace(/[1il|]/g,'l').replace(/[5s]/g,'s').replace(/[8b]/g,'b');
+  const x=[...fold(exactA)], y=[...fold(exactB)];
+  let row=y.map((_,i)=>i+1);row.unshift(0);
+  for(let i=1;i<=x.length;i++) {
     const next=[i];
-    for (let j=1;j<=y.length;j++) next[j]=Math.min(next[j-1]+1,row[j]+1,row[j-1]+(x[i-1]===y[j-1]?0:1));
+    for(let j=1;j<=y.length;j++) next[j]=Math.min(next[j-1]+1,row[j]+1,row[j-1]+(x[i-1]===y[j-1]?0:1));
     row=next;
   }
-  return Math.max(0, 1-row[y.length]/Math.max(x.length,y.length)) * .96;
+  return Math.max(0,1-row[y.length]/Math.max(x.length,y.length))*.96;
+}
+
+/**
+ * OCR crops may include the player ID plus role/hero labels. Compare the full
+ * OCR block and each visible line/token, then keep the strongest match.
+ */
+function similarity(ocrText:string,player:string) {
+  if(!ocrText||!player)return 0;
+  const variants=new Set<string>([ocrText]);
+  for(const line of ocrText.split(/[\r\n]+/)) {
+    const trimmed=line.trim();
+    if(trimmed)variants.add(trimmed);
+    for(const token of trimmed.split(/\s+/)) if(token) variants.add(token);
+  }
+  let best=0;
+  for(const variant of variants) best=Math.max(best,normalizedSimilarity(variant,player));
+  return best;
 }
 const permutations = (values: number[]): number[][] => values.length <= 1 ? [values] :
   values.flatMap((value,index)=>permutations(values.filter((_,i)=>i!==index)).map(rest=>[value,...rest]));
