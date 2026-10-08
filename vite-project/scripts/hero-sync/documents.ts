@@ -52,9 +52,9 @@ function rosterBlock(heroes: Hero[]) {
   const rows = heroes.map(hero => `| ${hero.id} | ${hero.chineseName} | ${hero.englishName} |`).join('\n');
   return `## 程序内英雄池
 
-当前 \`main\` 分支程序内共有 **${heroes.length} 个有效英雄条目**。英雄 ID 与程序持久化数据直接关联，因此旧 ID 不会复用；**ID 29 为历史保留空位**，不属于当前英雄池。
+当前 \`main\` 分支程序内共有 **${heroes.length} 个有效英雄条目**。英雄 ID 采用国际服官网 Launch Time 的**从旧到新连续编号**：ID 越大代表越晚上架；同批上线英雄采用固定的确定性顺序。旧版存档会在加载时自动迁移到这套编号。
 
-> 本表由 Hero Data Synchronizer 自动生成，用于快速核对程序当前实际包含的英雄。请勿手工维护表格；英雄同步 PR 会自动刷新这里。头像资源文件名与英雄 ID 已解耦，历史 `/heroesImg/*` 文件无需随编号重命名。
+> 本表由 Hero Data Synchronizer 自动生成，用于快速核对程序当前实际包含的英雄。请勿手工维护表格；英雄同步 PR 会自动刷新这里。头像资源文件名与英雄 ID 已解耦，历史 \`/heroesImg/*\` 文件无需随编号重命名。
 
 | ID | 中文名 | English |
 | ---: | --- | --- |
