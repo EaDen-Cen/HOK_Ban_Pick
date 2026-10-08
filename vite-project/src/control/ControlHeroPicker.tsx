@@ -1,3 +1,4 @@
+import { playerAtSlot } from '../shared/playerSlots';
 import { useEffect, useRef, useState } from 'react';
 import { heroesForState } from '../shared/heroData';
 import { draftHeroUsed, draftRestriction } from '../shared/draftRules';
@@ -56,7 +57,7 @@ export function ControlHeroPicker({ state, disabled, active, send, acknowledged 
     <div className={`picker-heading side-${phase?.team || 'none'}`}>
       <div className="current-phase" aria-live="polite">
         <h2>{phaseName(state, state.language)}</h2>
-        {phase && <span>{phase.action === 'ban' ? t('banCount', {number:state[`${phase.team}Bans`].length + 1,total:state.draftMode === 'match' ? 4 : 2}) : t('pickingFor', {player:state[`${phase.team}Team`].players[state[`${phase.team}Picks`].length] || t('playerNumber',{number:state[`${phase.team}Picks`].length + 1}),slot:state[`${phase.team}Picks`].length + 1})}</span>}
+        {phase && <span>{phase.action === 'ban' ? t('banCount', {number:state[`${phase.team}Bans`].length + 1,total:state.draftMode === 'match' ? 4 : 2}) : t('pickingFor', {player:playerAtSlot(state, phase.team, state[`${phase.team}Picks`].length).id || t('playerNumber',{number:state[`${phase.team}Picks`].length + 1}),slot:state[`${phase.team}Picks`].length + 1})}</span>}
         {phase && <small>{t('phaseStep',{step:state.currentPhase+1,total:phases(state.draftMode,state.firstPickSide).length})}</small>}
       </div>
       <input ref={searchInput} aria-label={t('searchHeroes')} placeholder={t('searchHeroes')} value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => {

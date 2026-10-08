@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-10-05T19:19:30.489Z",
+  "checkedAt": "2026-10-08T04:54:41.885Z",
   "source": "https://wiki.bittopup.com/hok",
   "heroes": [
     {
@@ -248,6 +248,13 @@
       "occupation": "Jungling",
       "imageUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/sU3BsR6P.png",
       "detailUrl": "https://wiki.bittopup.com/hok/137",
+      "source": "bittopup"
+    },
+    {
+      "campId": 138,
+      "englishName": "Wang Wei",
+      "occupation": "Mid Lane",
+      "detailUrl": "https://wiki.bittopup.com/hok/138",
       "source": "bittopup"
     },
     {

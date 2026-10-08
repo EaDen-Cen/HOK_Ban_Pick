@@ -1,3 +1,4 @@
+import { playerAtSlot } from '../shared/playerSlots';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { heroForState } from '../shared/heroData';
 import type { Action, MatchState, Side } from '../shared/types';
@@ -311,7 +312,8 @@ export function LineupAssignments({
       <div className="lineup-team-grid">
         {(['blue','red'] as const).map(side=><section className={`lineup-team ${side}`} key={side}>
           <h3>{state[`${side}Team`].name}</h3>
-          {state[`${side}Team`].players.map((player,index)=>{
+          {state[`${side}Team`].players.map((_,index)=>{
+            const player = playerAtSlot(state, side, index).id;
             const detected=resultFor(side,index);
             const top=detected?.candidates[0];
             return <div className="lineup-player-row" key={index}>

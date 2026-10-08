@@ -1,3 +1,10 @@
+import sharp from 'sharp';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { Diagnostics } from './diagnostics.js';
+import { acquireBackendLock, RecoveryManager, archiveData } from './recovery.js';
+import { PlayerRecognitionProvider } from './playerRecognition.js';
+import { solvePlayerSlots } from '../src/shared/playerSlots.js';
 import type { HeroRecognitionProvider } from './recognitionProvider.js';
 import { AccessStore } from './access.js';
 import { createServer } from 'node:http';
@@ -13,15 +20,24 @@ import { uploadPortrait, servePortrait } from './portraits.js';
 import { captureRegion, captureRegions, localCaptureRequest, recognizeClientFrame, recognizeLineup, recognizeScreen } from './capture.js';
 
 const recognitionProvider:HeroRecognitionProvider={id:'local-template-v1',recognize:input=>recognizeClientFrame(input.image,input.allowedHeroIds,input.shape)};
+const playerRecognition = new PlayerRecognitionProvider(process.env.HOK_OCR_MODEL_DIR, process.env.HOK_OCR_LANGUAGES || 'eng+chi_sim');
+void playerRecognition.prepare();
 const production = process.env.NODE_ENV === 'production';
 const project = fileURLToPath(new URL('../', import.meta.url));
 const dataFile = resolve(process.env.DATA_FILE || resolve(project, 'data/match.json'));
+const releaseBackendLock=acquireBackendLock(dirname(dataFile));
+process.once('exit',releaseBackendLock);
 const access = new AccessStore(resolve(dirname(dataFile),'access.json'));
 const roleFor = (token: unknown) => access.role(token);
 const loginAttempts = new Map<string,{count:number;until:number}>();
 const presets = new TeamPresetStore(resolve(dirname(dataFile), 'team-presets.json'));
 const store = new Store(dataFile, Date.now, presets);
 const uploadDirectory = resolve(process.env.UPLOAD_DIR || resolve(dirname(dataFile), 'uploads/player-portraits'));
+const diagnostics=new Diagnostics(resolve(dirname(dataFile),'logs'));
+diagnostics.record('server_start',{ocrEnabled:true});
+const recovery=new RecoveryManager(dataFile,uploadDirectory);
+recovery.automatic();
+const recoveryTimer=setInterval(()=>{recovery.automatic();if(recovery.error)diagnostics.record('backup_failed');},60000);recoveryTimer.unref();
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean);
 const server = createServer(async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -69,6 +85,59 @@ const server = createServer(async (req, res) => {
         }
         loginAttempts.delete(address); json(200,{token:access.token(role)});
       }
+      return;
+    }
+    if(url.pathname==='/api/v1/recognition/postgame'){
+      if(req.method!=='POST'){json(405,{error:'POST required'});return;}
+      if(roleFor(req.headers.authorization?.replace(/^Bearer /,''))!=='control'){json(403,{error:'Control only'});req.resume();return;}
+      try{
+        const chunks:Buffer[]=[];let size=0;req.setTimeout(10000,()=>req.destroy());
+        for await(const chunk of req){size+=chunk.length;if(size>2*1024*1024){json(413,{error:'Crops too large'});return;}chunks.push(chunk);}
+        const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        const report=store.data.state.postGameReports.find(r=>r.id===input.reportId);
+        if(!report){json(409,{error:'Prepare the game report first'});return;}
+        if(playerRecognition.status!=='ready'){json(503,{error:'Local OCR is not ready'});return;}
+        const result=await playerRecognition.recognize(input.images);
+        if(!store.data.state.postGameReports.some(r=>r.id===input.reportId)){json(409,{error:'Report changed'});return;}
+        await mkdir(uploadDirectory,{recursive:true});
+        const candidates=await Promise.all(result.texts.map(async(text,index)=>{
+          const normalized=text.normalize('NFKC').trim().replace(/[,，\s]/g,'').replace(/[％%]$/,'');
+          const value=/^\d+(\.\d+)?$/.test(normalized)?Number(normalized):null;
+          const name=`${randomUUID()}.png`;
+          // Provider verified and decoded these bounded PNG crops before OCR.
+          await writeFile(resolve(uploadDirectory,name),await sharp(Buffer.from(input.images[index].split(',')[1],'base64')).png().toBuffer(),{flag:'wx'});
+          return {rowId:report.players[index].rowId,value,confidence:value===null?0:result.confidences[index],text,evidence:`/uploads/player-portraits/${name}`};
+        }));
+        json(200,{candidates,elapsedMs:result.elapsedMs});
+      }catch{json(400,{error:'Post-game capture failed; check regions or retry after player OCR'});}
+      return;
+    }
+    if (url.pathname === '/api/recovery' || url.pathname === '/api/match-export') {
+      if(roleFor(req.headers.authorization?.replace(/^Bearer /,''))!=='control'){json(403,{error:'Control only'});req.resume();return;}
+      if(url.pathname==='/api/match-export'&&req.method==='GET'){json(200,archiveData(dataFile,uploadDirectory,false));return;}
+      if(req.method==='GET'){json(200,{backups:recovery.list(),lastBackup:recovery.lastBackup,error:recovery.error});return;}
+      if(req.method==='POST'){try{json(201,{file:recovery.create(true)});}catch{diagnostics.record('backup_failed');json(500,{error:'Backup failed; check server storage'});}return;}
+      json(405,{error:'Unsupported method'});return;
+    }
+    if (url.pathname === '/api/v1/recognition/players') {
+      if (roleFor(req.headers.authorization?.replace(/^Bearer /,'')) !== 'control') { json(403,{error:'Control only'}); req.resume(); return; }
+      if (req.method === 'GET') { json(200,{provider:playerRecognition.id,status:playerRecognition.status,error:playerRecognition.error}); return; }
+      if (req.method !== 'POST') { json(405,{error:'POST required'}); return; }
+      if (store.data.state.bpInputMode !== 'screen') { json(409,{error:'Screen input is not enabled'}); req.resume(); return; }
+      try {
+        const chunks:Buffer[]=[]; let size=0; req.setTimeout(10000,()=>req.destroy());
+        for await (const chunk of req) { size+=chunk.length; if(size>2*1024*1024){json(413,{error:'ID crops too large'});return;} chunks.push(chunk); }
+        const input=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        const state=store.data.state;
+        // BP revisions may advance while OCR runs: bind to roster/game instead.
+        const context=JSON.stringify([state.blueTeam.players,state.redTeam.players,state.gameNumber,state.draftGameNumber,state.committedGameId]);
+        if (JSON.stringify(input.players)!==JSON.stringify([state.blueTeam.players,state.redTeam.players]) || input.gameNumber!==state.gameNumber || state.committedGameId) {json(409,{error:'Roster or game changed'});return;}
+        if(playerRecognition.status!=='ready'){json(503,{error:playerRecognition.error||'Local OCR model is not ready'});return;}
+        const result=await playerRecognition.recognize(input.images);
+        const current=store.data.state;
+        if(context!==JSON.stringify([current.blueTeam.players,current.redTeam.players,current.gameNumber,current.draftGameNumber,current.committedGameId])){json(409,{error:'Roster or game changed'});return;}
+        json(200,{...result,blue:solvePlayerSlots(result.texts.slice(0,5),state.blueTeam.players,result.confidences.slice(0,5)),red:solvePlayerSlots(result.texts.slice(5),state.redTeam.players,result.confidences.slice(5))});
+      } catch(error) {json(400,{error:error instanceof Error?error.message:'Player recognition failed'});}
       return;
     }
     if (url.pathname === '/api/recognize-frame' || url.pathname === '/api/v1/recognition/frame') {
@@ -172,13 +241,13 @@ const server = createServer(async (req, res) => {
       const role = roleFor(req.headers.authorization?.replace(/^Bearer /, ''));
       if (!role) { json(401, { error: '访问口令缺失或无效，请重新输入' }); return; }
       if (url.pathname === '/api/match') json(200, store.snapshot(role));
-      else if (url.pathname === '/api/v1/capabilities') json(200,{version:1,recognition:{provider:recognitionProvider.id,endpoint:'/api/v1/recognition/frame',confidence:'similarity',shapes:['square','circle'],revisionRequired:true}});
+      else if (url.pathname === '/api/v1/capabilities') json(200,{version:1,recognition:{provider:recognitionProvider.id,endpoint:'/api/v1/recognition/frame',confidence:'similarity',shapes:['square','circle'],revisionRequired:true},playerRecognition:{provider:playerRecognition.id,status:playerRecognition.status,endpoint:'/api/v1/recognition/players',batchSize:10,context:'roster-and-game'},postGame:{endpoint:'/api/v1/recognition/postgame',pageSelection:'manual',mvpSelection:'manual'}});
       else if (url.pathname === '/api/heroes') json(200, heroes);
       else json(404, { error: '找不到请求的内容' });
       return;
     }
     const root = resolve(project, 'dist');
-    const route = ['/', '/control', '/caster', '/overlay/draft', '/tools/bp-simulator', '/tools/bp-simulator-control'].includes(url.pathname);
+    const route = ['/', '/control', '/caster', '/overlay/draft', '/overlay/game-hud', '/overlay/mvp', '/tools/bp-simulator', '/tools/bp-simulator-control'].includes(url.pathname);
     const file = resolve(root, route ? 'index.html' : `.${decodeURIComponent(url.pathname)}`);
     if (!file.startsWith(root + '/') && !file.startsWith(root + '\\')) { json(404, { error: '找不到请求的内容' }); return; }
     const mime: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
@@ -232,6 +301,7 @@ wss.on('connection', (ws, req) => {
       for (const client of clients.keys()) update(client);
       ws.send(JSON.stringify({ type: 'ack', id: message.id }));
     } catch (e) {
+      diagnostics.record('action_rejected',{revision:store.data.revision});
       ws.send(JSON.stringify({ type: 'error', id: typeof id === 'string' ? id : undefined, error: e instanceof Error ? e.message : '消息无效' }));
       update(ws, true);
     }
@@ -241,6 +311,7 @@ const tick = setInterval(() => { for (const ws of clients.keys()) update(ws); },
 const heartbeat = setInterval(() => { for (const [ws, c] of clients) { if (!c.alive) ws.terminate(); else { c.alive = false; ws.ping(); } } }, 15000);
 server.listen(Number(process.env.PORT || 3001), process.env.HOST || (production ? '0.0.0.0' : '127.0.0.1'), () => console.log('HOK Broadcast server ready on port ' + (process.env.PORT || 3001)));
 for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => {
+  diagnostics.record('server_stop');clearInterval(recoveryTimer);void playerRecognition.close();
   clearInterval(tick); clearInterval(heartbeat); for (const ws of clients.keys()) ws.close(1001, '服务器正在停止');
   server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 2000).unref();
 });

@@ -18,13 +18,18 @@
     "simulator": "vite --open /tools/bp-simulator-control",
     "simulator:server": "vite --host 127.0.0.1 --strictPort",
     "simulator:stage": "vite --open /tools/bp-simulator",
-    "benchmark:recognition": "node --import tsx scripts/benchmark-recognition.ts"
+    "benchmark:recognition": "node --import tsx scripts/benchmark-recognition.ts",
+    "recovery": "node --env-file-if-exists=.env --import tsx scripts/recovery.ts",
+    "benchmark:players": "node --import tsx scripts/benchmark-player-recognition.ts"
   },
   "dependencies": {
+    "@tesseract.js-data/chi_sim": "^1.0.0",
+    "@tesseract.js-data/eng": "^1.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.18.4",
     "sharp": "^0.35.4",
+    "tesseract.js": "^7.0.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {

@@ -1,3 +1,5 @@
+import type { PostGameReport, PostGameMetric, PostGameField } from './postGame.js';
+import { initialLiveGameStats, type LiveGameStats } from './liveGame.js';
 export type Side = 'blue' | 'red';
 
 export type Language = 'zh' | 'eng';
@@ -60,6 +62,8 @@ export interface GameDraftRecord {
   committedAt: number;
   blueTeam: Team;
   redTeam: Team;
+  bluePlayerSlotOrder?: number[];
+  redPlayerSlotOrder?: number[];
   /** Immutable draft-order history. */
   blueBans?: Array<number | null>;
   redBans?: Array<number | null>;
@@ -71,6 +75,9 @@ export interface GameDraftRecord {
 }
 
 export interface MatchState {
+  liveGameStats: LiveGameStats;
+  postGameReports: PostGameReport[];
+  activePostGameReportId: string | null;
   blueTeam: Team;
   redTeam: Team;
 
@@ -110,6 +117,9 @@ export interface MatchState {
   /** Pick order is immutable draft history; assignments drive player cards. */
   bluePicks: number[];
   redPicks: number[];
+  /** Screen P1–P5 -> roster index; never mutates Team or presets. */
+  bluePlayerSlotOrder: number[];
+  redPlayerSlotOrder: number[];
   blueAssignments: Array<number | null>;
   redAssignments: Array<number | null>;
 }
@@ -139,6 +149,10 @@ export type MatchSettings = Pick<
 >;
 
 export type Action =
+  | { type: 'post_game_begin' }
+  | { type: 'post_game_fields'; reportId:string; updates:Array<{rowId:string;metric:PostGameMetric;field:PostGameField}> }
+  | { type: 'select_mvp'; reportId:string; rowId:string|null }
+  | { type: 'live_game_stats'; stats: LiveGameStats }
   | { type: 'load_team_preset'; side: Side; presetId: string }
   | { type: 'draft_action'; team: Side; action: 'ban' | 'pick'; heroId: number }
   | { type: 'draft_pick_group'; team: Side; heroIds: number[] }
@@ -148,6 +162,7 @@ export type Action =
   | { type: 'score'; team: Side; delta: 1 | -1 }
   | { type: 'swap_picks'; team: Side; from: number; to: number } // legacy alias: swaps assignments, never pick order
   | { type: 'swap_assignments'; team: Side; from: number; to: number }
+  | { type: 'set_player_slot_order'; side: Side; order: number[]; expectedPlayers: string[] }
   | { type: 'set_lineup_assignments'; blue: number[]; red: number[] }
   | { type: 'settings'; settings: MatchSettings }
   | { type: 'hero_art_override'; heroId: number; override: HeroArtOverride }
@@ -167,6 +182,9 @@ export interface Snapshot {
 }
 
 export const initialState = (): MatchState => ({
+  liveGameStats: initialLiveGameStats(),
+  postGameReports: [],
+  activePostGameReportId: null,
   blueTeam: {
     id: 'team-a',
     name: '蓝方队伍',
@@ -219,6 +237,8 @@ export const initialState = (): MatchState => ({
   redBans: [],
   bluePicks: [],
   redPicks: [],
+  bluePlayerSlotOrder: [0, 1, 2, 3, 4],
+  redPlayerSlotOrder: [0, 1, 2, 3, 4],
   blueAssignments: [null, null, null, null, null],
   redAssignments: [null, null, null, null, null],
 });

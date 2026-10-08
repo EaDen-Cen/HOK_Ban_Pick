@@ -1,3 +1,9 @@
+import { PostGamePanel } from './control/PostGamePanel';
+import { MvpOverlay } from './overlay/MvpOverlay';
+import { LiveGamePanel } from './control/LiveGamePanel';
+import { GameHud } from './overlay/GameHud';
+import { RecoveryPanel } from './control/RecoveryPanel';
+import { PlayerSlotAlignment } from './control/PlayerSlotAlignment';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import './broadcast.css';
 import './BroadcastApp.css';
@@ -219,7 +225,7 @@ function TeamSettingsPanel({ state, send, disabled, token }: { state: MatchState
   </form>;
 }
 export default function BroadcastApp() {
-  const role: Role = location.pathname === '/caster' ? 'caster' : location.pathname === '/overlay/draft' ? 'overlay' : 'control';
+  const role: Role = location.pathname === '/caster' ? 'caster' : location.pathname.startsWith('/overlay/') ? 'overlay' : 'control';
   const {token,saveToken:setToken,local,checking,accessError,login}=useAccess(role);
   const [showAccess,setShowAccess]=useState(false);
   const [tokenInput, setTokenInput] = useState('');
@@ -252,7 +258,7 @@ export default function BroadcastApp() {
       </form><p>{accessError || connectionLabel(status, lang)}</p>
     </main>;
   }
-  if (role === 'overlay') return <ViewportCanvas className="overlay">{state ? <DraftOverlay state={state} /> : <p className="notice">{connectionLabel(status,lang)}</p>}</ViewportCanvas>;
+  if (role === 'overlay') return <ViewportCanvas className="overlay">{state ? (location.pathname==='/overlay/game-hud'?<GameHud state={state}/>:location.pathname==='/overlay/mvp'?<MvpOverlay state={state}/>:<DraftOverlay state={state} />) : <p className="notice">{connectionLabel(status,lang)}</p>}</ViewportCanvas>;
   return <main className={`workspace ${role === 'control' ? 'control-workspace' : ''}`}>
     <header className="topbar">
       <div><span className="eyebrow">{t(role === 'caster' ? 'casterEyebrow' : 'controlEyebrow')}</span><h1>{t('brandTitle')} <span>{t('brandSubtitle')}</span></h1></div>
@@ -292,8 +298,12 @@ export default function BroadcastApp() {
             </div>
           </section>
 
+          <PostGamePanel state={state} token={token} disabled={disabled} send={send} />
+          <LiveGamePanel state={state} disabled={disabled} send={send} />
+          <RecoveryPanel token={token} zh={state.language==='zh'} />
           <DraftLifecycle state={state} send={send} disabled={disabled} />
           {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><MatchSettingsPanel key={JSON.stringify([state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode, state.recognitionAutoAccept, state.recognitionThreshold, state.showHeroName, state.artSourceMode])} state={state} send={send} disabled={disabled} /></SettingsDialog>}
+          <PlayerSlotAlignment state={state} token={token} disabled={disabled} send={send} />
           <LineupAssignments state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />
         </>}>
           {state.bpInputMode === 'screen'
