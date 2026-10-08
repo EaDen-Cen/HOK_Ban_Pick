@@ -16,6 +16,7 @@ export interface OfficialHeroEvidence {
   campId: number;
   englishName?: string;
   chineseName?: string;
+  portraitUrl?: string;
   artUrl?: string;
   englishUrl: string;
   chineseUrl: string;
