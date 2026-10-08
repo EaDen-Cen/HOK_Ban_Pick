@@ -70,6 +70,8 @@
 
 当前已加入 **Wang Wei / 王维，本地 ID 120，Camp ID 138，Mid Lane**。关系数据保持空数组和 `unverified`，不会因为新英雄同步而自动生成 Counter / Combo。
 
+王维官网同时提供了带装饰圆框的人物肖像和横向 Key Art。圆框肖像不再作为 UI `imageLink`，否则 Hero Picker / Ban 小头像会把金色边框一起显示。当前 UI 临时使用官方 Key Art 通过 `object-fit: cover` 做方形裁切；原圆框肖像只保存在 `recognitionImageLink` 作为识别模板来源。等辅助目录恢复稳定 Icon 后，`imageLink` 仍会切换回本地 `/heroesImg/120.*`。
+
 ## Panel / Side 裁切数据如何同步
 
 Control 中“英雄数据与图片”里的 **Panel（底部横排）** 与 **Side（左右竖排）** x/y/scale，原本只有两种来源：
