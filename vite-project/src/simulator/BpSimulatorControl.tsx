@@ -505,6 +505,11 @@ export function BpSimulatorControl() {
             <span className="sim-range-separator">—</span>
             <label>最长<input type="number" min={0.3} max={15} step={0.1} value={(state.intervalMaxMs/1000).toFixed(1)} onChange={event=>patch({intervalMaxMs:Math.round(Number(event.target.value)*1000)})}/><small>秒</small></label>
           </div>
+          <label className="sim-checkbox-control"><span>随机切换预选英雄</span><input type="checkbox" checked={state.preselectSwitching} onChange={event=>patch({preselectSwitching:event.target.checked})}/><small>锁定前随机换候选，最后至少留约 1.2 秒稳定窗口</small></label>
+          <label>锁定后画面保留
+            <input type="number" min={0.5} max={2.5} step={0.1} value={(state.transitionHoldMs/1000).toFixed(1)} onChange={event=>patch({transitionHoldMs:Math.round(Number(event.target.value)*1000)})}/>
+            <span>{(state.transitionHoldMs/1000).toFixed(1)} 秒</span>
+          </label>
         </div>
 
         <div className="sim-phase-readout">
