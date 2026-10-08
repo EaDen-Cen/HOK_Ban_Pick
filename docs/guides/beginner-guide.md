@@ -271,7 +271,7 @@ vite-project\data\
 vite-project\artifacts\
 ```
 
-18 框校准与预设保存在 Director 浏览器的 localStorage 中，所以更换浏览器配置、清除站点数据或换电脑前，应重新确认校准。
+18 框英雄校准预设与 10 个 Player ID 区域预设都保存在 Director 浏览器的 localStorage 中，所以更换浏览器配置、清除站点数据或换电脑前，应重新确认并重新载入/校准本机预设。
 
 ## 常见问题
 
