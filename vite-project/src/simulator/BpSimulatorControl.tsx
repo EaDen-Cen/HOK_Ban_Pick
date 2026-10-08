@@ -375,6 +375,54 @@ export function BpSimulatorControl() {
       </div>
     </header>
 
+    <section className="sim-test-suite">
+      <div className="sim-test-tabs" role="tablist" aria-label="Simulator test mode">
+        <button className={state.testMode==='bp'?'active':''} onClick={()=>setTestMode('bp')}>BP 识别</button>
+        <button className={state.testMode==='lineup'?'active':''} onClick={()=>setTestMode('lineup')}>换英雄同步</button>
+        <button className={state.testMode==='player-order'?'active':''} onClick={()=>setTestMode('player-order')}>选手 ID 排序</button>
+      </div>
+      <div className="sim-integration-bar">
+        <label><input type="checkbox" checked={controlLink} onChange={event=>{
+          const enabled=event.target.checked;
+          setControlLink(enabled);
+          localStorage.setItem('hok-simulator-control-link',enabled?'1':'0');
+          setIntegrationMessage(enabled?'已启用 Control 联动测试；请确保 Control 正在采集 Simulator 页面。':'已关闭 Control 联动；Simulator 不会主动修改 Control。');
+        }} /> Control 联动测试</label>
+        <span className={controlStatus==='Connected'?'ok':'warn'}>{controlStatus}</span>
+        <small>只有开启后，Simulator 才会同步测试名单或发送 BP 重置；英雄和玩家顺序结果仍必须由 Control 从采集画面识别。</small>
+      </div>
+      {(integrationMessage||controlError)&&<p className="sim-integration-message" role="status">{integrationMessage||controlError}</p>}
+    </section>
+
+    {state.testMode==='player-order'&&<section className="sim-control-panel sim-player-order-test">
+      <h2>选手 ID 排序 · 自定义房间 → BP</h2>
+      <p className="sim-control-note">先生成双方各 5 个赛前 ID，再同步给 Control。按 START 时蓝、红分别只在本队内部随机位置；Simulator 保存真实顺序，等待 Control OCR 更新 PlayerSlotOrder 后自动停止计时。</p>
+      <div className="sim-player-test-toolbar">
+        <label>ID 压力测试集
+          <select value={state.playerProfile} onChange={event=>patch({playerProfile:event.target.value as SimulatorPlayerProfile,playerRosterPrepared:false,scene:'lobby'})}>
+            <option value="mixed">混合：英文 + 简中 + 日文</option>
+            <option value="latin">英文 / 数字 / 符号</option>
+            <option value="zh">简体中文</option>
+            <option value="confusable">OCR 易混淆：O/0、I/l/1、S/5</option>
+            <option value="ja">日文假名（需额外 jpn OCR 模型）</option>
+          </select>
+        </label>
+        <button disabled={controlLink&&(controlPending||controlStatus!=='Connected')} onClick={preparePlayerOrderTest}>① 随机 10 个 ID / 准备房间</button>
+        <button disabled={!state.playerRosterPrepared||state.scene!=='lobby'} onClick={startPlayerOrderTest}>② START：随机队内位置并计时</button>
+        <button onClick={()=>window.open('/tools/bp-simulator','hok-bp-simulator-stage')}>打开房间 / BP 采集页</button>
+      </div>
+      <div className="sim-player-ground-truth">
+        <div className="blue"><b>BLUE · Ground truth</b>{state.bluePlayerOrder.map((rosterIndex,slot)=><div key={slot}><span>P{slot+1}</span><strong>{state.bluePlayers[rosterIndex]}</strong><small>roster #{rosterIndex+1}</small></div>)}</div>
+        <div className="red"><b>RED · Ground truth</b>{state.redPlayerOrder.map((rosterIndex,slot)=><div key={slot}><span>P{slot+1}</span><strong>{state.redPlayers[rosterIndex]}</strong><small>roster #{rosterIndex+1}</small></div>)}</div>
+      </div>
+      <div className={'sim-test-result '+(state.playerOrderTestCompletedAt?'success':'')}>
+        <strong>{!state.playerOrderTestStartedAt?'等待 START':state.playerOrderTestCompletedAt?'✓ Control 顺序已完全同步':'识别计时中…'}</strong>
+        <span>{playerElapsed===null?'—':(playerElapsed/1000).toFixed(3)+' s'}</span>
+        <small>{controlRosterMatches?'测试名单一致':'Control 名单尚未同步'} · {playerOrderMatched?'P1–P5 匹配':'等待 P1–P5'}</small>
+      </div>
+      {state.playerProfile==='ja'&&<p className="sim-control-note">默认 Player OCR 为 eng + chi_sim。日文用于扩展压力测试；配置 HOK_OCR_MODEL_DIR / HOK_OCR_LANGUAGES 的 jpn traineddata 后再把它当作正式通过项。</p>}
+    </section>}
+
     <section className="sim-control-panel">
       <h2>比赛与阶段</h2>
       <p className="sim-control-note">{snapshot?'已连接 Control，随机选角遵循当前比赛 BP 历史与元流之子规则。':'未连接 Control，按普通 BP 规则模拟。'}</p>
