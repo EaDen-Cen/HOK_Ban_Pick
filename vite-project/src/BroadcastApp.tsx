@@ -300,12 +300,14 @@ export default function BroadcastApp() {
 
           <DraftLifecycle state={state} send={send} disabled={disabled} />
           {showSettings && <SettingsDialog label={t('matchSettings')} closeLabel={t('hideSettings')} onClose={() => setShowSettings(false)}><MatchSettingsPanel key={JSON.stringify([state.seriesFormat, state.stage, state.draftMode, state.draftRuleMode, state.firstPickSide, state.sideSwapMode, state.language, state.overlayLayout, state.scoreDisplay, state.bpInputMode, state.recognitionAutoAccept, state.recognitionThreshold, state.showHeroName, state.artSourceMode])} state={state} send={send} disabled={disabled} /></SettingsDialog>}
-          <PlayerSlotAlignment state={state} token={token} disabled={disabled} send={send} />
-          <LineupAssignments state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />
+          {state.bpInputMode!=='screen'&&<PlayerSlotAlignment state={state} token={token} disabled={disabled} send={send} />}
+          {state.bpInputMode!=='screen'&&<LineupAssignments state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />}
         </>}>
           {state.bpInputMode === 'screen'
             ? <div className="screen-recognition-workspace">
               <Suspense fallback={<p>{t('connectingServer')}</p>}><ScreenInput state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} /></Suspense>
+              <PlayerSlotAlignment state={state} token={token} disabled={disabled} send={send} />
+              <LineupAssignments state={state} revision={snapshot!.revision} token={token} disabled={disabled} send={send} />
               <details className="manual-picker-fallback" onToggle={event=>setManualFallbackOpen(event.currentTarget.open)}>
                 <summary>{t('manualFallbackTitle')}</summary>
                 <p className="muted">{t('manualFallbackHint')}</p>
