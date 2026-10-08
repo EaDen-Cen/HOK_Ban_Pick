@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialState, phases } from '../src/shared/types.js';
-import { completedSimulatorSlots, simulatorBanVisualKeys, simulatorControlSync, simulatorNextTurnPhase, simulatorPlayerOrdersMatch, simulatorPlayerTestRoster, simulatorPreviousTurnPhase, simulatorPreselectSwitchMoments, simulatorRandomDelayMs, simulatorRandomPlayerOrder, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn, swapSimulatorPickHeroes } from '../src/simulator/bpSimulatorModel.js';
-import { migrateLegacySimulatorSlotHeroes } from '../src/simulator/bpSimulatorState.js';
+import { completedSimulatorSlots, migrateLegacySimulatorSlotHeroes, simulatorBanVisualKeys, simulatorControlSync, simulatorNextTurnPhase, simulatorPlayerOrdersMatch, simulatorPlayerTestRoster, simulatorPreviousTurnPhase, simulatorPreselectSwitchMoments, simulatorRandomDelayMs, simulatorRandomPlayerOrder, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn, swapSimulatorPickHeroes } from '../src/simulator/bpSimulatorModel.js';
 
 test('simulator match mode follows the production 18-phase HOK draft order', () => {
   const sequence=phases('match','blue');
