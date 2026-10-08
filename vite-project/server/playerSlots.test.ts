@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { Store } from './store.js';
 import { initialState, phases, type Action } from '../src/shared/types.js';
 import { normalizeState, pickRestriction } from '../src/shared/draftRules.js';
-import { playerAtSlot, solvePlayerSlots } from '../src/shared/playerSlots.js';
+import { playerAtSlot, solvePlayerSlotCandidates, solvePlayerSlots } from '../src/shared/playerSlots.js';
 import { createCaptureSlotPreset, readCaptureSlotPresets } from '../src/control/captureSlotPresets.js';
 import {
   createPlayerIdRegionPreset,
@@ -22,6 +22,23 @@ test('all 120 player permutations resolve globally without duplicate identities'
     assert.deepEqual(result.order,order);assert.equal(result.automatic,true);
   }
 });
+test('multi-pass OCR candidates use roster-match confidence without being capped by raw OCR confidence',()=>{
+  const candidates=[
+    [{text:'Pixel',confidence:.92,variant:'soft'},{text:'Pixel8',confidence:.31,variant:'threshold190'}],
+    [{text:'Raven-X',confidence:.42,variant:'soft'}],
+    [{text:'Aster_7',confidence:.28,variant:'threshold170'}],
+    [{text:'Zero0',confidence:.20,variant:'threshold190'}],
+    [{text:'K1ng',confidence:.18,variant:'soft'}],
+  ];
+  const players=['Pixel8','Raven-X','Aster_7','Zero0','K1ng'];
+  const result=solvePlayerSlotCandidates(candidates,players)!;
+  assert.deepEqual(result.order,[0,1,2,3,4]);
+  assert.deepEqual(result.confidence,[1,1,1,1,1]);
+  assert.equal(result.automatic,true);
+  assert.equal(result.ocrConfidence?.[0],.31);
+  assert.equal(result.ocrText?.[0],'Pixel8');
+});
+
 test('case, whitespace, NFKC and OCR confusion normalize; close IDs and substitutes never auto apply',()=>{
   assert.equal(solvePlayerSlots([' ＡＬＰＨＡ ','b r a v o','CHARLIE','Delta','Echo'],ids)!.automatic,true);
   assert.equal(solvePlayerSlots(['AOpha','Bravo','Charlie','Delta','Echo'],ids)!.automatic,false);
