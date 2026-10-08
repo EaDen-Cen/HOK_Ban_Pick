@@ -40,6 +40,7 @@ export function BpSimulator() {
   },[sequence,state.firstPickSide,state.mode]);
 
   const visibleState=(key:string)=>{
+    if(state.testMode==='lineup'&&key.includes('Pick')) return {visible:true,isCurrent:false,isLocked:true,empty:false};
     const slotPhase=phaseByKey.get(key);
     const visible=slotPhase!==undefined&&(slotPhase<state.phaseIndex||activeKeys.has(key));
     const isLocked=(slotPhase!==undefined&&slotPhase<state.phaseIndex)||state.locked.includes(key);
@@ -160,16 +161,18 @@ export function BpSimulator() {
   const actionLabel=active?.action==='ban'?'Ban':active?.action==='pick'?'Pick':'Complete';
 
   return <main className="bp-simulator-stage-page" aria-label="HOK BP capture simulator">
-    <ViewportCanvas width={1600} height={900} className={'bp-simulator-stage '+(state.testMode==='player-order'?'sim-player-id-test':'')}>
+    <ViewportCanvas width={1600} height={900} className={'bp-simulator-stage '+(state.testMode==='player-order'?'sim-player-id-test ':'')+(state.testMode==='lineup'?'sim-lineup-stage':'')}>
       <div className="sim-side-wash blue" />
       <div className="sim-side-wash red" />
 
-      <div className="sim-ban-row blue">
-        {simulatorBanVisualKeys('blue').map(renderBan)}
-      </div>
-      <div className="sim-ban-row red">
-        {simulatorBanVisualKeys('red').map(renderBan)}
-      </div>
+      {state.testMode!=='lineup'&&<>
+        <div className="sim-ban-row blue">
+          {simulatorBanVisualKeys('blue').map(renderBan)}
+        </div>
+        <div className="sim-ban-row red">
+          {simulatorBanVisualKeys('red').map(renderBan)}
+        </div>
+      </>}
 
       <div className="sim-pick-column blue">
         {[0,1,2,3,4].map(index=>renderPlayer('blue',index))}
@@ -178,7 +181,18 @@ export function BpSimulator() {
         {[0,1,2,3,4].map(index=>renderPlayer('red',index))}
       </div>
 
-      <section className="sim-game-center">
+      {state.testMode==='lineup'?<section className="sim-game-center sim-lineup-center">
+        <header className="sim-game-title">
+          <span>INTEGRATION TEST</span>
+          <strong>LINEUP SWAP</strong>
+          <small>FINAL 10-PLAYER HERO OWNERSHIP</small>
+        </header>
+        <div className="sim-lineup-center-copy">
+          <b>只测试换英雄后的最终归属</b>
+          <p>先在 Simulator 控制台同步基线到 Control，再交换左右任意两名选手的英雄。</p>
+          <span>BP 识别在另一个独立测试模式中，不参与这里的结果。</span>
+        </div>
+      </section>:<section className="sim-game-center">
         <header className="sim-game-title">
           <span>Phase</span>
           <strong>{actionLabel}</strong>
@@ -206,11 +220,11 @@ export function BpSimulator() {
           </button>
           <button className="ghost">PRESELECT</button>
         </div>
-      </section>
+      </section>}
 
       <div className="sim-bottom-status">
-        <span>{activeSlots.length?activeSlots.map(simulatorSlotKey).join(' + '):'DRAFT COMPLETE'}</span>
-        <strong>{activeLocked?'LOCKED / TRANSITIONED':'PRESELECT'}</strong>
+        <span>{state.testMode==='lineup'?'LINEUP SWAP TEST':activeSlots.length?activeSlots.map(simulatorSlotKey).join(' + '):'DRAFT COMPLETE'}</span>
+        <strong>{state.testMode==='lineup'?'FINAL HERO OWNERSHIP':activeLocked?'LOCKED / TRANSITIONED':'PRESELECT'}</strong>
         <small>F: FULLSCREEN · C: CONTROL</small>
       </div>
     </ViewportCanvas>

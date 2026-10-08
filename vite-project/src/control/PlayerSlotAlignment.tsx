@@ -2,137 +2,395 @@ import { useEffect, useRef, useState } from 'react';
 import type { Action, MatchState, Side } from '../shared/types';
 import { playerAtSlot, type PlayerSlotSolution } from '../shared/playerSlots';
 import { defaultCaptureSlots, normalizeCaptureSlots, type CaptureSlots, type CaptureSlotKey } from './bpCaptureLayout';
-import { regionToPixels, type NormalizedCaptureRegion } from './windowCaptureGeometry';
+import { normalizeCaptureRegion, regionToPixels, type NormalizedCaptureRegion } from './windowCaptureGeometry';
 import { getSharedWindowCaptureStream, subscribeSharedWindowCapture } from './sharedWindowCapture';
+
 const storage='hok-window-capture-slots-v3';
-function readSlots(): CaptureSlots {try{return normalizeCaptureSlots(JSON.parse(localStorage.getItem(storage)||'null')??defaultCaptureSlots);}catch{return normalizeCaptureSlots(defaultCaptureSlots);}}
-function idRegion(slots: CaptureSlots, side: Side, index: number): NormalizedCaptureRegion {
-  const key=`${side}${index+1}`;
-  if(slots.playerIds?.[key]) return slots.playerIds[key];
+
+function readSlots(): CaptureSlots {
+  try{return normalizeCaptureSlots(JSON.parse(localStorage.getItem(storage)||'null')??defaultCaptureSlots);}
+  catch{return normalizeCaptureSlots(defaultCaptureSlots);}
+}
+
+function defaultIdRegion(slots: CaptureSlots, side: Side, index: number): NormalizedCaptureRegion {
   const pick=slots[`${side}Pick${index+1}` as CaptureSlotKey];
   const width=Math.min(.18,1-pick.x-pick.width);
-  return {x:side==='blue'?pick.x+pick.width:Math.max(0,pick.x-.18),y:pick.y+pick.height*.65,width:side==='blue'?Math.max(.02,width):.18,height:Math.max(.02,pick.height*.3)};
+  return {
+    x:side==='blue'?pick.x+pick.width:Math.max(0,pick.x-.18),
+    y:pick.y+pick.height*.65,
+    width:side==='blue'?Math.max(.02,width):.18,
+    height:Math.max(.02,pick.height*.3),
+  };
 }
-interface Scan { texts:string[]; blue?:PlayerSlotSolution; red?:PlayerSlotSolution; elapsedMs:number }
+
+function idRegion(slots: CaptureSlots, side: Side, index: number): NormalizedCaptureRegion {
+  const key=`${side}${index+1}`;
+  return slots.playerIds?.[key]??defaultIdRegion(slots,side,index);
+}
+
+interface Scan {
+  texts:string[];
+  blue?:PlayerSlotSolution;
+  red?:PlayerSlotSolution;
+  elapsedMs:number;
+}
+
+const sameOrder=(a:readonly number[],b:readonly number[])=>a.length===b.length&&a.every((value,index)=>value===b[index]);
+
 export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchState;token:string;disabled:boolean;send:(action:Action)=>void}) {
   const zh=state.language==='zh';
-  const [ready,setReady]=useState(false), [status,setStatus]=useState(''), [scan,setScan]=useState<Scan>(), [busy,setBusy]=useState(false);
+  const [ready,setReady]=useState(false);
+  const [status,setStatus]=useState('');
+  const [scan,setScan]=useState<Scan>();
+  const [busy,setBusy]=useState(false);
   const [auto,setAuto]=useState(()=>localStorage.getItem('hok-player-slot-auto')!=='0');
-  const [slots,setSlots]=useState(readSlots), [selected,setSelected]=useState('blue1'), [preview,setPreview]=useState(''), [calibrationOpen,setCalibrationOpen]=useState(false);
-  const video=useRef<HTMLVideoElement>(null), latest=useRef({state,disabled,send}), inFlight=useRef(false), generation=useRef(0);
+  const [manualScan,setManualScan]=useState(0);
+  const [manualEdit,setManualEdit]=useState<Record<Side,boolean>>({blue:false,red:false});
+  const [slots,setSlots]=useState(readSlots);
+  const [selected,setSelected]=useState('blue1');
+  const [preview,setPreview]=useState('');
+  const [calibrationOpen,setCalibrationOpen]=useState(false);
+
+  const video=useRef<HTMLVideoElement>(null);
+  const latest=useRef({state,disabled,send});
+  const inFlight=useRef(false);
+  const generation=useRef(0);
   const accepted=useRef<Partial<Record<Side,string>>>({});
   latest.current={state,disabled,send};
+
   const context=JSON.stringify([state.blueTeam.players,state.redTeam.players,state.gameNumber]);
-  const contextRef=useRef(context); contextRef.current=context;
-  useEffect(()=>{accepted.current={};setScan(undefined);setStatus('');generation.current++;},[context,state.committedGameId]);
+  const contextRef=useRef(context);
+  contextRef.current=context;
+
+  useEffect(()=>{
+    accepted.current={};
+    setScan(undefined);
+    setStatus('');
+    setManualEdit({blue:false,red:false});
+    generation.current++;
+  },[context,state.committedGameId]);
+
   useEffect(()=>{
     const refresh=()=>setSlots(readSlots());
     window.addEventListener('hok-capture-slots-changed',refresh);
     return()=>window.removeEventListener('hok-capture-slots-changed',refresh);
   },[]);
+
   useEffect(()=>{
     let active=true;
     const attach=async(stream:MediaStream|undefined)=>{
-      if(!video.current) return;
-      video.current.srcObject=stream??null;setReady(false);
-      if(stream) try {await video.current.play();if(active)setReady(true);} catch { /* capture not ready */ }
+      if(!video.current)return;
+      video.current.srcObject=stream??null;
+      setReady(false);
+      if(stream)try{await video.current.play();if(active)setReady(true);}catch{/* capture not ready */}
     };
     void attach(getSharedWindowCaptureStream());
     const unsubscribe=subscribeSharedWindowCapture(stream=>void attach(stream));
     return()=>{active=false;unsubscribe();};
   },[]);
+
   function apply(side:Side,solution:PlayerSlotSolution) {
     const current=latest.current;
-    if(current.disabled||current.state.committedGameId) return;
-    current.send({type:'set_player_slot_order',side,order:solution.order,expectedPlayers:[...current.state[`${side}Team`].players]});
+    if(current.disabled||current.state.committedGameId)return;
+    current.send({
+      type:'set_player_slot_order',
+      side,
+      order:solution.order,
+      expectedPlayers:[...current.state[`${side}Team`].players],
+    });
   }
+
+  function requestRescan() {
+    accepted.current={};
+    setScan(undefined);
+    setStatus(zh?'准备重新识别…':'Preparing rescan…');
+    generation.current++;
+    setManualScan(value=>value+1);
+  }
+
   useEffect(()=>{
-    if(state.bpInputMode!=='screen'||state.committedGameId) return;
+    if(state.bpInputMode!=='screen'||state.committedGameId||(!auto&&manualScan===0))return;
     let active=true;
     const api=(import.meta.env.VITE_API_URL||'').replace(/\/$/,'');
     const headers={Authorization:`Bearer ${token}`};
+
     async function run() {
       const current=latest.current;
-      if(inFlight.current || (accepted.current.blue && accepted.current.red)) return;
+      if(inFlight.current||(auto&&accepted.current.blue&&accepted.current.red))return;
       inFlight.current=true;
       const epoch=generation.current;
-      try {
+      try{
         const health=await fetch(`${api}/api/v1/recognition/players`,{headers}).then(r=>r.json());
         if(!active)return;
-        if(health.status!=='ready'){setStatus(zh?`选手 OCR 未就绪：${health.error||health.status}`:`Player OCR not ready: ${health.error||health.status}`);return;}
-        if(!auto||!ready||current.disabled||current.state.committedGameId||!video.current?.videoWidth) return;
-        // A single captured frame feeds all ten crops; OCR runs independently of Auto BP.
-        const source=video.current, frame=document.createElement('canvas');
-        frame.width=source.videoWidth;frame.height=source.videoHeight;
+        if(health.status!=='ready'){
+          setStatus(zh?`选手 OCR 未就绪：${health.error||health.status}`:`Player OCR not ready: ${health.error||health.status}`);
+          return;
+        }
+        if(!ready||current.disabled||current.state.committedGameId||!video.current?.videoWidth)return;
+
+        const source=video.current;
+        const frame=document.createElement('canvas');
+        frame.width=source.videoWidth;
+        frame.height=source.videoHeight;
         frame.getContext('2d')!.drawImage(source,0,0);
+
         const regions=readSlots();
         const capturedContext=contextRef.current;
         const images=(['blue','red'] as const).flatMap(side=>Array.from({length:5},(_,index)=>{
           const pixels=regionToPixels(idRegion(regions,side,index),frame.width,frame.height);
-          const crop=document.createElement('canvas');crop.width=Math.min(640,pixels.width*2);crop.height=Math.min(128,pixels.height*2);
+          const crop=document.createElement('canvas');
+          crop.width=Math.min(640,pixels.width*2);
+          crop.height=Math.min(128,pixels.height*2);
           crop.getContext('2d')!.drawImage(frame,pixels.x,pixels.y,pixels.width,pixels.height,0,0,crop.width,crop.height);
           return crop.toDataURL('image/png');
         }));
-        setBusy(true);setStatus(zh?'选手顺序识别中…':'Recognizing player order…');
-        const response=await fetch(`${api}/api/v1/recognition/players`,{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify({images,players:[current.state.blueTeam.players,current.state.redTeam.players],gameNumber:current.state.gameNumber}),signal:AbortSignal.timeout(8000)});
+
+        setBusy(true);
+        setStatus(zh?'选手顺序识别中…':'Recognizing player order…');
+        const response=await fetch(`${api}/api/v1/recognition/players`,{
+          method:'POST',
+          headers:{...headers,'Content-Type':'application/json'},
+          body:JSON.stringify({
+            images,
+            players:[current.state.blueTeam.players,current.state.redTeam.players],
+            gameNumber:current.state.gameNumber,
+          }),
+          signal:AbortSignal.timeout(8000),
+        });
         const result=await response.json();
         if(!active||epoch!==generation.current||capturedContext!==contextRef.current)return;
         if(!response.ok)throw new Error(result.error);
         setScan(result);
-        setStatus(zh?`本地识别 ${Math.round(result.elapsedMs)} ms；歧义槽位保留原顺序。`:`Local OCR ${Math.round(result.elapsedMs)} ms; ambiguous slots keep their current order.`);
-      } catch(error){if(active)setStatus(error instanceof Error?error.message:'OCR failed');}
-      finally {inFlight.current=false;if(active)setBusy(false);}
+        setStatus(zh?`本地 OCR ${Math.round(result.elapsedMs)} ms`:`Local OCR ${Math.round(result.elapsedMs)} ms`);
+        if(!auto)setManualScan(0);
+      }catch(error){
+        if(active)setStatus(error instanceof Error?error.message:'OCR failed');
+        if(!auto)setManualScan(0);
+      }finally{
+        inFlight.current=false;
+        if(active)setBusy(false);
+      }
     }
-    const timer=setInterval(()=>void run(),450);void run();
-    return()=>{active=false;clearInterval(timer);};
-  },[auto,ready,state.bpInputMode,state.committedGameId,token,zh]);
-  // Reuse a scan after BP acknowledgement; never send two actions into the single pending WS slot.
+
+    if(auto){
+      const timer=setInterval(()=>void run(),450);
+      void run();
+      return()=>{active=false;clearInterval(timer);};
+    }
+    void run();
+    return()=>{active=false;};
+  },[auto,manualScan,ready,state.bpInputMode,state.committedGameId,token,zh]);
+
   useEffect(()=>{
-    if(!auto||disabled||!scan||state.committedGameId) return;
+    if(!auto||disabled||!scan||state.committedGameId)return;
     for(const side of ['blue','red'] as const){
-      const solution=scan[side];if(!solution?.automatic)continue;
+      const solution=scan[side];
+      if(!solution?.automatic)continue;
       const signature=solution.order.join(',');
       if(state[`${side}PlayerSlotOrder`].join(',')===signature){accepted.current[side]=signature;continue;}
       if(accepted.current[side]===signature)continue;
-      apply(side,solution);break;
+      apply(side,solution);
+      break;
     }
   },[auto,disabled,scan,state]);
-  const region=idRegion(slots,selected.startsWith('blue')?'blue':'red',Number(selected.slice(-1))-1);
+
+  const selectedSide:Side=selected.startsWith('blue')?'blue':'red';
+  const selectedIndex=Number(selected.slice(-1))-1;
+  const region=idRegion(slots,selectedSide,selectedIndex);
+
+  function saveSlots(next:CaptureSlots) {
+    const normalized=normalizeCaptureSlots(next);
+    localStorage.setItem(storage,JSON.stringify(normalized));
+    setSlots(normalized);
+    window.dispatchEvent(new Event('hok-capture-slots-changed'));
+    accepted.current={};
+    setScan(undefined);
+    generation.current++;
+  }
+
+  function updateSelectedRegion(nextRegion:NormalizedCaptureRegion) {
+    const next=readSlots();
+    next.playerIds={...(next.playerIds??{}),[selected]:normalizeCaptureRegion(nextRegion)};
+    saveSlots(next);
+  }
+
+  function resetSelectedRegion() {
+    const next=readSlots();
+    if(next.playerIds){
+      const playerIds={...next.playerIds};
+      delete playerIds[selected];
+      next.playerIds=playerIds;
+    }
+    saveSlots(next);
+  }
+
+  function resetAllIdRegions() {
+    const next=readSlots();
+    delete next.playerIds;
+    saveSlots(next);
+  }
+
   useEffect(()=>{
     if(!calibrationOpen||!ready)return;
-    const render=()=>{if(!video.current?.videoWidth)return;const source=video.current,cropRegion=idRegion(slots,selected.startsWith('blue')?'blue':'red',Number(selected.slice(-1))-1),pixels=regionToPixels(cropRegion,source.videoWidth,source.videoHeight),canvas=document.createElement('canvas');canvas.width=Math.min(640,pixels.width*2);canvas.height=Math.min(128,pixels.height*2);canvas.getContext('2d')!.drawImage(source,pixels.x,pixels.y,pixels.width,pixels.height,0,0,canvas.width,canvas.height);setPreview(canvas.toDataURL('image/png'));};
-    render();const timer=setInterval(render,500);return()=>clearInterval(timer);
-  },[calibrationOpen,ready,slots,selected]);
+    const render=()=>{
+      if(!video.current?.videoWidth)return;
+      const source=video.current;
+      const cropRegion=idRegion(slots,selectedSide,selectedIndex);
+      const pixels=regionToPixels(cropRegion,source.videoWidth,source.videoHeight);
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.min(640,pixels.width*2);
+      canvas.height=Math.min(128,pixels.height*2);
+      canvas.getContext('2d')!.drawImage(source,pixels.x,pixels.y,pixels.width,pixels.height,0,0,canvas.width,canvas.height);
+      setPreview(canvas.toDataURL('image/png'));
+    };
+    render();
+    const timer=setInterval(render,500);
+    return()=>clearInterval(timer);
+  },[calibrationOpen,ready,selectedIndex,selectedSide,slots]);
+
+  const confirmedSides=(['blue','red'] as const).filter(side=>scan?.[side]&&sameOrder(state[`${side}PlayerSlotOrder`],scan[side]!.order)).length;
+  const recognizedSlots=(['blue','red'] as const).reduce((sum,side)=>sum+(scan?.[side]?.confidence.filter(value=>value>=.8).length??0),0);
+
+  function renderTeam(side:Side) {
+    const team=state[`${side}Team`];
+    const currentOrder=state[`${side}PlayerSlotOrder`];
+    const solution=scan?.[side];
+    const displayOrder=solution?.order??currentOrder;
+    const confirmed=!!solution&&sameOrder(currentOrder,solution.order);
+    const needsReview=!!solution&&!solution.automatic;
+    const statusText=!solution
+      ? (zh?'等待识别':'Waiting')
+      : confirmed
+        ? (zh?'已同步':'Synced')
+        : solution.automatic
+          ? (zh?'高置信度':'High confidence')
+          : (zh?'需确认':'Review');
+
+    return <article className={`player-slot-team-card ${side}`} key={side}>
+      <header>
+        <div>
+          <span>{side==='blue'?(zh?'蓝方':'Blue'):(zh?'红方':'Red')}</span>
+          <strong>{team.name}</strong>
+        </div>
+        <span className={`player-slot-team-status ${confirmed?'synced':needsReview?'review':solution?'ready':'idle'}`}>{statusText}</span>
+      </header>
+
+      <div className="player-slot-result-list">
+        {displayOrder.map((roster,index)=>{
+          const confidence=solution?.confidence[index];
+          const raw=scan?.texts[(side==='blue'?0:5)+index]||'';
+          const badgeClass=confidence===undefined?'idle':confidence>=.9?'high':confidence>=.8?'medium':'low';
+          return <div className="player-slot-result-row" key={index} title={raw?`${zh?'OCR 原文':'OCR'}: ${raw}`:''}>
+            <span className="player-slot-position">P{index+1}</span>
+            <strong>{team.players[roster]||`${zh?'选手':'Player'} ${roster+1}`}</strong>
+            {confidence===undefined
+              ? <span className="player-slot-confidence idle">{zh?'待识别':'—'}</span>
+              : <span className={`player-slot-confidence ${badgeClass}`}>{Math.round(confidence*100)}%</span>}
+          </div>;
+        })}
+      </div>
+
+      <div className="player-slot-card-actions">
+        {solution&&!confirmed&&<button disabled={disabled||!!state.committedGameId||busy} onClick={()=>apply(side,solution)}>{zh?'采用建议':'Apply suggestion'}</button>}
+        <button className="secondary" disabled={disabled||!!state.committedGameId} onClick={()=>setManualEdit(value=>({...value,[side]:!value[side]}))}>
+          {manualEdit[side]?(zh?'收起手动调整':'Close manual edit'):(zh?'手动调整':'Manual edit')}
+        </button>
+      </div>
+
+      {manualEdit[side]&&<div className="player-slot-manual-grid">
+        {currentOrder.map((roster,index)=><label key={index}>
+          <span>P{index+1}</span>
+          <select aria-label={`${side} P${index+1} player`} value={roster} disabled={disabled||!!state.committedGameId} onChange={e=>{
+            const order=[...currentOrder];
+            const other=order.indexOf(Number(e.target.value));
+            [order[index],order[other]]=[order[other],order[index]];
+            setAuto(false);
+            localStorage.setItem('hok-player-slot-auto','0');
+            send({type:'set_player_slot_order',side,order,expectedPlayers:[...team.players]});
+          }}>
+            {team.players.map((name,i)=><option key={i} value={i}>{name||`${zh?'选手':'Player'} ${i+1}`}</option>)}
+          </select>
+        </label>)}
+      </div>}
+
+      <footer>{playerAtSlot(state,side,0).id||'—'} → {playerAtSlot(state,side,1).id||'—'} → {playerAtSlot(state,side,2).id||'—'} → {playerAtSlot(state,side,3).id||'—'} → {playerAtSlot(state,side,4).id||'—'}</footer>
+    </article>;
+  }
+
   return <section className="panel player-slot-alignment">
     <video className="lineup-capture-video" ref={video} muted playsInline />
-    <div className="toolbar"><strong>{zh?'选手顺序 / P1–P5':'Player order / P1–P5'}</strong>
-      {state.bpInputMode==='screen'&&<label><input type="checkbox" checked={auto} onChange={e=>{setAuto(e.target.checked);localStorage.setItem('hok-player-slot-auto',e.target.checked?'1':'0');}} />{zh?'自动识别':'Auto align'}</label>}
+
+    <header className="player-slot-heading">
+      <div>
+        <span className="player-slot-eyebrow">P1–P5</span>
+        <h3>{zh?'选手顺序自动识别':'Player order recognition'}</h3>
+        <p>{state.bpInputMode==='screen'
+          ? (status||(ready?(zh?'等待本地 OCR…':'Waiting for local OCR…'):(zh?'等待 Auto BP 连接采集窗口':'Waiting for Auto BP capture')))
+          : (zh?'当前为手动 BP；可直接调整选手顺序。':'Manual BP mode; player order can be edited directly.')}</p>
+      </div>
+      {state.bpInputMode==='screen'&&<label className="player-slot-auto-toggle">
+        <input type="checkbox" checked={auto} onChange={e=>{setAuto(e.target.checked);localStorage.setItem('hok-player-slot-auto',e.target.checked?'1':'0');}} />
+        <span>{zh?'自动识别':'Auto align'}</span>
+      </label>}
+    </header>
+
+    <div className="player-slot-summary">
+      <div><span>{zh?'识别状态':'Recognition'}</span><strong>{scan?(confirmedSides===2?(zh?'双方已同步':'Both synced'):(zh?'已有候选结果':'Candidates ready')):(zh?'等待画面':'Waiting')}</strong></div>
+      <div><span>{zh?'可靠槽位':'Reliable slots'}</span><strong>{scan?`${recognizedSlots}/10`:'—'}</strong></div>
+      <div><span>{zh?'本地耗时':'Local OCR'}</span><strong>{scan?`${Math.round(scan.elapsedMs)} ms`:'—'}</strong></div>
+      <button disabled={busy||disabled||state.bpInputMode!=='screen'} onClick={requestRescan}>{busy?(zh?'识别中…':'Scanning…'):(zh?'重新识别':'Rescan')}</button>
     </div>
-    <p role="status">{state.bpInputMode==='screen'?(status||(ready?(zh?'等待本地 OCR…':'Waiting for local OCR…'):(zh?'等待 Auto BP 连接采集窗口':'Waiting for Auto BP capture'))):(zh?'按游戏画面从上到下设置顺序':'Set players in screen order, top to bottom')}</p>
-    <div className="lineup-team-grid">{(['blue','red'] as const).map(side=><div key={side}>
-      <b>{state[`${side}Team`].name} · {scan?.[side]?.automatic?(zh?'识别已确认':'Recognized'):(zh?'当前顺序':'Current order')}</b>
-      {state[`${side}PlayerSlotOrder`].map((roster,index)=><div className="lineup-player-row" key={index}>
-        <span>P{index+1}</span><select aria-label={`${side} P${index+1} player`} value={roster} disabled={disabled||!!state.committedGameId} onChange={e=>{
-          const order=[...state[`${side}PlayerSlotOrder`]], other=order.indexOf(Number(e.target.value));
-          [order[index],order[other]]=[order[other],order[index]];
-          setAuto(false);localStorage.setItem('hok-player-slot-auto','0');
-          send({type:'set_player_slot_order',side,order,expectedPlayers:[...state[`${side}Team`].players]});
-        }}>{state[`${side}Team`].players.map((name,i)=><option key={i} value={i}>{name||`${zh?'选手':'Player'} ${i+1}`}</option>)}</select>
-        <span className={scan?.[side]?.anomalies.includes(index)?'error':'muted'} title={scan?.texts[(side==='blue'?0:5)+index]}>{scan?.[side]?`${Math.round(scan[side]!.confidence[index]*100)}%`:'—'}</span>
-      </div>)}
-      {scan?.[side]&&!scan[side]!.automatic&&<button disabled={disabled||!!state.committedGameId||busy} onClick={()=>apply(side,scan[side]!)}>{zh?'采用建议顺序':'Use suggested order'}</button>}
-      <small>{Array.from({length:5},(_,i)=>playerAtSlot(state,side,i).id||'—').join(' → ')}</small>
-    </div>)}</div>
-    {state.bpInputMode==='screen'&&<details onToggle={e=>setCalibrationOpen(e.currentTarget.open)}><summary>{zh?'选手 ID 区域校准':'Player ID region calibration'}</summary>
-      <p className="muted">{zh?'文字区域默认位于 Pick 头像旁；按源画面百分比微调。随 BP 区域预设保存。':'ID regions default next to pick portraits. Adjust source percentages; saved with BP presets.'}</p>
-      <select aria-label="Player ID region" value={selected} onChange={e=>setSelected(e.target.value)}>{(['blue','red'] as const).flatMap(side=>Array.from({length:5},(_,i)=><option key={`${side}${i+1}`} value={`${side}${i+1}`}>{side} P{i+1}</option>))}</select>
-      {(['x','y','width','height'] as const).map(key=><label key={key}>{key} % <input type="number" min={0} max={100} step={.1} value={Math.round(region[key]*1000)/10} onChange={e=>{
-        const next=readSlots();next.playerIds={...next.playerIds,[selected]:{...region,[key]:Number(e.target.value)/100}};
-        const normalized=normalizeCaptureSlots(next);localStorage.setItem(storage,JSON.stringify(normalized));setSlots(normalized);
-        window.dispatchEvent(new Event('hok-capture-slots-changed'));accepted.current={};setScan(undefined);generation.current++;
-      }} /></label>)}
-      {preview&&<img style={{maxWidth:'100%',imageRendering:'pixelated'}} src={preview} alt={zh?'实际选手 ID 裁剪':'Actual player ID crop'}/>}
-      <button onClick={()=>{accepted.current={};setScan(undefined);generation.current++;}}>{zh?'重新识别':'Rescan'}</button>
+
+    <div className="player-slot-team-grid">
+      {(['blue','red'] as const).map(renderTeam)}
+    </div>
+
+    {state.bpInputMode==='screen'&&<details className="player-slot-calibration" onToggle={e=>setCalibrationOpen(e.currentTarget.open)}>
+      <summary>{zh?'高级：选手 ID 区域校准':'Advanced: player ID region calibration'}</summary>
+      <p className="muted">{zh?'默认区域会自动跟随对应 Pick 头像。只有 OCR 截不到完整 ID 时才需要调整。':'Regions follow the Pick avatars by default. Adjust only when OCR misses part of an ID.'}</p>
+
+      <div className="player-slot-calibration-grid">
+        <div className="player-slot-calibration-controls">
+          <label>{zh?'槽位':'Slot'}
+            <select aria-label="Player ID region" value={selected} onChange={e=>setSelected(e.target.value)}>
+              {(['blue','red'] as const).flatMap(side=>Array.from({length:5},(_,i)=><option key={`${side}${i+1}`} value={`${side}${i+1}`}>{side} P{i+1}</option>))}
+            </select>
+          </label>
+
+          <div className="player-slot-nudge-grid">
+            <span />
+            <button onClick={()=>updateSelectedRegion({...region,y:region.y-.005})}>↑</button>
+            <span />
+            <button onClick={()=>updateSelectedRegion({...region,x:region.x-.005})}>←</button>
+            <button onClick={()=>updateSelectedRegion({...region,y:region.y+.005})}>↓</button>
+            <button onClick={()=>updateSelectedRegion({...region,x:region.x+.005})}>→</button>
+          </div>
+
+          <div className="player-slot-size-actions">
+            <button onClick={()=>updateSelectedRegion({...region,width:region.width+.01})}>{zh?'加宽':'W +'}</button>
+            <button onClick={()=>updateSelectedRegion({...region,width:Math.max(.02,region.width-.01)})}>{zh?'缩窄':'W −'}</button>
+            <button onClick={()=>updateSelectedRegion({...region,height:region.height+.005})}>{zh?'加高':'H +'}</button>
+            <button onClick={()=>updateSelectedRegion({...region,height:Math.max(.02,region.height-.005)})}>{zh?'变矮':'H −'}</button>
+          </div>
+
+          <div className="player-slot-reset-actions">
+            <button className="secondary" onClick={resetSelectedRegion}>{zh?'恢复当前默认':'Reset slot'}</button>
+            <button className="secondary" onClick={resetAllIdRegions}>{zh?'恢复全部默认':'Reset all'}</button>
+          </div>
+
+          <details className="player-slot-precise-values">
+            <summary>{zh?'精确数值':'Precise values'}</summary>
+            {(['x','y','width','height'] as const).map(key=><label key={key}>{key} %
+              <input type="number" min={0} max={100} step={.1} value={Math.round(region[key]*1000)/10} onChange={e=>updateSelectedRegion({...region,[key]:Number(e.target.value)/100})}/>
+            </label>)}
+          </details>
+        </div>
+
+        <figure className="player-slot-crop-preview">
+          <figcaption>{zh?'实际 OCR 裁剪预览':'Actual OCR crop'}</figcaption>
+          {preview?<img src={preview} alt={zh?'实际选手 ID 裁剪':'Actual player ID crop'}/>:<div>{zh?'等待采集画面':'Waiting for capture'}</div>}
+        </figure>
+      </div>
     </details>}
   </section>;
 }
