@@ -56,10 +56,11 @@ export class PlayerRecognitionProvider {
         const darkBackground=(stats.channels[0]?.mean??255)<135;
         const prepared=darkBackground
           ? flattened.clone()
+              .resize(width-32,40,{fit:'contain',background:'#000'})
               .greyscale()
-              .linear(-1,255)
-              .resize(width-32,40,{fit:'contain',background:'#fff'})
               .normalize()
+              .threshold(150)
+              .negate({alpha:false})
           : flattened.clone()
               .resize(width-32,40,{fit:'contain',background:'#fff'})
               .greyscale()
