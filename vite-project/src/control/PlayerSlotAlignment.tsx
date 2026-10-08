@@ -6,23 +6,52 @@ import { normalizeCaptureRegion, regionToPixels, type NormalizedCaptureRegion } 
 import { getSharedWindowCaptureStream, subscribeSharedWindowCapture } from './sharedWindowCapture';
 
 const storage='hok-window-capture-slots-v3';
+const playerIdRegionVersion='hok-player-id-region-layout-v2';
 
 function readSlots(): CaptureSlots {
-  try{return normalizeCaptureSlots(JSON.parse(localStorage.getItem(storage)||'null')??defaultCaptureSlots);}
-  catch{return normalizeCaptureSlots(defaultCaptureSlots);}
+  try{
+    const parsed=JSON.parse(localStorage.getItem(storage)||'null')??defaultCaptureSlots;
+    // Reset only the first experimental ID rectangles once. Keep all 18 BP
+    // hero boxes and every later v2 calibration.
+    if(localStorage.getItem(playerIdRegionVersion)!=='2'){
+      if(parsed&&typeof parsed==='object'&&'playerIds' in parsed) delete parsed.playerIds;
+      localStorage.setItem(storage,JSON.stringify(parsed));
+      localStorage.setItem(playerIdRegionVersion,'2');
+    }
+    return normalizeCaptureSlots(parsed);
+  }catch{return normalizeCaptureSlots(defaultCaptureSlots);}
 }
 
 function defaultIdRegion(slots: CaptureSlots, side: Side, index: number): NormalizedCaptureRegion {
-  const pick=slots[`${side}Pick${index+1}` as CaptureSlotKey];
-  const width=Math.min(.18,1-pick.x-pick.width);
-  return {
-    x:side==='blue'?pick.x+pick.width:Math.max(0,pick.x-.18),
-    y:pick.y+pick.height*.65,
-    width:side==='blue'?Math.max(.02,width):.18,
-    height:Math.max(.02,pick.height*.3),
-  };
+  const pick=slots[(side+'Pick'+(index+1)) as CaptureSlotKey];
+  const gap=.004;
+  const desiredWidth=.16;
+  const height=Math.max(.032,Math.min(.065,pick.height*.52));
+  const y=pick.y+Math.max(0,(pick.height-height)/2);
+  const x=side==='blue'?pick.x+pick.width+gap:pick.x-desiredWidth-gap;
+  return normalizeCaptureRegion({
+    x:Math.max(0,Math.min(1-desiredWidth,x)),
+    y:Math.max(0,Math.min(1-height,y)),
+    width:desiredWidth,
+    height,
+  });
 }
 
+function fallbackIdRegion(slots:CaptureSlots,side:Side,index:number):NormalizedCaptureRegion {
+  const pick=slots[(side+'Pick'+(index+1)) as CaptureSlotKey];
+  const width=.23;
+  const height=Math.max(.055,Math.min(.12,pick.height*1.15));
+  const y=pick.y-(height-pick.height)/2;
+  const x=side==='blue'
+    ? pick.x+pick.width*.55
+    : pick.x-width+pick.width*.45;
+  return normalizeCaptureRegion({
+    x:Math.max(0,Math.min(1-width,x)),
+    y:Math.max(0,Math.min(1-height,y)),
+    width,
+    height,
+  });
+}
 function idRegion(slots: CaptureSlots, side: Side, index: number): NormalizedCaptureRegion {
   const key=`${side}${index+1}`;
   return slots.playerIds?.[key]??defaultIdRegion(slots,side,index);
@@ -136,32 +165,48 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
 
         const regions=readSlots();
         const capturedContext=contextRef.current;
-        const images=(['blue','red'] as const).flatMap(side=>Array.from({length:5},(_,index)=>{
-          const pixels=regionToPixels(idRegion(regions,side,index),frame.width,frame.height);
+        const captureImages=(wide=false)=>(['blue','red'] as const).flatMap(side=>Array.from({length:5},(_,index)=>{
+          const cropRegion=wide?fallbackIdRegion(regions,side,index):idRegion(regions,side,index);
+          const pixels=regionToPixels(cropRegion,frame.width,frame.height);
           const crop=document.createElement('canvas');
-          crop.width=Math.min(640,pixels.width*2);
-          crop.height=Math.min(128,pixels.height*2);
+          crop.width=Math.min(760,pixels.width*2);
+          crop.height=Math.min(180,pixels.height*2);
           crop.getContext('2d')!.drawImage(frame,pixels.x,pixels.y,pixels.width,pixels.height,0,0,crop.width,crop.height);
           return crop.toDataURL('image/png');
         }));
+        const recognize=async(images:string[])=>{
+          const response=await fetch(`${api}/api/v1/recognition/players`,{
+            method:'POST',
+            headers:{...headers,'Content-Type':'application/json'},
+            body:JSON.stringify({
+              images,
+              players:[current.state.blueTeam.players,current.state.redTeam.players],
+              gameNumber:current.state.gameNumber,
+            }),
+            signal:AbortSignal.timeout(8000),
+          });
+          const value=await response.json();
+          if(!response.ok)throw new Error(value.error);
+          return value;
+        };
 
         setBusy(true);
         setStatus(zh?'选手顺序识别中…':'Recognizing player order…');
-        const response=await fetch(`${api}/api/v1/recognition/players`,{
-          method:'POST',
-          headers:{...headers,'Content-Type':'application/json'},
-          body:JSON.stringify({
-            images,
-            players:[current.state.blueTeam.players,current.state.redTeam.players],
-            gameNumber:current.state.gameNumber,
-          }),
-          signal:AbortSignal.timeout(8000),
-        });
-        const result=await response.json();
+        let result=await recognize(captureImages(false));
+        const readable=(result.confidences??[]).filter((value:number)=>value>=.15).length;
+        const anyText=(result.texts??[]).some((value:string)=>value.trim());
+        let usedFallback=false;
+        if(readable===0||!anyText){
+          const fallback=await recognize(captureImages(true));
+          const score=(value:{confidences?:number[]})=>(value.confidences??[]).reduce((sum:number,item:number)=>sum+item,0);
+          if(score(fallback)>score(result)){result=fallback;usedFallback=true;}
+        }
+
         if(!active||epoch!==generation.current||capturedContext!==contextRef.current)return;
-        if(!response.ok)throw new Error(result.error);
         setScan(result);
-        setStatus(zh?`本地 OCR ${Math.round(result.elapsedMs)} ms`:`Local OCR ${Math.round(result.elapsedMs)} ms`);
+        setStatus(zh
+          ? `本地 OCR ${Math.round(result.elapsedMs)} ms${usedFallback?' · 已自动扩大 ID 区域':''}`
+          : `Local OCR ${Math.round(result.elapsedMs)} ms${usedFallback?' · automatic wide-ID fallback':''}`);
         if(!auto)setManualScan(0);
       }catch(error){
         if(active)setStatus(error instanceof Error?error.message:'OCR failed');

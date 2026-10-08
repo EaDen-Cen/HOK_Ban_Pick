@@ -47,9 +47,30 @@ export class PlayerRecognitionProvider {
         const input=Buffer.from(image.split(',')[1],'base64');
         const meta=await sharp(input,{limitInputPixels:1000000}).metadata();
         if (!meta.width || !meta.height || meta.width>2048 || meta.height>512) throw new Error('ID crop too large');
-        return sharp(input).flatten({background:'#fff'}).resize(width-32,40,{fit:'contain',background:'#fff'}).greyscale().normalize().png().toBuffer();
+
+        // Preserve the proven light-background pipeline exactly. For HOK's
+        // normal dark UI, only flip polarity before the same final resize so
+        // Tesseract receives dark glyphs on a light field.
+        const flattened=sharp(input).flatten({background:'#fff'});
+        const stats=await flattened.clone().greyscale().normalize().stats();
+        const darkBackground=(stats.channels[0]?.mean??255)<135;
+        const prepared=darkBackground
+          ? flattened.clone()
+            .resize(width-32,40,{fit:'contain',background:'#000'})
+            .greyscale()
+            .normalize()
+            .threshold(150)
+            .negate({alpha:false})
+          : flattened.clone()
+            .resize(width-32,40,{fit:'contain',background:'#fff'})
+            .greyscale()
+            .normalize();
+        return prepared.png().toBuffer();
       }));
-      const page=await sharp({create:{width,height:rowHeight*10,channels:3,background:'#fff'}}).composite(crops.map((input,i)=>({input,left:16,top:i*rowHeight+12}))).png().toBuffer();
+      const page=await sharp({create:{width,height:rowHeight*10,channels:3,background:'#fff'}})
+        .composite(crops.map((input,i)=>({input,left:16,top:i*rowHeight+12})))
+        .png()
+        .toBuffer();
       const result=await this.worker.recognize(page,{}, {text:true,blocks:true});
       const texts=Array<string>(10).fill(''), confidences=Array<number>(10).fill(0);
       for (const block of result.data.blocks??[]) for (const paragraph of block.paragraphs) for (const line of paragraph.lines) {

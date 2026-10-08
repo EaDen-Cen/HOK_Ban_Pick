@@ -1549,3 +1549,13 @@
   .player-slot-summary{grid-template-columns:1fr}
   .player-slot-calibration-grid{grid-template-columns:1fr}
 }
+
+.control-secondary-tools{
+  display:grid;
+  gap:10px;
+  margin-top:16px;
+}
+.control-secondary-tools>.panel,
+.control-secondary-tools>details{
+  margin:0;
+}

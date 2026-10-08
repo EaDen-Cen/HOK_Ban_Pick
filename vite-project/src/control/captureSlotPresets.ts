@@ -8,6 +8,7 @@ export interface CaptureSlotPreset {
   slots:CaptureSlots;
   sourceWidth?:number;
   sourceHeight?:number;
+  playerIdLayoutVersion?:number;
   createdAt:number;
   updatedAt:number;
 }
@@ -30,12 +31,16 @@ export function readCaptureSlotPresets(raw:string|null):CaptureSlotPreset[] {
       const updatedAt=Number.isFinite(item.updatedAt)?Number(item.updatedAt):createdAt;
       const sourceWidth=Number.isFinite(item.sourceWidth)&&item.sourceWidth>0?Number(item.sourceWidth):undefined;
       const sourceHeight=Number.isFinite(item.sourceHeight)&&item.sourceHeight>0?Number(item.sourceHeight):undefined;
+      const playerIdLayoutVersion=Number(item.playerIdLayoutVersion)===2?2:undefined;
+      const migratedSlots=normalizeCaptureSlots(item.slots);
+      if(playerIdLayoutVersion!==2) delete migratedSlots.playerIds;
       return [{
         id,
         name,
-        slots:normalizeCaptureSlots(item.slots),
+        slots:migratedSlots,
         sourceWidth,
         sourceHeight,
+        playerIdLayoutVersion:2,
         createdAt,
         updatedAt,
       }];
@@ -60,6 +65,7 @@ export function createCaptureSlotPreset(input:{
     slots:cloneCaptureSlots(input.slots),
     sourceWidth:input.sourceWidth,
     sourceHeight:input.sourceHeight,
+    playerIdLayoutVersion:2,
     createdAt:now,
     updatedAt:now,
   };
@@ -75,6 +81,7 @@ export function updateCaptureSlotPreset(
     slots:input.slots?cloneCaptureSlots(input.slots):cloneCaptureSlots(preset.slots),
     sourceWidth:input.sourceWidth??preset.sourceWidth,
     sourceHeight:input.sourceHeight??preset.sourceHeight,
+    playerIdLayoutVersion:2,
     updatedAt:input.now??Date.now(),
   };
 }

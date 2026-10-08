@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { phases } from '../src/shared/types.js';
-import { completedSimulatorSlots, simulatorBanVisualKeys, simulatorNextTurnPhase, simulatorPlayerOrdersMatch, simulatorPlayerTestRoster, simulatorPreviousTurnPhase, simulatorRandomDelayMs, simulatorRandomPlayerOrder, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn, swapSimulatorPickHeroes } from '../src/simulator/bpSimulatorModel.js';
+import { completedSimulatorSlots, simulatorBanVisualKeys, simulatorNextTurnPhase, simulatorPlayerOrdersMatch, simulatorPlayerTestRoster, simulatorPreviousTurnPhase, simulatorPreselectSwitchMoments, simulatorRandomDelayMs, simulatorRandomPlayerOrder, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn, swapSimulatorPickHeroes } from '../src/simulator/bpSimulatorModel.js';
 
 test('simulator match mode follows the production 18-phase HOK draft order', () => {
   const sequence=phases('match','blue');
@@ -75,6 +75,16 @@ test('simulator random autoplay delay stays inside the configured range',()=>{
   assert.equal(simulatorRandomDelayMs(900,1800,()=>1),1800);
   assert.equal(simulatorRandomDelayMs(900,1800,()=>.5),1350);
   assert.equal(simulatorRandomDelayMs(1800,900,()=>0),900);
+});
+
+test('autoplay preselect switches leave a stable quiet window before lock',()=>{
+  const values=[0,.5,1,.25,.75];
+  let cursor=0;
+  const moments=simulatorPreselectSwitchMoments(3000,()=>values[cursor++%values.length]);
+  assert.ok(moments.length>=1);
+  assert.ok(moments.every((value,index)=>value>=400&&(index===0||value>moments[index-1])));
+  assert.ok(moments.at(-1)!<=1800);
+  assert.deepEqual(simulatorPreselectSwitchMoments(900,()=>0),[]);
 });
 
 

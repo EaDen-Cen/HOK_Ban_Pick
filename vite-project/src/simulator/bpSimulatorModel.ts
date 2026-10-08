@@ -144,6 +144,26 @@ export function simulatorRandomDelayMs(
   return Math.round(min+(max-min)*Math.min(1,Math.max(0,random())));
 }
 
+/**
+ * Random preselect changes during the player's thinking window. The last
+ * switch always leaves a quiet window before lock so Control can accumulate
+ * stable hero evidence even in a 3–6 second stress test.
+ */
+export function simulatorPreselectSwitchMoments(
+  totalMs:number,
+  random:()=>number=Math.random,
+  quietBeforeLockMs=1200,
+) {
+  const end=Math.max(0,totalMs-Math.max(700,quietBeforeLockMs));
+  const moments:number[]=[];
+  let cursor=400+Math.floor(Math.min(1,Math.max(0,random()))*400);
+  while(cursor<end&&moments.length<6) {
+    moments.push(cursor);
+    cursor+=450+Math.floor(Math.min(1,Math.max(0,random()))*450);
+  }
+  return moments;
+}
+
 export function swapSimulatorPickHeroes(
   assignments:Record<string,number>,
   side:Side,

@@ -25,6 +25,7 @@ test('case, whitespace, NFKC and OCR confusion normalize; close IDs and substitu
   assert.equal(solvePlayerSlots(['Unknown','Bravo','Charlie','Delta','Echo'],ids)!.automatic,false);
   assert.equal(solvePlayerSlots(ids,ids,[.1,1,1,1,1])!.automatic,false);
   assert.equal(solvePlayerSlots(ids,ids,[1,1,1,1,1])!.automatic,true);
+  assert.equal(solvePlayerSlots(['Alpha Roaming','Bravo Jungling','Charlie Mid','Delta Clash','Echo Farm'],ids)!.automatic,true);
   assert.equal(solvePlayerSlots(ids,['','','','','']),undefined);
 });
 test('mapping controls player/portrait/role, saves history, follows identity in Player BP and resets next game',()=>{
@@ -61,4 +62,6 @@ test('invalid permutations and stale rosters are atomic; legacy state upgrades; 
   const slots={...defaultCaptureSlots,playerIds:{blue1:{x:.1,y:.2,width:.2,height:.03}}};
   const preset=createCaptureSlotPreset({id:'test',name:'Test',slots});
   assert.deepEqual(readCaptureSlotPresets(JSON.stringify([preset]))[0].slots.playerIds,slots.playerIds);
+  const legacy={...preset,playerIdLayoutVersion:undefined};
+  assert.equal(readCaptureSlotPresets(JSON.stringify([legacy]))[0].slots.playerIds,undefined);
 });

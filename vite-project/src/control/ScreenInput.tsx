@@ -770,7 +770,10 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
 
   useEffect(()=>{
     if(!autoWatch||result||disabled||!phase||state.committedGameId||busy||!videoReady) return;
-    const timer=setTimeout(()=>{void capture();},350);
+    // Fast BP can expose a lock cue for well under a second. 250 ms keeps two
+    // independent confirmation scans possible without overlapping requests;
+    // busyRef still guarantees only one recognition job runs at a time.
+    const timer=setTimeout(()=>{void capture();},250);
     return()=>clearTimeout(timer);
   },[autoWatch,busy,capture,disabled,phase,result,state.committedGameId,videoReady]);
 
