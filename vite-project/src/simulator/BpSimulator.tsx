@@ -2,7 +2,7 @@ import { ViewportCanvas } from '../shared/ViewportCanvas';
 import { useEffect, useMemo } from 'react';
 import heroes from '../components/HeroList';
 import { phases, type Side } from '../shared/types';
-import { simulatorBanVisualKeys, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn } from './bpSimulatorModel';
+import { simulatorBanVisualKeys, simulatorRandomPlayerOrder, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn } from './bpSimulatorModel';
 import { useBpSimulatorState } from './bpSimulatorState';
 import './bpSimulator.css';
 
@@ -22,7 +22,7 @@ function LockCue() {
 }
 
 export function BpSimulator() {
-  const [state]=useBpSimulatorState();
+  const [state,update]=useBpSimulatorState();
   const sequence=useMemo(()=>phases(state.mode,state.firstPickSide),[state.mode,state.firstPickSide]);
   const activeSlots=simulatorSlotsForTurn(state.mode,state.firstPickSide,state.phaseIndex);
   const active=activeSlots[0];
@@ -71,6 +71,54 @@ export function BpSimulator() {
     return()=>window.removeEventListener('keydown',listener);
   },[]);
 
+  const startPlayerOrderTest=()=>{
+    if(!state.playerRosterPrepared) return;
+    update(current=>({
+      ...current,
+      scene:'draft',
+      phaseIndex:0,
+      locked:[],
+      emptyBans:[],
+      autoPlay:false,
+      bluePlayerOrder:simulatorRandomPlayerOrder(),
+      redPlayerOrder:simulatorRandomPlayerOrder(),
+      playerOrderTestStartedAt:Date.now(),
+      playerOrderTestCompletedAt:null,
+    }));
+  };
+
+  const playerForScreenSlot=(side:Side,index:number)=>{
+    const players=side==='blue'?state.bluePlayers:state.redPlayers;
+    const order=side==='blue'?state.bluePlayerOrder:state.redPlayerOrder;
+    return players[order[index]??index]||`${side.toUpperCase()}.P${index+1}`;
+  };
+
+  if(state.testMode==='player-order'&&state.scene==='lobby') {
+    return <main className="bp-simulator-stage-page" aria-label="HOK custom room simulator">
+      <ViewportCanvas width={1600} height={900} className="bp-simulator-stage sim-room-stage">
+        <header className="sim-room-header">
+          <span>CUSTOM ROOM</span>
+          <strong>PLAYER ORDER TEST</strong>
+          <small>队伍名单已固定；开始后只在各自队伍内部随机房间位置</small>
+        </header>
+        <section className="sim-room-team blue">
+          <h2>BLUE TEAM</h2>
+          {state.bluePlayers.map((player,index)=><div className="sim-room-player" key={player}><b>{index+1}</b><span>{player}</span></div>)}
+        </section>
+        <section className="sim-room-team red">
+          <h2>RED TEAM</h2>
+          {state.redPlayers.map((player,index)=><div className="sim-room-player" key={player}><b>{index+1}</b><span>{player}</span></div>)}
+        </section>
+        <div className="sim-room-center">
+          <p>{state.playerRosterPrepared?'Control 测试名单已准备':'请先在 Simulator 控制台准备测试名单'}</p>
+          <button className="sim-room-start" disabled={!state.playerRosterPrepared} onClick={startPlayerOrderTest}>START</button>
+          <small>开始瞬间计时；进入 BP 后蓝/红分别随机排序</small>
+        </div>
+        <div className="sim-bottom-status"><small>F: FULLSCREEN · C: CONTROL</small></div>
+      </ViewportCanvas>
+    </main>;
+  }
+
   const renderBan=(key:string)=>{
     const side=key.startsWith('blue')?'blue':'red';
     const stateForSlot=visibleState(key);
@@ -102,8 +150,8 @@ export function BpSimulator() {
         {!stateForSlot.visible&&<span className="sim-player-placeholder">{index+1}</span>}
       </div>
       <div className="sim-player-copy">
-        <strong>{side==='blue'?'BLUE':'RED'}.P{index+1}</strong>
-        <span>{roles[index]}</span>
+        <strong data-player-id={playerForScreenSlot(side,index)}>{playerForScreenSlot(side,index)}</strong>
+        <span>{roles[(side==='blue'?state.bluePlayerOrder:state.redPlayerOrder)[index]??index]}</span>
         {stateForSlot.visible&&<small>{heroName(id)}</small>}
       </div>
     </div>;
