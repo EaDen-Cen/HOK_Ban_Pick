@@ -62,4 +62,6 @@ test('invalid permutations and stale rosters are atomic; legacy state upgrades; 
   const slots={...defaultCaptureSlots,playerIds:{blue1:{x:.1,y:.2,width:.2,height:.03}}};
   const preset=createCaptureSlotPreset({id:'test',name:'Test',slots});
   assert.deepEqual(readCaptureSlotPresets(JSON.stringify([preset]))[0].slots.playerIds,slots.playerIds);
+  const legacy={...preset,playerIdLayoutVersion:undefined};
+  assert.equal(readCaptureSlotPresets(JSON.stringify([legacy]))[0].slots.playerIds,undefined);
 });
