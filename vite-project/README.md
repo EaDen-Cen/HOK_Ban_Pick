@@ -36,6 +36,6 @@ npm run hero:crop-sync
 
 - `start-broadcast.bat`：准备依赖、构建、启动 Broadcast 和 Quick Tunnel。
 - `stop-broadcast.bat`：停止 Broadcast 与 tunnel。
-- `start-bp-simulator.bat`：后台启动 BP Simulator，启动窗口完成后自动关闭；控制页提供 BP 识别、换英雄同步、Player ID 排序三种独立测试。
+- `start-bp-simulator.bat`：后台启动 BP Simulator，启动窗口完成后自动关闭；控制页提供 BP 识别、换英雄同步、Player ID 排序三种独立测试，并可用“从 Control 同步模拟器数据”快速复用当前比赛状态。
 - `stop-bp-simulator.bat`：停止 BP Simulator。
 - `sync-hero-crops.bat`：把当前 `data/match.json` 中的 Panel / Side 英雄裁切提升到 Git 跟踪的 `src/data/heroArtFocusOverrides.ts`；只生成本地 diff，不自动 push。
