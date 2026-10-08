@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 import heroes from '../src/components/HeroList.js';
 import { trustedRemoteHeroImage } from './capture.js';
+import { releaseOrderEnglishNames } from '../src/data/heroIdOrder.js';
 
 const addedNames = [
   'Yango', 'Flowborn (Tank)', 'Garuda', 'Arke', 'Bai Qi', 'Fatih', 'Umbrosa',
@@ -65,29 +66,28 @@ function legacyImageDimensions(bytes: Buffer, label: string) {
   assert.fail(`${label}: unsupported or invalid image encoding`);
 }
 
-test('hero IDs and names are valid and unique; all previous valid IDs remain stable', () => {
+test('hero IDs are contiguous and match canonical oldest-to-newest launch order', () => {
   const ids = new Set<number>();
   const names = new Set<string>();
-  for (const hero of heroes) {
-    assert.ok(Number.isSafeInteger(hero.id) && hero.id > 0, `Invalid ID: ${hero.id}`);
+  assert.equal(heroes.length, releaseOrderEnglishNames.length);
+  heroes.forEach((hero, index) => {
+    assert.equal(hero.id, index + 1, `${hero.englishName}: release-order ID`);
+    assert.equal(hero.englishName, releaseOrderEnglishNames[index], `ID ${hero.id}: canonical launch-order name`);
     assert.ok(!ids.has(hero.id), `Duplicate ID: ${hero.id}`);
     assert.ok(hero.englishName.trim(), `ID ${hero.id} needs an English name`);
     assert.ok(hero.chineseName.trim(), `ID ${hero.id} needs a display name for Chinese mode`);
     const normalizedName = hero.englishName.trim().toLowerCase();
     assert.ok(!names.has(normalizedName), `Duplicate English name: ${hero.englishName}`);
-    ids.add(hero.id); names.add(normalizedName);
-  }
-  assert.ok(!ids.has(29), 'The blank ID 29 placeholder must not be selectable');
-  for (let id = 1; id <= 96; id++) {
-    if (id !== 29) assert.ok(ids.has(id), `Existing hero ID ${id} was removed`);
-  }
+    ids.add(hero.id);
+    names.add(normalizedName);
+  });
 });
 
 test('all 21 audited additions exist under new IDs, including distinct Flowborn forms', () => {
   for (const name of addedNames) {
     const hero = heroes.find(candidate => candidate.englishName === name);
     assert.ok(hero, `Missing audited hero: ${name}`);
-    assert.ok(hero.id >= 97, `${name} must not reuse an existing or placeholder ID`);
+    assert.ok(hero.id >= 1 && hero.id <= heroes.length, `${name} must use a canonical release-order ID`);
   }
 });
 
