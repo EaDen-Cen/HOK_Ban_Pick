@@ -45,7 +45,7 @@ function validateStores(archive:RecoveryArchive,stage:string){
   // Store is the authoritative schema upgrader. Validate the migrated v2 view so
   // recovery can safely import both pre-release-order v1 archives and new v2 ones.
   const data=new Store(file).data;
-  for(const state of [data.state,...data.history,...data.events.map((event:{resultingState:unknown})=>event.resultingState)]){
+  for(const state of [data.state,...data.history,...data.events.map(event=>event.resultingState)]){
     if(!state||!Array.isArray(state.bluePicks)||!Array.isArray(state.redPicks)||!Array.isArray(state.draftHistory)||!state.blueTeam||!state.redTeam)throw new Error('Invalid saved match state');
     // Reuse all settings validation, including safe asset URLs, roles, score bounds and IDs.
     const normalized=normalizeState(state),verifier=new Store();verifier.apply(randomUUID(),0,{type:'settings',settings:normalized});
