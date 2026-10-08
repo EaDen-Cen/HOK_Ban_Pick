@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import sharp from 'sharp';
 import { PlayerRecognitionProvider } from './playerRecognition.js';
 import { solvePlayerSlotCandidates } from '../src/shared/playerSlots.js';
+import { readFileSync } from 'node:fs';
 test('resident offline OCR batches ten names and ten numeric fields without model downloads',async()=>{
   const provider=new PlayerRecognitionProvider();
   try{
@@ -26,5 +27,31 @@ test('resident offline OCR batches ten names and ten numeric fields without mode
     assert.ok(red.average>=.9);
     await assert.rejects(provider.recognize(['data:image/png;base64,AAAA']),/Ten small/);
     assert.equal(provider.status,'ready');
+  }finally{await provider.close();}
+});
+
+test('wide dim right-aligned ID strips retain ink and real Chinese screenshot text',async()=>{
+  const provider=new PlayerRecognitionProvider(undefined,'eng+chi_sim');
+  try{
+    await provider.prepare();assert.equal(provider.status,'ready',provider.error);
+    const fixture=JSON.parse(readFileSync(new URL('./fixtures/player-id-dim-strip.json',import.meta.url),'utf8'));
+    const screenshot=await provider.recognizePlayerIds(Array(10).fill(fixture.image));
+    assert.ok(screenshot.candidates.every(row=>row.some(candidate=>candidate.text.replace(/\s/g,'')==='听雨')));
+    const names=['Alpha','Bravo','Charlie','Delta','Echo','Fox','Golf','Hotel','India','Juliet'];
+    const order=[3,0,4,1,2];
+    const ids=[...order.map(index=>names[index]),...order.map(index=>names[index+5])];
+    const images=await Promise.all(ids.map(async(text,index)=>{
+      const svg=`<svg width="570" height="90"><defs><linearGradient id="bg"><stop stop-color="#202334"/><stop offset="1" stop-color="#58192e"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#bg)"/><text x="${index<5?18:550}" y="53" text-anchor="${index<5?'start':'end'}" font-family="DejaVu Sans" font-size="20" font-weight="700" fill="#88818b">${text}</text></svg>`;
+      return 'data:image/png;base64,'+(await sharp(Buffer.from(svg)).png().toBuffer()).toString('base64');
+    }));
+    const result=await provider.recognizePlayerIds(images);
+    for(const offset of [0,5]){
+      const solution=solvePlayerSlotCandidates(result.candidates.slice(offset,offset+5),names.slice(offset,offset+5))!;
+      assert.deepEqual(solution.order,order);
+      assert.equal(solution.automatic,true,JSON.stringify(solution));
+    }
+    const blank='data:image/png;base64,'+(await sharp({create:{width:570,height:90,channels:3,background:'#182030'}}).png().toBuffer()).toString('base64');
+    const empty=await provider.recognizePlayerIds(Array(10).fill(blank));
+    assert.equal(solvePlayerSlotCandidates(empty.candidates.slice(0,5),names.slice(0,5))!.automatic,false);
   }finally{await provider.close();}
 });
