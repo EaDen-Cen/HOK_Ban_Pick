@@ -1,13 +1,15 @@
 # HOK Broadcast · 王者荣耀赛事 BP 导播系统
 
-基于 React、TypeScript、Node.js 与 WebSocket 的社区赛事导播系统，提供 Control 操作台、延迟 Caster 解说台、OBS Overlay、Auto BP 屏幕识别、18 槽位校准预设、最终阵容换英雄同步与独立 BP Simulator。当前基础版本为 **v1.0.0**，包含性能与访问流程优化。
+基于 React、TypeScript、Node.js 与 WebSocket 的社区赛事导播系统，提供 Control 操作台、延迟 Caster 解说台、OBS Overlay、Auto BP 屏幕识别、18 槽位校准预设、选手 P1–P5 自动对齐、最终阵容换英雄同步、备份恢复、赛后 MVP 页面与独立 BP Simulator。当前发布目标为 **v1.0.0**。
+
+> **发布状态（2026-10-08）**：核心 BP / Auto BP / Player ID / 换英雄链路已进入 Release Candidate 状态。Simulator 中 BP 极限测试在约 **1.5–2 秒**选角窗口下可稳定出结果，选手顺序核查最佳实测约 **1.8 秒**；这些是当前测试环境成绩，不等于真实比赛设备 SLA。**局内 HUD 仍处于测试阶段**：可用于彩排和 OBS 预览，但在真实比赛、自动数据采集与长时间运行完成验收前，不应作为唯一官方比分来源。
 
 ## 低配置导播优化
 
 - 比赛状态按角色/版本缓存；延迟事件二分查询，避免重复复制与序列化。
 - 识别保留全部多裁剪方案，减少中间图片编码并复用完全相同画面的证据。
 - 重型编辑器与模拟器按需加载；Overlay / Simulator 画布等比适配窗口。
-- Simulator 随机选角共用 Control 的 BP 规则；随机时间只模拟选角，锁定后固定短切换。
+- Simulator 随机选角共用 Control 的 BP 规则；可随机切换预选英雄，最终预选保留稳定窗口，锁定 cue 默认约 1.1 秒并可调。
 - 识别高级项可设置 50%–100% 自动输入阈值；英雄高级数据默认收起。
 - 本机免登录，远程密码及角色 token 在“访问与网站设置”管理；Overlay 缺少凭据时显示登录。
 
@@ -188,7 +190,7 @@ http://127.0.0.1:5173/tools/bp-simulator-control
 http://127.0.0.1:5173/tools/bp-simulator
 ```
 
-模拟器可复现 Pick、双选、圆形 Ban、空 Ban、蓝/红先手、换英雄与完整 BP phase 顺序；自动脚本支持随机等待时间范围。然后在 HOK Control 的 Auto BP 中选择 Simulator 的采集画面窗口即可。
+模拟器分为 **BP 识别、换英雄同步、选手 ID 排序** 三个独立测试模式，可复现 Pick、双选、圆形 Ban、空 Ban、蓝/红先手、预选英雄随机切换、换英雄与完整 BP phase 顺序；还可调整 Pick 头像/Ban 位尺寸并记录 Player ID 核查耗时。然后在 HOK Control 的 Auto BP 中选择 Simulator 的采集画面窗口即可。
 
 LoL 项目中值得移植的功能优化及已移植内容见 [HOK / LoL 功能对照审计](docs/research/lol-feature-parity-audit-2026-10-06.md)。
 
@@ -200,7 +202,7 @@ LoL 项目中值得移植的功能优化及已移植内容见 [HOK / LoL 功能�
 | 安装、三端接入、延迟、备份和部署 | [运行指南](docs/guides/getting-started.md) |
 | 比赛流程、快捷 BP、照片、队伍库及替补 | [操作指南](docs/guides/operator-guide.md) |
 | Windows 一键启动、Simulator 启停及 Cloudflare | [启动器说明](docs/guides/windows-launcher.md) |
-| Auto BP、18 框校准、预设、锁定与换英雄 | [屏幕识别指南](docs/guides/screen-recognition.md) |
+| Auto BP、18 框校准、Player ID、预设、锁定与换英雄 | [屏幕识别指南](docs/guides/screen-recognition.md) |
 | v1.0.0 功能与已知边界 | [v1.0.0 发布说明](docs/releases/v1.0.0.md) |
 | 理解源码目录和状态流 | [系统结构](docs/design/architecture.md) |
 | 查看项目阶段与未来路线 | [项目里程碑](MILESTONES.md) |
@@ -232,4 +234,4 @@ vite-project/       应用与 npm 命令执行目录
 
 ## 选手对齐、恢复、HUD 与赛后 MVP
 
-已接入每局选手槽位映射、常驻本地 OCR、备份/停机恢复、局内 HUD 和赛后数据草稿/MVP 页面。参见 [功能与操作说明](docs/guides/player-alignment-recovery-hud.md)。真实游戏和 OBS 验收状态见项目里程碑。
+已接入每局选手槽位映射、常驻本地 OCR、双队原子顺序更新、两帧边缘结果复核、ID 区域独立预设、备份/停机恢复，以及赛后数据草稿/MVP 页面。局内 HUD 已有可用的人工统计与 OBS Overlay，但**仍属于测试功能**；在真实 HOK HUD、OBS 长时间运行和自动数据采集完成验收前，请保留人工比分/官方观战 UI 作为兜底。参见 [功能与操作说明](docs/guides/player-alignment-recovery-hud.md)。真实游戏和 OBS 验收状态见 [项目里程碑](MILESTONES.md)。
