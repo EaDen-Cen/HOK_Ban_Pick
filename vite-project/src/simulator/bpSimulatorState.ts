@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import heroes from '../components/HeroList';
 import type { MatchState, Side } from '../shared/types';
-import { simulatorAllSlotKeys } from './bpSimulatorModel';
+import { simulatorAllSlotKeys, type SimulatorPlayerProfile, type SimulatorScene, type SimulatorTestMode } from './bpSimulatorModel';
 
 export type SimulatorSlotMap = Record<string,number>;
 
@@ -17,6 +17,16 @@ export interface BpSimulatorState {
   intervalMaxMs: number;
   banSize: number;
   pickSize: number;
+  testMode: SimulatorTestMode;
+  scene: SimulatorScene;
+  playerProfile: SimulatorPlayerProfile;
+  bluePlayers: string[];
+  redPlayers: string[];
+  bluePlayerOrder: number[];
+  redPlayerOrder: number[];
+  playerRosterPrepared: boolean;
+  playerOrderTestStartedAt: number | null;
+  playerOrderTestCompletedAt: number | null;
 }
 
 const STORAGE_KEY='hok-bp-simulator-state-v2';
@@ -42,6 +52,16 @@ export function createDefaultBpSimulatorState():BpSimulatorState {
     intervalMaxMs:1800,
     banSize:38,
     pickSize:72,
+    testMode:'bp',
+    scene:'draft',
+    playerProfile:'mixed',
+    bluePlayers:['BLUE.P1','BLUE.P2','BLUE.P3','BLUE.P4','BLUE.P5'],
+    redPlayers:['RED.P1','RED.P2','RED.P3','RED.P4','RED.P5'],
+    bluePlayerOrder:[0,1,2,3,4],
+    redPlayerOrder:[0,1,2,3,4],
+    playerRosterPrepared:false,
+    playerOrderTestStartedAt:null,
+    playerOrderTestCompletedAt:null,
   };
 }
 
@@ -57,6 +77,14 @@ function normalizeState(value:Partial<BpSimulatorState>|undefined):BpSimulatorSt
   const rawMax=clamp(Number(source.intervalMaxMs)||Number((source as {intervalMs?:number}).intervalMs)||defaults.intervalMaxMs,300,15000);
   const intervalMinMs=Math.min(rawMin,rawMax);
   const intervalMaxMs=Math.max(rawMin,rawMax);
+  const normalizePlayers=(value:unknown,fallback:string[])=>Array.isArray(value)&&value.length===5&&value.every(item=>typeof item==='string')
+    ? value.map(item=>String(item).slice(0,40)) : fallback;
+  const normalizeOrder=(value:unknown)=>Array.isArray(value)&&value.length===5&&new Set(value).size===5&&value.every(item=>Number.isInteger(item)&&Number(item)>=0&&Number(item)<5)
+    ? value.map(Number) : [0,1,2,3,4];
+  const testMode:SimulatorTestMode=source.testMode==='lineup'||source.testMode==='player-order'?source.testMode:'bp';
+  const scene:SimulatorScene=source.scene==='lobby'?'lobby':'draft';
+  const playerProfile:SimulatorPlayerProfile=['mixed','latin','zh','ja','confusable'].includes(String(source.playerProfile))
+    ? source.playerProfile as SimulatorPlayerProfile : 'mixed';
   return {
     mode:source.mode==='normal'?'normal':'match',
     firstPickSide:source.firstPickSide==='red'?'red':'blue',
@@ -69,6 +97,16 @@ function normalizeState(value:Partial<BpSimulatorState>|undefined):BpSimulatorSt
     intervalMaxMs,
     banSize:clamp(Number(source.banSize)||defaults.banSize,24,64),
     pickSize:clamp(Number(source.pickSize)||defaults.pickSize,48,104),
+    testMode,
+    scene,
+    playerProfile,
+    bluePlayers:normalizePlayers(source.bluePlayers,defaults.bluePlayers),
+    redPlayers:normalizePlayers(source.redPlayers,defaults.redPlayers),
+    bluePlayerOrder:normalizeOrder(source.bluePlayerOrder),
+    redPlayerOrder:normalizeOrder(source.redPlayerOrder),
+    playerRosterPrepared:source.playerRosterPrepared===true,
+    playerOrderTestStartedAt:Number.isFinite(source.playerOrderTestStartedAt)?Number(source.playerOrderTestStartedAt):null,
+    playerOrderTestCompletedAt:Number.isFinite(source.playerOrderTestCompletedAt)?Number(source.playerOrderTestCompletedAt):null,
   };
 }
 
