@@ -55,8 +55,15 @@ export class PlayerRecognitionProvider {
         const stats=await flattened.clone().greyscale().normalize().stats();
         const darkBackground=(stats.channels[0]?.mean??255)<135;
         const prepared=darkBackground
-          ? flattened.clone().greyscale().normalize().negate().resize(width-32,40,{fit:'contain',background:'#fff'})
-          : flattened.clone().resize(width-32,40,{fit:'contain',background:'#fff'}).greyscale().normalize();
+          ? flattened.clone()
+              .greyscale()
+              .linear(-1,255)
+              .resize(width-32,40,{fit:'contain',background:'#fff'})
+              .normalize()
+          : flattened.clone()
+              .resize(width-32,40,{fit:'contain',background:'#fff'})
+              .greyscale()
+              .normalize();
         return prepared.png().toBuffer();
       }));
       const page=await sharp({create:{width,height:rowHeight*10,channels:3,background:'#fff'}})
