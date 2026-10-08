@@ -55,6 +55,52 @@ test('operator can apply the visible red proposal during a slow scan and late OC
   }finally{release();await h.send({type:'reset_match'});await h.send({type:'settings',settings:initialState()});h.close();}
 });
 
+test('two matching borderline OCR frames combine into an automatic player-order decision',async({page,baseURL})=>{
+  const h=await harness(baseURL);
+  try{
+    await h.send({type:'reset_match'});
+    const base=h.state();
+    base.bpInputMode='screen';
+    base.language='eng';
+    base.blueTeam.players=['Alpha','Bravo','Charlie','Delta','Echo'];
+    base.redTeam.players=['Fox','Golf','Hotel','India','Juliet'];
+    await h.send({type:'settings',settings:base});
+    await page.addInitScript(()=>{
+      localStorage.setItem('hok-player-slot-auto','1');
+      Object.defineProperty(navigator.mediaDevices,'getDisplayMedia',{value:async()=>{
+        const canvas=document.createElement('canvas');
+        canvas.width=1920;canvas.height=1080;
+        canvas.getContext('2d')!.fillRect(0,0,1920,1080);
+        return canvas.captureStream(10);
+      }});
+    });
+    let calls=0;
+    await page.route('**/api/v1/recognition/players',async route=>{
+      if(route.request().method()==='GET')return route.fulfill({json:{status:'ready'}});
+      calls++;
+      const order=[4,3,2,1,0];
+      const confidence=calls===1?[.95,.95,.76,.95,.95]:[.95,.76,.95,.95,.95];
+      const solution={order,confidence,average:confidence.reduce((a,b)=>a+b,0)/5,margin:.18,automatic:false,anomalies:[calls===1?2:1]};
+      await route.fulfill({json:{
+        texts:['Echo','Delta','Charlie','Bravo','Alpha','Juliet','India','Hotel','Golf','Fox'],
+        confidences:Array(10).fill(.8),
+        blue:solution,
+        red:solution,
+        elapsedMs:180,
+      }});
+    });
+    await page.goto('/control');
+    await page.getByRole('button',{name:'Choose game window',exact:true}).click();
+    await expect.poll(()=>calls).toBeGreaterThanOrEqual(2);
+    await expect.poll(()=>`${h.state().bluePlayerSlotOrder}|${h.state().redPlayerSlotOrder}`).toBe('4,3,2,1,0|4,3,2,1,0');
+    await expect(page.locator('.player-slot-summary')).toContainText('Both synced');
+  }finally{
+    await h.send({type:'reset_match'});
+    await h.send({type:'settings',settings:initialState()});
+    h.close();
+  }
+});
+
 test('real offline OCR captures and synchronizes both teams within two seconds',async({page,baseURL})=>{
   const h=await harness(baseURL);
   try{

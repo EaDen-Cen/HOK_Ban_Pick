@@ -57,6 +57,7 @@ export interface PlayerSlotSolution {
   ocrConfidence?:number[];
   ocrText?:string[];
   ocrVariant?:string[];
+  verificationFrames?:number;
 }
 export interface PlayerOcrCandidateInput {
   text:string;
