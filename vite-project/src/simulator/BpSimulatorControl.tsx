@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import heroes from '../components/HeroList';
 import { useAccess } from '../shared/access';
 import { useMatch } from '../shared/useMatch';
@@ -13,6 +13,7 @@ import {
   simulatorNextTurnPhase,
   simulatorPreviousTurnPhase,
   simulatorRandomDelayMs,
+  simulatorPreselectSwitchMoments,
   simulatorSlotForPhase,
   simulatorSlotKey,
   simulatorSlotsForTurn,
@@ -119,6 +120,8 @@ export function BpSimulatorControl() {
   const access=useAccess('control');
   const {snapshot,status:controlStatus,error:controlError,pending:controlPending,send:sendControl,acknowledged}=useMatch('control',access.token,access.saveToken);
   const rules=snapshot?.state??initialState();
+  const rulesRef=useRef(rules);
+  rulesRef.current=rules;
   const [ruleError,setRuleError]=useState('');
   const [controlLink,setControlLink]=useState(()=>localStorage.getItem('hok-simulator-control-link')==='1');
   const [integrationMessage,setIntegrationMessage]=useState('');
