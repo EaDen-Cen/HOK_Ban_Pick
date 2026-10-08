@@ -41,8 +41,8 @@ const PLAYER_ID_POOLS: Record<SimulatorPlayerProfile,string[]> = {
   mixed: [
     'EaDen-01','Nova.O','L1ght','Zero0','K1ng',
     '逐风','北辰','星河','小满','青岚',
-    'アキラ','ユウキ','レン','サクラ','ハル',
-    'Aster_7','Raven-X','Pixel8','长安','听雨',
+    'Aster_7','Raven-X','Pixel8','Orbit_1','Echo-0',
+    '长安','听雨','白榆','南星','知夏',
   ],
 };
 
