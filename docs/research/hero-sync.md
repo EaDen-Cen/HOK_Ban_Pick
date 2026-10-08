@@ -57,6 +57,59 @@
 - 官方 Full Art CDN 加载失败时自动退回本地 \`imageLink\` Icon，避免比赛画面出现空卡。
 - 自动任务只开 PR，不自动合并到 \`main\`。
 
+## Wang Wei 与新英雄来源回退
+
+2026-10-08 的第一次检查其实已经发现了 `Wang Wei (campId 138)`，但当时辅助目录的 `/hok/138` 详情页返回 HTTP 502。旧实现必须先从该详情页补齐图片，因此审计记录为“Skipped new hero Wang Wei”。
+
+现在新英雄流程改为：
+
+1. 先查询官方 HOK 英雄页确认英文身份，并尝试读取官方中文名与 Character / Key Art；
+2. 再尝试辅助目录详情页补齐 Icon；
+3. 如果辅助详情页临时失败，但官方身份已确认且已有可信 Key Art，则仍可加入英雄，临时用官方远程素材作为 Picker / Overlay 图片；
+4. 后续同步一旦拿到辅助目录的官方 CDN Icon，会继续下载到 `public/heroesImg/`，把英雄恢复为本地 Icon + 官方 Full Art 的常规结构。
+
+当前已加入 **Wang Wei / 王维，本地 ID 120，Camp ID 138，Mid Lane**。关系数据保持空数组和 `unverified`，不会因为新英雄同步而自动生成 Counter / Combo。
+
+## Panel / Side 裁切数据如何同步
+
+Control 中“英雄数据与图片”里的 **Panel（底部横排）** 与 **Side（左右竖排）** x/y/scale，原本只有两种来源：
+
+- 默认/少量人工源码值：`src/data/heroArtFocus.ts`；
+- 导播在网页中保存后的运行时覆盖：`data/match.json -> state.heroArtOverrides`。
+
+第二种属于运行时比赛数据，`vite-project/.gitignore` 明确忽略 `/data/`，所以它会被本机持久化和备份，但**不会自动进入 GitHub**。这也是以前一台机器调好的构图不会自然出现在另一台机器上的原因。
+
+现在共享默认值拆到：
+
+```text
+vite-project/src/data/heroArtFocusOverrides.ts
+```
+
+这个文件受 Git 跟踪，会跟随仓库、Release 和其他电脑。要把当前导播电脑已经调好的裁切提升成项目默认值，在 `vite-project/` 执行：
+
+```powershell
+npm run hero:crop-sync
+```
+
+Windows 也可以直接双击：
+
+```text
+sync-hero-crops.bat
+```
+
+命令读取当前 `data/match.json`（设置了 `DATA_FILE` 时读取对应文件），仅提取已知英雄的 `panel` / `side` x、y、scale，合并写入 `src/data/heroArtFocusOverrides.ts`。它**不会自动 git commit/push**，也不会导出队伍、选手、比赛、访问凭据、英雄运行时数据或 `useLegacyImage`。这样可以先检查 diff，再决定哪些构图应该成为所有用户共享的默认值。
+
+推荐流程：
+
+```text
+Control 调好英雄构图
+→ 保存英雄图片
+→ sync-hero-crops.bat
+→ 查看 heroArtFocusOverrides.ts diff
+→ commit / push / PR
+→ 其他机器 pull 或下载下一版 Release
+```
+
 ## 本地命令
 
 在 \`vite-project/\` 中：
