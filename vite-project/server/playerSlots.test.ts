@@ -25,6 +25,7 @@ test('case, whitespace, NFKC and OCR confusion normalize; close IDs and substitu
   assert.equal(solvePlayerSlots(['Unknown','Bravo','Charlie','Delta','Echo'],ids)!.automatic,false);
   assert.equal(solvePlayerSlots(ids,ids,[.1,1,1,1,1])!.automatic,false);
   assert.equal(solvePlayerSlots(ids,ids,[1,1,1,1,1])!.automatic,true);
+  assert.equal(solvePlayerSlots(['Alpha Roaming','Bravo Jungling','Charlie Mid','Delta Clash','Echo Farm'],ids)!.automatic,true);
   assert.equal(solvePlayerSlots(ids,['','','','','']),undefined);
 });
 test('mapping controls player/portrait/role, saves history, follows identity in Player BP and resets next game',()=>{
