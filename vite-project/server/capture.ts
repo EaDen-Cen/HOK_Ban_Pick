@@ -146,7 +146,8 @@ let templates: Promise<{heroId:number; square:Float64Array; circle:Float64Array}
 export async function recognizeImage(buffer: Buffer, allowedHeroIds?: number[], shape:MatchShape='square') {
   templates ??= Promise.all(heroes.map(async h=>{
     try {
-      const source=await heroTemplateSource(h.imageLink);
+      const templateLink=h.recognitionImageLink || h.imageLink;
+      const source=await heroTemplateSource(templateLink);
       const [square,circle]=await Promise.all([features(source,'square'),features(source,'circle')]);
       return {heroId:h.id,square,circle};
     } catch(error) {
@@ -156,7 +157,7 @@ export async function recognizeImage(buffer: Buffer, allowedHeroIds?: number[], 
       // If that remote source is unavailable, skip only that template so the
       // rest of Auto BP remains usable and the hero can still be entered
       // manually.
-      if(trustedRemoteHeroImage(h.imageLink)) return undefined;
+      if(trustedRemoteHeroImage(h.recognitionImageLink || h.imageLink)) return undefined;
       throw error;
     }
   })).then(rows=>rows.filter((row):row is NonNullable<typeof row>=>Boolean(row)))
