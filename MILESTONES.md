@@ -78,7 +78,7 @@ Control 需要提供极简状态，而不是新的复杂操作面板，例如：
 
 同步按稳定身份检查全部旧英雄和新英雄，远端缺失只报告，不删除本地 ID。头像、名称、分路和别名持续维护；Counter/Combo 需要人工核验。
 
-2026-10-08 补充：Wang Wei / 王维（Camp 138，本地 ID 120）此前已出现在辅助目录，但其详情页临时返回 502，旧同步器因此没有加入。同步流程现改为**先查官方 HOK 身份证据，再尝试辅助详情页**；如果官方已确认且有 Key Art，即使辅助详情页临时故障也可先生成英雄记录，后续再用稳定 Icon 替换临时远程图。
+2026-10-08 补充：Wang Wei / 王维（Camp 138；release-order ID **119**，图标资产仍为 `/heroesImg/120.png`）此前已出现在辅助目录，但其详情页临时返回 502，旧同步器因此没有加入。同步流程现改为**先查官方 HOK 身份证据，再尝试辅助详情页**；如果官方已确认且有 Key Art，即使辅助详情页临时故障也可先生成英雄记录，后续再用稳定 Icon 替换临时远程图。
 
 Panel / Side 的广播构图也纳入可版本控制数据：现场编辑仍先写入 `data/match.json`，通过 `npm run hero:crop-sync` 或 `sync-hero-crops.bat` 可把可共享的 x/y/scale 提升到 `src/data/heroArtFocusOverrides.ts`，随后按普通 Git 流程进入 GitHub。
 
