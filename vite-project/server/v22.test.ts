@@ -111,3 +111,56 @@ test('V2 migration normalizes new fields in state, undo, delayed events and nest
   }
   act(restored, { type: 'undo' }); assert.equal(restored.data.state.draftComplete, true);
 });
+
+
+test('legacy hero IDs migrate atomically across state, history, events and overrides', () => {
+  const seed = new Store();
+  const legacy = JSON.parse(JSON.stringify(seed.data));
+  legacy.version = 1;
+  const decorate = (state: MatchState) => {
+    state.blueBans = [1, 120];
+    state.redBans = [54];
+    state.bluePicks = [1, 54, 120];
+    state.redPicks = [85];
+    state.blueAssignments = [1, 54, 120, null, null];
+    state.redAssignments = [85, null, null, null, null];
+    state.heroArtOverrides = {
+      '1': { panel: { x: 50, y: 50, scale: 1.2 } },
+      '120': { side: { x: 60, y: 40, scale: 1.4 } },
+    };
+    state.heroDataOverrides = {
+      '54': { chineseName: '敖隐测试' },
+    };
+  };
+  decorate(legacy.state);
+  legacy.history = [JSON.parse(JSON.stringify(legacy.state))];
+  legacy.events = [{
+    id: 'legacy-event',
+    timestamp: 1,
+    type: 'legacy',
+    resultingState: JSON.parse(JSON.stringify(legacy.state)),
+    revision: 1,
+  }];
+
+  const file = join(mkdtempSync(join(tmpdir(), 'hok-release-id-')), 'match.json');
+  writeFileSync(file, JSON.stringify(legacy));
+  const restored = new Store(file);
+
+  assert.equal(restored.data.version, 2);
+  for (const state of [
+    restored.data.state,
+    ...restored.data.history,
+    ...restored.data.events.map(event => event.resultingState),
+  ]) {
+    assert.deepEqual(state.blueBans, [72, 119]);
+    assert.deepEqual(state.redBans, [88]);
+    assert.deepEqual(state.bluePicks, [72, 88, 119]);
+    assert.deepEqual(state.redPicks, [1]);
+    assert.deepEqual(state.blueAssignments, [72, 88, 119, null, null]);
+    assert.deepEqual(state.redAssignments, [1, null, null, null, null]);
+    assert.ok(state.heroArtOverrides['72']);
+    assert.ok(state.heroArtOverrides['119']);
+    assert.equal(state.heroArtOverrides['1'], undefined);
+    assert.equal(state.heroDataOverrides['88']?.chineseName, '敖隐测试');
+  }
+});
