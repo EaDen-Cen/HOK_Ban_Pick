@@ -75,7 +75,9 @@ on:
       - 'vite-project/server/store.ts'
       - 'vite-project/server/store.test.ts'
       - 'vite-project/src/data/heroArtFocus.ts'
+      - 'vite-project/src/data/heroArtFocusOverrides.ts'
       - 'vite-project/src/data/heroArtSourceOverrides.ts'
+      - 'vite-project/sync-hero-crops.bat'
       - '.github/workflows/hero-data-sync.yml'
   workflow_dispatch:
   schedule:
