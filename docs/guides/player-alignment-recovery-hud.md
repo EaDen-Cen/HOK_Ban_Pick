@@ -5,8 +5,8 @@
 1. 赛前填写双方五名选手的真实游戏 ID；队伍资料库仍保留原始阵容顺序。
 2. 启用屏幕输入并在 Auto BP 中选择游戏窗口。选手识别复用这条窗口采集流，与英雄识别并行。
 3. 后端启动时预加载随 npm 依赖安装的英文与简体中文 Tesseract 模型。模型在本机常驻，比赛中无需下载模型或请求远程 AI。启动后 `/api/v1/recognition/players` 返回 `ready` 才开始 OCR。
-4. 展开“选手 ID 区域校准”。文字区域默认根据 Pick 头像位置推导；按原画面百分比调整 P1–P5 的文字矩形，裁剪预览应只包含游戏 ID。这些矩形随现有 BP 预设保存。
-5. 系统从同一帧裁剪十个 ID，批量识别后只在各自队伍五人中求全局最佳一一映射。大小写、全半角、空格和常见数字/字母混淆会参与匹配；还会比较第二名方案，避免相似 ID 抢占同一槽位。
+4. 正常比赛不需要先手填 x/y/width/height。选手 ID 区域会从已经校准好的 P1–P5 Pick 头像框自动推导；第一次升级到新布局会只清除旧版错误的 ID 小框，不影响 18 个英雄框。OCR 首次完全读不到文字时还会自动尝试更宽的文字区域。只有真实游戏 UI 与默认推导不符时，才展开“高级：选手 ID 区域校准”，用方向/宽高按钮微调；精确百分比输入放在二级折叠中。这些新区域继续随 BP 预设保存。
+5. 系统从同一帧裁剪十个 ID，先按画面明暗自动转换成更适合 Tesseract 的黑字白底，再批量识别；如果裁剪中同时出现分路/英雄文字，会逐行/逐词寻找最像的已知 Player ID。匹配仍只在各自队伍五人中求全局最佳一一映射，并比较第二名方案，避免相似 ID 抢占同一槽位。
 6. 高置信度自动发送映射，双方各确认一次后停止后台扫描。低置信度持续复核，保留现有顺序；可采用建议或用下拉框交换两个槽位。人工调整会关闭自动对齐，避免识别覆盖修正；需要再次自动识别时重新打开开关。
 
 `bluePlayerSlotOrder` / `redPlayerSlotOrder` 表示“屏幕槽位 → 当前阵容索引”。英雄 assignments 继续按屏幕顺序保存；照片、角色、ID、Player BP 限制、有效局历史和赛后报告通过映射读取身份。下一局/重置 BP 清除当前映射，有效局记录保留当局映射；资料库不会被重排。
@@ -29,9 +29,9 @@ BP Simulator 控制台现在按用途分成 **BP 识别、换英雄同步、选�
 4. Control 的 Player Slot Alignment 从 BP 画面 OCR ID 并更新 `bluePlayerSlotOrder` / `redPlayerSlotOrder`。Simulator 持有随机后的 ground truth，双方顺序完全一致时自动停止计时。
 5. 每次随机函数都会避免得到完整 identity 顺序，确保测试真正发生了重排。
 
-默认本地 OCR 仍只保证 `eng+chi_sim`。日文假名测试页已提供，但应在 `HOK_OCR_MODEL_DIR` / `HOK_OCR_LANGUAGES` 配置 `jpn` traineddata 后再作为正式通过项；默认配置下它属于故障/扩展能力压力测试。
+默认本地 OCR 仍只保证 `eng+chi_sim`。日文假名测试页已提供，但应在 `HOK_OCR_MODEL_DIR` / `HOK_OCR_LANGUAGES` 配置 `jpn` traineddata 后再作为正式通过项；默认配置下它属于故障/扩展能力压力测试。BP 自动脚本还可在 3–6 秒等极限等待窗口中随机切换预选英雄；真正锁定前保留约 1.2 秒稳定候选窗口，锁定 cue 默认保留 1.1 秒，便于验证 Control 是否能在快速 Draft 中连续取到确认帧。
 
-换英雄模式会在交换 Simulator 的两个 Pick 槽后开始计时；它不会直接调用 `set_lineup_assignments`。只有 Control 已完成 BP、正在采集 Simulator 且现有 LineupAssignments 识别到变化后，Control assignments 与 Simulator ground truth 一致，计时才结束。这样测到的是实际识别链路耗时。
+换英雄模式与 BP 识别完全独立：先配置 Simulator 的 10 个最终英雄，再点击“同步 Simulator 英雄配置到 Control”。这个按钮通过正常 Control actions 建立一套已完成的 Normal BP 测试基线，不经过 BP OCR，也不计入换英雄耗时。之后交换两个 Pick 槽时不会直接调用 `set_lineup_assignments`；只有 LineupAssignments 从采集画面识别出变化、Control assignments 与 Simulator ground truth 一致，计时才结束。
 
 ## 备份与恢复（M15）
 
