@@ -4,6 +4,15 @@ import { playerAtSlot, type PlayerSlotSolution } from '../shared/playerSlots';
 import { defaultCaptureSlots, normalizeCaptureSlots, type CaptureSlots, type CaptureSlotKey } from './bpCaptureLayout';
 import { normalizeCaptureRegion, regionToPixels, type NormalizedCaptureRegion } from './windowCaptureGeometry';
 import { getSharedWindowCaptureStream, subscribeSharedWindowCapture } from './sharedWindowCapture';
+import {
+  PLAYER_ID_REGION_KEYS,
+  PLAYER_ID_REGION_PRESETS_STORAGE,
+  createPlayerIdRegionPreset,
+  readPlayerIdRegionPresets,
+  updatePlayerIdRegionPreset,
+  type PlayerIdRegionPreset,
+  type PlayerIdRegions,
+} from './playerIdRegionPresets';
 
 const storage='hok-window-capture-slots-v3';
 const playerIdRegionVersion='hok-player-id-region-layout-v2';
@@ -79,6 +88,11 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
   const [selected,setSelected]=useState('blue1');
   const [preview,setPreview]=useState('');
   const [calibrationOpen,setCalibrationOpen]=useState(false);
+  const [idRegionPresets,setIdRegionPresets]=useState<PlayerIdRegionPreset[]>(
+    ()=>readPlayerIdRegionPresets(localStorage.getItem(PLAYER_ID_REGION_PRESETS_STORAGE)),
+  );
+  const [selectedIdRegionPresetId,setSelectedIdRegionPresetId]=useState('');
+  const [idRegionPresetName,setIdRegionPresetName]=useState('');
 
   const video=useRef<HTMLVideoElement>(null);
   const latest=useRef({state,disabled,send});
@@ -133,6 +147,17 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
     accepted.current={};
     setScan(undefined);
     setStatus(zh?'准备重新识别…':'Preparing rescan…');
+    generation.current++;
+    setManualScan(value=>value+1);
+  }
+
+  function restoreAutoRecognition() {
+    accepted.current={};
+    setManualEdit({blue:false,red:false});
+    setScan(undefined);
+    setAuto(true);
+    localStorage.setItem('hok-player-slot-auto','1');
+    setStatus(zh?'已恢复自动识别，正在重新扫描…':'Automatic recognition restored; rescanning…');
     generation.current++;
     setManualScan(value=>value+1);
   }
@@ -275,6 +300,90 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
     saveSlots(next);
   }
 
+  const selectedIdRegionPreset=idRegionPresets.find(item=>item.id===selectedIdRegionPresetId);
+
+  function effectiveIdRegions(source:CaptureSlots=slots):PlayerIdRegions {
+    const regions:PlayerIdRegions={};
+    for(const key of PLAYER_ID_REGION_KEYS){
+      const side:Side=key.startsWith('blue')?'blue':'red';
+      const index=Number(key.slice(-1))-1;
+      regions[key]=idRegion(source,side,index);
+    }
+    return regions;
+  }
+
+  function persistIdRegionPresets(next:PlayerIdRegionPreset[]) {
+    const ordered=[...next].sort((a,b)=>b.updatedAt-a.updatedAt);
+    setIdRegionPresets(ordered);
+    localStorage.setItem(PLAYER_ID_REGION_PRESETS_STORAGE,JSON.stringify(ordered));
+  }
+
+  function saveIdRegionPreset() {
+    const name=idRegionPresetName.trim();
+    if(!name){
+      setStatus(zh?'请先填写 ID 区域预设名称。':'Enter a name for the ID-region preset first.');
+      return;
+    }
+    if(idRegionPresets.some(item=>item.name.toLowerCase()===name.toLowerCase())){
+      setStatus(zh?'已有同名 ID 区域预设。':'An ID-region preset with that name already exists.');
+      return;
+    }
+    const now=Date.now();
+    const preset=createPlayerIdRegionPreset({
+      id:`player-id-${now}-${idRegionPresets.length+1}`,
+      name,
+      regions:effectiveIdRegions(),
+      sourceWidth:video.current?.videoWidth||undefined,
+      sourceHeight:video.current?.videoHeight||undefined,
+      now,
+    });
+    persistIdRegionPresets([preset,...idRegionPresets]);
+    setSelectedIdRegionPresetId(preset.id);
+    setIdRegionPresetName(preset.name);
+    setStatus(zh?`已保存 ID 区域预设：${preset.name}`:`Saved ID-region preset: ${preset.name}`);
+  }
+
+  function updateSelectedIdRegionPreset() {
+    if(!selectedIdRegionPreset){
+      setStatus(zh?'请先选择要覆盖的 ID 区域预设。':'Choose an ID-region preset to update first.');
+      return;
+    }
+    const nextName=idRegionPresetName.trim()||selectedIdRegionPreset.name;
+    if(idRegionPresets.some(item=>item.id!==selectedIdRegionPreset.id&&item.name.toLowerCase()===nextName.toLowerCase())){
+      setStatus(zh?'已有同名 ID 区域预设。':'An ID-region preset with that name already exists.');
+      return;
+    }
+    const updated=updatePlayerIdRegionPreset(selectedIdRegionPreset,{
+      name:nextName,
+      regions:effectiveIdRegions(),
+      sourceWidth:video.current?.videoWidth||undefined,
+      sourceHeight:video.current?.videoHeight||undefined,
+    });
+    persistIdRegionPresets(idRegionPresets.map(item=>item.id===updated.id?updated:item));
+    setIdRegionPresetName(updated.name);
+    setStatus(zh?`已更新 ID 区域预设：${updated.name}`:`Updated ID-region preset: ${updated.name}`);
+  }
+
+  function loadSelectedIdRegionPreset() {
+    if(!selectedIdRegionPreset){
+      setStatus(zh?'请先选择 ID 区域预设。':'Choose an ID-region preset first.');
+      return;
+    }
+    const next=readSlots();
+    next.playerIds={...selectedIdRegionPreset.regions};
+    saveSlots(next);
+    setStatus(zh?`已载入 ID 区域预设：${selectedIdRegionPreset.name}`:`Loaded ID-region preset: ${selectedIdRegionPreset.name}`);
+    setManualScan(value=>value+1);
+  }
+
+  function deleteSelectedIdRegionPreset() {
+    if(!selectedIdRegionPreset)return;
+    persistIdRegionPresets(idRegionPresets.filter(item=>item.id!==selectedIdRegionPreset.id));
+    setSelectedIdRegionPresetId('');
+    setIdRegionPresetName('');
+    setStatus(zh?`已删除 ID 区域预设：${selectedIdRegionPreset.name}`:`Deleted ID-region preset: ${selectedIdRegionPreset.name}`);
+  }
+
   useEffect(()=>{
     if(!calibrationOpen||!ready)return;
     const render=()=>{
@@ -374,7 +483,14 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
           : (zh?'当前为手动 BP；可直接调整选手顺序。':'Manual BP mode; player order can be edited directly.')}</p>
       </div>
       {state.bpInputMode==='screen'&&<label className="player-slot-auto-toggle">
-        <input type="checkbox" checked={auto} onChange={e=>{setAuto(e.target.checked);localStorage.setItem('hok-player-slot-auto',e.target.checked?'1':'0');}} />
+        <input type="checkbox" checked={auto} onChange={e=>{
+          if(e.target.checked)restoreAutoRecognition();
+          else{
+            setAuto(false);
+            localStorage.setItem('hok-player-slot-auto','0');
+            setStatus(zh?'自动识别已暂停。':'Automatic recognition paused.');
+          }
+        }} />
         <span>{zh?'自动识别':'Auto align'}</span>
       </label>}
     </header>
@@ -383,7 +499,12 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
       <div><span>{zh?'识别状态':'Recognition'}</span><strong>{scan?(confirmedSides===2?(zh?'双方已同步':'Both synced'):(zh?'已有候选结果':'Candidates ready')):(zh?'等待画面':'Waiting')}</strong></div>
       <div><span>{zh?'可靠槽位':'Reliable slots'}</span><strong>{scan?`${recognizedSlots}/10`:'—'}</strong></div>
       <div><span>{zh?'本地耗时':'Local OCR'}</span><strong>{scan?`${Math.round(scan.elapsedMs)} ms`:'—'}</strong></div>
-      <button disabled={busy||disabled||state.bpInputMode!=='screen'} onClick={requestRescan}>{busy?(zh?'识别中…':'Scanning…'):(zh?'重新识别':'Rescan')}</button>
+      <div className="player-slot-summary-actions">
+        {!auto&&<button className="player-slot-restore-auto" disabled={busy||disabled||state.bpInputMode!=='screen'} onClick={restoreAutoRecognition}>
+          {zh?'恢复自动识别':'Restore auto'}
+        </button>}
+        <button disabled={busy||disabled||state.bpInputMode!=='screen'} onClick={requestRescan}>{busy?(zh?'识别中…':'Scanning…'):(zh?'重新识别':'Rescan')}</button>
+      </div>
     </div>
 
     <div className="player-slot-team-grid">
@@ -393,6 +514,34 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
     {state.bpInputMode==='screen'&&<details className="player-slot-calibration" onToggle={e=>setCalibrationOpen(e.currentTarget.open)}>
       <summary>{zh?'高级：选手 ID 区域校准':'Advanced: player ID region calibration'}</summary>
       <p className="muted">{zh?'默认区域会自动跟随对应 Pick 头像。只有 OCR 截不到完整 ID 时才需要调整。':'Regions follow the Pick avatars by default. Adjust only when OCR misses part of an ID.'}</p>
+
+      <section className="player-id-region-presets">
+        <div className="player-id-region-preset-heading">
+          <div>
+            <strong>{zh?'ID 区域预设':'ID region presets'}</strong>
+            <small>{zh?'保存的是 10 个 Player ID 区域，不会改动 18 个 Ban/Pick 英雄框。':'Stores only the 10 Player ID regions; the 18 Ban/Pick hero boxes stay untouched.'}</small>
+          </div>
+          {selectedIdRegionPreset?.sourceWidth&&selectedIdRegionPreset?.sourceHeight&&<span>{selectedIdRegionPreset.sourceWidth}×{selectedIdRegionPreset.sourceHeight}</span>}
+        </div>
+        <div className="player-id-region-preset-row">
+          <select value={selectedIdRegionPresetId} onChange={e=>{
+            const id=e.target.value;
+            setSelectedIdRegionPresetId(id);
+            const preset=idRegionPresets.find(item=>item.id===id);
+            setIdRegionPresetName(preset?.name??'');
+          }}>
+            <option value="">{zh?'选择预设…':'Choose preset…'}</option>
+            {idRegionPresets.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+          <button disabled={!selectedIdRegionPreset} onClick={loadSelectedIdRegionPreset}>{zh?'载入':'Load'}</button>
+          <button className="secondary" disabled={!selectedIdRegionPreset} onClick={deleteSelectedIdRegionPreset}>{zh?'删除':'Delete'}</button>
+        </div>
+        <div className="player-id-region-preset-row">
+          <input type="text" maxLength={48} value={idRegionPresetName} placeholder={zh?'例如：HOK 1600×900 默认观战':'e.g. HOK 1600×900 spectator'} onChange={e=>setIdRegionPresetName(e.target.value)} />
+          <button onClick={saveIdRegionPreset}>{zh?'保存当前 10 区域':'Save current 10'}</button>
+          <button className="secondary" disabled={!selectedIdRegionPreset} onClick={updateSelectedIdRegionPreset}>{zh?'覆盖所选预设':'Update selected'}</button>
+        </div>
+      </section>
 
       <div className="player-slot-calibration-grid">
         <div className="player-slot-calibration-controls">
