@@ -13,6 +13,9 @@ export function preferredChineseHeroName(englishName: string, officialChineseNam
     flowbornmarksman: '元流之子（射手）',
     flowbornmage: '元流之子（法师）',
   };
+  const reviewedSimplifiedNames: Record<string, string> = {
+    wangwei: '王维',
+  };
   const mapped = flowbornNames[normalizedEnglish];
   const official = officialChineseName?.trim();
   const normalizedOfficial = (official || '').toLowerCase();
@@ -20,6 +23,7 @@ export function preferredChineseHeroName(englishName: string, officialChineseNam
   if (mapped && (!official || PLACEHOLDER_CHINESE_NAMES.has(normalizedOfficial) || official === '元流之子')) {
     return mapped;
   }
+  if (reviewedSimplifiedNames[normalizedEnglish]) return reviewedSimplifiedNames[normalizedEnglish];
   if (!official || PLACEHOLDER_CHINESE_NAMES.has(normalizedOfficial)) return undefined;
   return official;
 }
