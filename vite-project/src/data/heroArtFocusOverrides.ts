@@ -14,7 +14,7 @@ export type SharedHeroArtFocusOverrides = Record<number, Partial<Record<HeroArtL
  * in runtime state and are intentionally not exported.
  */
 const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
-  "1": {
+  "72": {
     "panel": {
       "x": 39,
       "y": 11,
@@ -26,7 +26,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.25
     }
   },
-  "2": {
+  "59": {
     "panel": {
       "x": 48,
       "y": 12,
@@ -38,7 +38,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.03
     }
   },
-  "3": {
+  "71": {
     "panel": {
       "x": 62,
       "y": 0,
@@ -50,7 +50,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.88
     }
   },
-  "4": {
+  "30": {
     "panel": {
       "x": 62,
       "y": 0,
@@ -62,7 +62,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.49
     }
   },
-  "5": {
+  "12": {
     "panel": {
       "x": 40,
       "y": 0,
@@ -74,7 +74,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.71
     }
   },
-  "6": {
+  "25": {
     "panel": {
       "x": 52,
       "y": 4,
@@ -86,7 +86,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.46
     }
   },
-  "7": {
+  "3": {
     "panel": {
       "x": 49,
       "y": 31,
@@ -98,7 +98,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.36
     }
   },
-  "8": {
+  "17": {
     "panel": {
       "x": 48,
       "y": 20,
@@ -110,7 +110,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.67
     }
   },
-  "9": {
+  "89": {
     "panel": {
       "x": 51,
       "y": 10,
@@ -122,7 +122,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.17
     }
   },
-  "10": {
+  "64": {
     "panel": {
       "x": 71,
       "y": 31,
@@ -134,7 +134,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.87
     }
   },
-  "11": {
+  "78": {
     "panel": {
       "x": 70,
       "y": 14,
@@ -146,7 +146,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.65
     }
   },
-  "12": {
+  "16": {
     "panel": {
       "x": 41,
       "y": 31,
@@ -158,7 +158,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.65
     }
   },
-  "13": {
+  "94": {
     "panel": {
       "x": 33,
       "y": 12,
@@ -170,7 +170,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.75
     }
   },
-  "14": {
+  "62": {
     "panel": {
       "x": 29,
       "y": 12,
@@ -182,7 +182,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.63
     }
   },
-  "15": {
+  "57": {
     "panel": {
       "x": 50,
       "y": 10,
@@ -194,7 +194,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.22
     }
   },
-  "16": {
+  "20": {
     "panel": {
       "x": 29,
       "y": 8,
@@ -206,7 +206,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.54
     }
   },
-  "17": {
+  "63": {
     "panel": {
       "x": 27,
       "y": 33,
@@ -218,7 +218,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.74
     }
   },
-  "18": {
+  "49": {
     "panel": {
       "x": 37,
       "y": 19,
@@ -230,7 +230,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.73
     }
   },
-  "19": {
+  "67": {
     "panel": {
       "x": 75,
       "y": 34,
@@ -242,7 +242,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.57
     }
   },
-  "20": {
+  "34": {
     "panel": {
       "x": 67,
       "y": 0,
@@ -254,7 +254,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.67
     }
   },
-  "21": {
+  "38": {
     "panel": {
       "x": 63,
       "y": 7,
@@ -266,7 +266,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.73
     }
   },
-  "22": {
+  "31": {
     "panel": {
       "x": 35,
       "y": 0,
@@ -278,7 +278,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.65
     }
   },
-  "23": {
+  "76": {
     "panel": {
       "x": 57,
       "y": 14,
@@ -290,7 +290,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.94
     }
   },
-  "24": {
+  "15": {
     "panel": {
       "x": 53,
       "y": 8,
@@ -302,7 +302,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.71
     }
   },
-  "25": {
+  "41": {
     "panel": {
       "x": 30,
       "y": 0,
@@ -314,7 +314,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.45
     }
   },
-  "26": {
+  "75": {
     "panel": {
       "x": 41,
       "y": 8,
@@ -326,7 +326,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.52
     }
   },
-  "27": {
+  "92": {
     "panel": {
       "x": 68,
       "y": 31,
@@ -338,7 +338,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.6
     }
   },
-  "28": {
+  "73": {
     "panel": {
       "x": 36,
       "y": 10,
@@ -350,7 +350,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.82
     }
   },
-  "30": {
+  "32": {
     "panel": {
       "x": 56,
       "y": 11,
@@ -362,7 +362,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.28
     }
   },
-  "31": {
+  "2": {
     "panel": {
       "x": 31,
       "y": 18,
@@ -374,7 +374,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.56
     }
   },
-  "32": {
+  "44": {
     "panel": {
       "x": 41,
       "y": 12,
@@ -386,7 +386,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.92
     }
   },
-  "33": {
+  "83": {
     "panel": {
       "x": 42,
       "y": 11,
@@ -398,7 +398,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.01
     }
   },
-  "35": {
+  "82": {
     "panel": {
       "x": 28,
       "y": 17,
@@ -410,7 +410,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.45
     }
   },
-  "36": {
+  "29": {
     "panel": {
       "x": 32,
       "y": 7,
@@ -422,7 +422,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.48
     }
   },
-  "37": {
+  "77": {
     "panel": {
       "x": 54,
       "y": 13,
@@ -434,7 +434,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.58
     }
   },
-  "38": {
+  "23": {
     "panel": {
       "x": 68,
       "y": 18,
@@ -446,7 +446,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.98
     }
   },
-  "39": {
+  "80": {
     "panel": {
       "x": 23,
       "y": 22,
@@ -458,7 +458,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.82
     }
   },
-  "40": {
+  "5": {
     "panel": {
       "x": 85,
       "y": 13,
@@ -470,7 +470,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.84
     }
   },
-  "41": {
+  "13": {
     "panel": {
       "x": 19,
       "y": 21,
@@ -482,7 +482,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.47
     }
   },
-  "42": {
+  "14": {
     "panel": {
       "x": 19,
       "y": 8,
@@ -494,7 +494,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.82
     }
   },
-  "43": {
+  "19": {
     "panel": {
       "x": 67,
       "y": 4,
@@ -506,7 +506,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.58
     }
   },
-  "44": {
+  "48": {
     "panel": {
       "x": 42,
       "y": 2,
@@ -518,7 +518,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.69
     }
   },
-  "45": {
+  "60": {
     "panel": {
       "x": 44,
       "y": 9,
@@ -530,7 +530,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.97
     }
   },
-  "46": {
+  "6": {
     "panel": {
       "x": 59,
       "y": 23,
@@ -542,7 +542,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.65
     }
   },
-  "47": {
+  "36": {
     "panel": {
       "x": 39,
       "y": 10,
@@ -554,7 +554,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.84
     }
   },
-  "48": {
+  "8": {
     "panel": {
       "x": 66,
       "y": 27,
@@ -566,7 +566,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.17
     }
   },
-  "49": {
+  "53": {
     "panel": {
       "x": 44,
       "y": 21,
@@ -578,7 +578,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.78
     }
   },
-  "50": {
+  "66": {
     "panel": {
       "x": 31,
       "y": 14,
@@ -590,7 +590,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.9
     }
   },
-  "51": {
+  "91": {
     "panel": {
       "x": 68,
       "y": 4,
@@ -602,7 +602,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.8
     }
   },
-  "52": {
+  "81": {
     "panel": {
       "x": 67,
       "y": 17,
@@ -614,7 +614,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.6
     }
   },
-  "53": {
+  "45": {
     "panel": {
       "x": 69,
       "y": 23,
@@ -626,7 +626,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.93
     }
   },
-  "54": {
+  "88": {
     "panel": {
       "x": 52,
       "y": 12,
@@ -638,7 +638,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2
     }
   },
-  "55": {
+  "40": {
     "panel": {
       "x": 61,
       "y": 0,
@@ -650,7 +650,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.44
     }
   },
-  "56": {
+  "86": {
     "panel": {
       "x": 33,
       "y": 19,
@@ -662,7 +662,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.87
     }
   },
-  "57": {
+  "47": {
     "panel": {
       "x": 46,
       "y": 0,
@@ -674,7 +674,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.3
     }
   },
-  "58": {
+  "70": {
     "panel": {
       "x": 21,
       "y": 0,
@@ -686,7 +686,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.68
     }
   },
-  "59": {
+  "54": {
     "panel": {
       "x": 29,
       "y": 10,
@@ -698,7 +698,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.46
     }
   },
-  "60": {
+  "35": {
     "panel": {
       "x": 30,
       "y": 10,
@@ -710,7 +710,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.54
     }
   },
-  "61": {
+  "65": {
     "panel": {
       "x": 69,
       "y": 4,
@@ -722,7 +722,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.49
     }
   },
-  "62": {
+  "93": {
     "panel": {
       "x": 63,
       "y": 44,
@@ -734,7 +734,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.11
     }
   },
-  "63": {
+  "56": {
     "panel": {
       "x": 30,
       "y": 47,
@@ -746,7 +746,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.47
     }
   },
-  "64": {
+  "10": {
     "panel": {
       "x": 30,
       "y": 30,
@@ -758,7 +758,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.47
     }
   },
-  "65": {
+  "68": {
     "panel": {
       "x": 41,
       "y": 8,
@@ -770,7 +770,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.94
     }
   },
-  "66": {
+  "50": {
     "panel": {
       "x": 33,
       "y": 0,
@@ -782,7 +782,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.49
     }
   },
-  "67": {
+  "26": {
     "panel": {
       "x": 27,
       "y": 15,
@@ -794,7 +794,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.88
     }
   },
-  "68": {
+  "37": {
     "panel": {
       "x": 32,
       "y": 34,
@@ -806,7 +806,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.11
     }
   },
-  "69": {
+  "55": {
     "panel": {
       "x": 61,
       "y": 38,
@@ -818,7 +818,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.72
     }
   },
-  "70": {
+  "85": {
     "panel": {
       "x": 31,
       "y": 37,
@@ -830,7 +830,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.94
     }
   },
-  "71": {
+  "18": {
     "panel": {
       "x": 30,
       "y": 7,
@@ -842,7 +842,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.67
     }
   },
-  "72": {
+  "11": {
     "panel": {
       "x": 56,
       "y": 11,
@@ -854,7 +854,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.06
     }
   },
-  "73": {
+  "27": {
     "panel": {
       "x": 47,
       "y": 26,
@@ -866,7 +866,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.68
     }
   },
-  "74": {
+  "28": {
     "panel": {
       "x": 21,
       "y": 15,
@@ -878,7 +878,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.94
     }
   },
-  "75": {
+  "79": {
     "panel": {
       "x": 27,
       "y": 20,
@@ -890,7 +890,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.27
     }
   },
-  "76": {
+  "69": {
     "panel": {
       "x": 24,
       "y": 0,
@@ -902,7 +902,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.57
     }
   },
-  "77": {
+  "74": {
     "panel": {
       "x": 41,
       "y": 12,
@@ -914,7 +914,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.74
     }
   },
-  "78": {
+  "42": {
     "panel": {
       "x": 60,
       "y": 18,
@@ -926,7 +926,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.03
     }
   },
-  "79": {
+  "7": {
     "panel": {
       "x": 51,
       "y": 11,
@@ -938,7 +938,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.18
     }
   },
-  "80": {
+  "61": {
     "panel": {
       "x": 41,
       "y": 41,
@@ -950,7 +950,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.23
     }
   },
-  "81": {
+  "24": {
     "panel": {
       "x": 48,
       "y": 18,
@@ -962,7 +962,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.88
     }
   },
-  "82": {
+  "43": {
     "panel": {
       "x": 68,
       "y": 18,
@@ -974,7 +974,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.48
     }
   },
-  "83": {
+  "33": {
     "panel": {
       "x": 68,
       "y": 20,
@@ -986,7 +986,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.73
     }
   },
-  "84": {
+  "52": {
     "panel": {
       "x": 42,
       "y": 8,
@@ -998,7 +998,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.25
     }
   },
-  "85": {
+  "1": {
     "panel": {
       "x": 25,
       "y": 10,
@@ -1010,7 +1010,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.44
     }
   },
-  "86": {
+  "87": {
     "panel": {
       "x": 53,
       "y": 7,
@@ -1022,7 +1022,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.79
     }
   },
-  "87": {
+  "9": {
     "panel": {
       "x": 53,
       "y": 23,
@@ -1034,7 +1034,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.53
     }
   },
-  "88": {
+  "84": {
     "panel": {
       "x": 39,
       "y": 10,
@@ -1046,7 +1046,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.47
     }
   },
-  "89": {
+  "21": {
     "panel": {
       "x": 46,
       "y": 10,
@@ -1058,7 +1058,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.66
     }
   },
-  "90": {
+  "22": {
     "panel": {
       "x": 43,
       "y": 18,
@@ -1070,7 +1070,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.17
     }
   },
-  "91": {
+  "39": {
     "panel": {
       "x": 69,
       "y": 2,
@@ -1082,7 +1082,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.97
     }
   },
-  "92": {
+  "46": {
     "panel": {
       "x": 22,
       "y": 5,
@@ -1094,7 +1094,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.75
     }
   },
-  "93": {
+  "51": {
     "panel": {
       "x": 64,
       "y": 45,
@@ -1106,7 +1106,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.09
     }
   },
-  "94": {
+  "90": {
     "panel": {
       "x": 51,
       "y": 6,
@@ -1118,7 +1118,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.34
     }
   },
-  "95": {
+  "4": {
     "panel": {
       "x": 29,
       "y": 11,
@@ -1130,7 +1130,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.12
     }
   },
-  "96": {
+  "95": {
     "panel": {
       "x": 19,
       "y": 13,
@@ -1142,7 +1142,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.81
     }
   },
-  "97": {
+  "114": {
     "panel": {
       "x": 37,
       "y": 0,
@@ -1154,31 +1154,31 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.73
     }
   },
+  "104": {
+    "panel": {
+      "x": 50,
+      "y": 31,
+      "scale": 1.12
+    },
+    "side": {
+      "x": 50,
+      "y": 29,
+      "scale": 1.22
+    }
+  },
+  "110": {
+    "panel": {
+      "x": 50,
+      "y": 31,
+      "scale": 1.12
+    },
+    "side": {
+      "x": 50,
+      "y": 29,
+      "scale": 1.22
+    }
+  },
   "98": {
-    "panel": {
-      "x": 50,
-      "y": 31,
-      "scale": 1.12
-    },
-    "side": {
-      "x": 50,
-      "y": 29,
-      "scale": 1.22
-    }
-  },
-  "99": {
-    "panel": {
-      "x": 50,
-      "y": 31,
-      "scale": 1.12
-    },
-    "side": {
-      "x": 50,
-      "y": 29,
-      "scale": 1.22
-    }
-  },
-  "100": {
     "panel": {
       "x": 15,
       "y": 3,
@@ -1190,7 +1190,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.74
     }
   },
-  "101": {
+  "102": {
     "panel": {
       "x": 63,
       "y": 11,
@@ -1202,7 +1202,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.95
     }
   },
-  "102": {
+  "103": {
     "panel": {
       "x": 47,
       "y": 11,
@@ -1214,7 +1214,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.73
     }
   },
-  "103": {
+  "109": {
     "panel": {
       "x": 68,
       "y": 11,
@@ -1226,7 +1226,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.4
     }
   },
-  "105": {
+  "111": {
     "panel": {
       "x": 50,
       "y": 15,
@@ -1238,7 +1238,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.34
     }
   },
-  "106": {
+  "101": {
     "panel": {
       "x": 49,
       "y": 15,
@@ -1250,7 +1250,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.05
     }
   },
-  "107": {
+  "97": {
     "panel": {
       "x": 71,
       "y": 45,
@@ -1262,7 +1262,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.29
     }
   },
-  "109": {
+  "96": {
     "panel": {
       "x": 49,
       "y": 0,
@@ -1274,7 +1274,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.82
     }
   },
-  "110": {
+  "99": {
     "panel": {
       "x": 45,
       "y": 6,
@@ -1286,7 +1286,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.13
     }
   },
-  "111": {
+  "113": {
     "panel": {
       "x": 61,
       "y": 17,
@@ -1298,7 +1298,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.71
     }
   },
-  "112": {
+  "118": {
     "panel": {
       "x": 60,
       "y": 7,
@@ -1310,7 +1310,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.3
     }
   },
-  "113": {
+  "100": {
     "panel": {
       "x": 63,
       "y": 14,
@@ -1322,7 +1322,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.87
     }
   },
-  "114": {
+  "112": {
     "panel": {
       "x": 56,
       "y": 18,
@@ -1334,7 +1334,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.14
     }
   },
-  "116": {
+  "117": {
     "panel": {
       "x": 51,
       "y": 26,
@@ -1346,7 +1346,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 2.09
     }
   },
-  "118": {
+  "106": {
     "panel": {
       "x": 50,
       "y": 31,
@@ -1358,7 +1358,7 @@ const heroArtFocusOverrides: SharedHeroArtFocusOverrides = {
       "scale": 1.22
     }
   },
-  "120": {
+  "119": {
     "panel": {
       "x": 55,
       "y": 18,
