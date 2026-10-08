@@ -373,21 +373,72 @@ export function BpSimulatorControl() {
 
   useEffect(()=>{
     if(state.testMode!=='bp'||!state.autoPlay||state.phaseIndex>=sequence.length)return;
-    const delay=activeLocked?120:simulatorRandomDelayMs(state.intervalMinMs,state.intervalMaxMs);
-    const timer=window.setTimeout(()=>{
+
+    if(activeLocked){
+      const timer=window.setTimeout(()=>{
+        update(current=>{
+          const currentSequence=phases(current.mode,current.firstPickSide);
+          const next=Math.min(currentSequence.length,simulatorNextTurnPhase(current.mode,current.firstPickSide,current.phaseIndex));
+          return {...current,phaseIndex:next,autoPlay:next<currentSequence.length&&current.autoPlay};
+        });
+      },state.transitionHoldMs);
+      return()=>window.clearTimeout(timer);
+    }
+
+    const thinkingMs=simulatorRandomDelayMs(state.intervalMinMs,state.intervalMaxMs);
+    const timers:number[]=[];
+    if(state.preselectSwitching){
+      const moments=simulatorPreselectSwitchMoments(thinkingMs);
+      for(const moment of moments){
+        timers.push(window.setTimeout(()=>{
+          update(current=>{
+            const slots=simulatorSlotsForTurn(current.mode,current.firstPickSide,current.phaseIndex);
+            const keys=slots.map(simulatorSlotKey).filter(key=>!current.emptyBans.includes(key));
+            if(!keys.length||keys.every(key=>current.locked.includes(key)))return current;
+            try{
+              return {
+                ...current,
+                slotHeroes:randomizeSimulatorSlots(
+                  current.slotHeroes,
+                  current.mode,
+                  current.firstPickSide,
+                  rulesRef.current,
+                  new Set(keys),
+                  current.emptyBans,
+                ),
+              };
+            }catch{
+              return current;
+            }
+          });
+        },moment));
+      }
+    }
+
+    timers.push(window.setTimeout(()=>{
       update(current=>{
-        const currentSequence=phases(current.mode,current.firstPickSide);
         const currentSlots=simulatorSlotsForTurn(current.mode,current.firstPickSide,current.phaseIndex);
         if(!currentSlots.length)return {...current,autoPlay:false};
         const keys=currentSlots.map(simulatorSlotKey);
-        const allLocked=keys.every(key=>current.locked.includes(key));
-        if(!allLocked)return {...current,locked:unique([...current.locked,...keys])};
-        const next=Math.min(currentSequence.length,simulatorNextTurnPhase(current.mode,current.firstPickSide,current.phaseIndex));
-        return {...current,phaseIndex:next,autoPlay:next<currentSequence.length&&current.autoPlay};
+        return {...current,locked:unique([...current.locked,...keys])};
       });
-    },delay);
-    return()=>window.clearTimeout(timer);
-  },[sequence.length,activeLocked,state.autoPlay,state.firstPickSide,state.intervalMaxMs,state.intervalMinMs,state.locked,state.mode,state.phaseIndex,state.testMode,update]);
+    },thinkingMs));
+
+    return()=>timers.forEach(timer=>window.clearTimeout(timer));
+  },[
+    activeLocked,
+    sequence.length,
+    state.autoPlay,
+    state.firstPickSide,
+    state.intervalMaxMs,
+    state.intervalMinMs,
+    state.mode,
+    state.phaseIndex,
+    state.preselectSwitching,
+    state.testMode,
+    state.transitionHoldMs,
+    update,
+  ]);
 
   const playerElapsed=state.playerOrderTestStartedAt?(state.playerOrderTestCompletedAt??clock)-state.playerOrderTestStartedAt:null;
   const swapElapsed=swapStartedAt?(swapCompletedAt??clock)-swapStartedAt:null;
