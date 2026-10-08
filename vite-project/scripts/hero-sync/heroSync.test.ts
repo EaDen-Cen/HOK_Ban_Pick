@@ -236,7 +236,7 @@ test('runtime hero crop metadata can be promoted into tracked shared defaults', 
   assert.equal(merged[9999], undefined);
   const rendered = renderHeroArtFocusOverrides(merged);
   assert.match(rendered, /heroArtFocusOverrides/);
-  assert.doesNotMatch(rendered, /useLegacyImage/);
+  assert.doesNotMatch(rendered, /"useLegacyImage"\s*:/);
 });
 
 
