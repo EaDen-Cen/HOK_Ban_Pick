@@ -11,7 +11,9 @@
 | `/api/match` | GET | 当前角色比赛快照 |
 | `/api/heroes` | GET | 基础英雄数据 |
 | `/api/v1/capabilities` | GET | 识别版本、提供者、形状与接口位置 |
-| `/api/v1/recognition/frame` | POST | Control 上传浏览器头像裁剪；兼容路径 `/api/recognize-frame` |
+| `/api/v1/recognition/frame` | POST | Control 上传浏览器英雄头像裁剪；兼容路径 `/api/recognize-frame` |
+| `/api/v1/recognition/players` | GET / POST | 查询本地 Player OCR 状态；或提交双方 10 个 ID 裁剪与 roster/gameNumber，返回映射建议 |
+| `/api/v1/recognition/postgame` | POST | 提交赛后数字裁剪与 reportId，返回 OCR 草稿、置信度与证据 |
 | `/ws` | WebSocket | 身份认证、修订号动作、ACK 和状态广播 |
 
 识别请求：`{revision, image, allowedHeroIds?, shape?}`。`image` 为 PNG/JPEG/WebP 的 base64 data URL；`shape` 为 square / circle。限制为 4 MiB 请求、3 MiB 解码文件及 400 万像素。显式空英雄池不会回退到全部英雄。响应包含 `preview`、`fingerprint`、`lockFingerprint`、`meanLuma`、`candidates: [{heroId, confidence}]`。confidence 是相似度，不是准确率。陈旧修订号返回 409。
@@ -26,15 +28,12 @@
 
 Control action `set_player_slot_orders` 接收 `blue` / `red` 两个五人排列，以及 `expectedPlayers: [蓝方 roster, 红方 roster]`。一次校验、提交和撤销双方映射；任一排列非法、名单改变或本局已提交，均不修改任何一方。原 `set_player_slot_order` 继续用于单队及人工调整。
 
-新增 Control API：
+补充 Control / 恢复 API：
 
 | 接口 | 行为 |
 | --- | --- |
-| GET /api/v1/recognition/players | 本地 OCR 就绪状态；Control 专用 |
-| POST /api/v1/recognition/players | 十个 ID 裁剪，绑定双方 roster 与 gameNumber，返回两队映射建议；不直接写状态 |
-| POST /api/v1/recognition/postgame | 十个数字裁剪 + reportId，返回数值、置信度和原图证据；不直接写草稿 |
 | GET /api/recovery | 备份列表、最近自动备份时间与失败状态 |
 | POST /api/recovery | 立即创建本机完整备份 |
 | GET /api/match-export | 导出比赛/队伍/上传媒体，排除 access.json |
 
-WS Action 新增 `set_player_slot_order`（side/order/expectedPlayers）、`live_game_stats`、`post_game_begin`、`post_game_fields`、`select_mvp`，沿用修订号校验、撤销、持久化及角色权限。选手 OCR 在 BP 并行推进时按阵容/当前局检验上下文，映射写入仍须使用当前 revision。新 OBS 路由 `/overlay/game-hud` 与 `/overlay/mvp` 使用 overlay 角色。
+WS Action 包含 `set_player_slot_order`（单队人工/自动修正）、`set_player_slot_orders`（双方原子更新）、`live_game_stats`、`post_game_begin`、`post_game_fields`、`select_mvp`，沿用修订号校验、撤销、持久化及角色权限。选手 OCR 在 BP 并行推进时按阵容/当前局检验上下文，映射写入仍须使用当前 revision。新 OBS 路由 `/overlay/game-hud` 与 `/overlay/mvp` 使用 overlay 角色。**`/overlay/game-hud` 当前为 Experimental / 测试阶段**：接口与持久化已实现，但自动 HUD 数据读取、真实比赛长时间稳定性和正式比分兜底尚未验收。
