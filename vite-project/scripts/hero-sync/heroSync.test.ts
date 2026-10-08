@@ -54,6 +54,14 @@ test('Wang Wei uses reviewed simplified Chinese display name', () => {
   assert.equal(wangWei.campId, 138);
 });
 
+test('Wang Wei never exposes the framed official portrait as the UI icon', () => {
+  const wangWei = heroes.find(hero => hero.id === 120)!;
+  assert.equal(wangWei.imageLink, wangWei.artLink);
+  assert.notEqual(wangWei.imageLink, wangWei.recognitionImageLink);
+  assert.match(wangWei.imageLink, /17895496027563\.jpg$/);
+  assert.match(wangWei.recognitionImageLink || '', /17893719635393\.png$/);
+});
+
 test('normalization matches historical aliases without creating a duplicate hero', () => {
   assert.equal(normalizeName("Ao'yin"), 'aoyin');
   const plan = makePlan([local()], [remote({ englishName: 'Loong' })]);
