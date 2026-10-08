@@ -518,7 +518,7 @@ export function BpSimulatorControl() {
       <p className="sim-control-note">双选阶段可同时编辑两个 Pick 位；锁定当前组后即可推进到下一轮。</p>
     </section>
 
-    <section className="sim-control-panel">
+    {state.testMode==='lineup'&&<section className="sim-control-panel">
       <h2>选手互换英雄测试</h2>
       <div className="sim-swap-row">
         <label>队伍
@@ -540,8 +540,13 @@ export function BpSimulatorControl() {
         </label>
         <button onClick={swapPicks} disabled={swapA===swapB}>立即交换英雄</button>
       </div>
-      <p className="sim-control-note">交换只改变最终玩家槽的英雄，不改写 BP 历史。</p>
-    </section>
+      <p className="sim-control-note">交换只改变模拟画面的最终玩家槽英雄，不直接写 Control；若 Control 已完成 BP 且正在采集 Simulator，现有换英雄识别会自动同步。</p>
+      <div className={'sim-test-result '+(swapCompletedAt?'success':'')}>
+        <strong>{!swapStartedAt?'等待交换':swapCompletedAt?'✓ Control assignments 已同步':'等待 Control 识别换英雄…'}</strong>
+        <span>{swapElapsed===null?'—':(swapElapsed/1000).toFixed(3)+' s'}</span>
+        <small>{snapshot?.state.draftComplete?'Control BP 已完成':'Control 尚未完成 BP'} · {swapMatched?'英雄归属一致':'等待匹配'}</small>
+      </div>
+    </section>}
 
     <section className="sim-control-panel">
       <h2>10 个 Pick 槽实时状态</h2>
