@@ -36,7 +36,7 @@ Windows 现场使用可直接双击 `vite-project/start-broadcast.bat`；启动�
 <!-- HERO-SYNC:ROSTER:START -->
 ## 程序内英雄池
 
-当前 `main` 分支程序内共有 **118 个有效英雄条目**。英雄 ID 与程序持久化数据直接关联，因此旧 ID 不会复用；**ID 29 为历史保留空位**，不属于当前英雄池。
+当前 `main` 分支程序内共有 **119 个有效英雄条目**。英雄 ID 与程序持久化数据直接关联，因此旧 ID 不会复用；**ID 29 为历史保留空位**，不属于当前英雄池。
 
 > 本表由 Hero Data Synchronizer 自动生成，用于快速核对程序当前实际包含的英雄。请勿手工维护表格；英雄同步 PR 会自动刷新这里。
 
@@ -160,6 +160,7 @@ Windows 现场使用可直接双击 `vite-project/start-broadcast.bat`；启动�
 | 117 | 元流之子（法师） | Flowborn (Mage) |
 | 118 | 元流之子（刺客） | Flowborn (Assassin) |
 | 119 | 元流之子（辅助） | Flowborn (Roamer) |
+| 120 | 王维 | Wang Wei |
 <!-- HERO-SYNC:ROSTER:END -->
 
 ## BP 屏幕采集模拟器
