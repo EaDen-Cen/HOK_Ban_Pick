@@ -126,7 +126,7 @@ async function heroTemplateSource(imageLink:string) {
   if(!trustedRemoteHeroImage(imageLink)) throw new Error(`Untrusted remote hero portrait: ${imageLink}`);
 
   const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),8000);
+  const timeout=setTimeout(()=>controller.abort(),1500);
   try {
     const response=await fetch(imageLink,{
       signal:controller.signal,
