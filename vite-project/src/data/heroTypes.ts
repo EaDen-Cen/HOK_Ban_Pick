@@ -3,6 +3,12 @@ export interface Hero {
   englishName: string;
   chineseName: string;
   imageLink: string;
+  /**
+   * Optional recognition-only portrait/template source. This is deliberately
+   * separate from imageLink so a temporary OCR/template-friendly official
+   * portrait never leaks into the user-facing hero icon.
+   */
+  recognitionImageLink?: string;
   /** High-resolution character/key art used by flexible broadcast cards. Falls back to imageLink. */
   artLink?: string;
   /** Optional CSS object-position override for unusual compositions. */

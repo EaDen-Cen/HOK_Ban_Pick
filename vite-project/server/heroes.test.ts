@@ -106,6 +106,12 @@ test('hero relationships reference existing heroes and contain no self reference
 
 test('every hero has a local portrait or an explicitly trusted temporary official portrait', () => {
   for (const hero of heroes) {
+    if (hero.recognitionImageLink) {
+      assert.ok(
+        trustedRemoteHeroImage(hero.recognitionImageLink),
+        `${hero.englishName}: untrusted recognition-only portrait`,
+      );
+    }
     if (!hero.imageLink.startsWith('/')) {
       assert.ok(trustedRemoteHeroImage(hero.imageLink), `${hero.englishName}: untrusted remote portrait`);
       assert.equal(hero.relationshipStatus, 'unverified', `${hero.englishName}: remote portrait is only allowed for a new unverified hero`);
