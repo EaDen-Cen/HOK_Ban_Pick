@@ -107,3 +107,145 @@ linear-gradient(90deg,rgba(4,44,84,.95) 0,rgba(15,65,112,.65) 17%,transparent 39
 .sim-room-center{position:absolute;left:39%;right:39%;top:34%;z-index:5;display:grid;justify-items:center;text-align:center;gap:15px}.sim-room-center p{color:#aebcd0;min-height:34px}.sim-room-start{width:170px;height:58px;border:1px solid #8da7c7;background:#1b3755;color:white;font-size:24px;letter-spacing:.12em}.sim-room-start:hover:not(:disabled){background:#265178}.sim-room-start:disabled{opacity:.35}.sim-room-center small{color:#7286a1}
 
 @media(max-width:720px){.sim-player-ground-truth{grid-template-columns:1fr}.sim-integration-bar small{min-width:100%}}
+
+
+/* Independent simulator test workflows */
+.sim-test-tabs button{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+}
+.sim-test-tabs button>b{
+  display:grid;
+  place-items:center;
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  background:#0b1624;
+  color:#8094ad;
+  font-size:10px;
+}
+.sim-test-tabs button.active>b{
+  background:#d9f4f2;
+  color:#07131b;
+}
+.sim-test-intro{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  min-height:110px;
+  background:linear-gradient(120deg,#0b1929,#0a1422);
+}
+.sim-test-intro.lineup{
+  background:linear-gradient(120deg,#10231e,#0a1422);
+  border-color:#2d5c4b;
+}
+.sim-test-intro>div,
+.sim-test-intro-inline{
+  min-width:0;
+}
+.sim-test-intro span,
+.sim-test-intro-inline>span{
+  color:#69d6d1;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.16em;
+}
+.sim-test-intro h2,
+.sim-test-intro-inline h2{
+  margin:4px 0 6px;
+}
+.sim-test-intro p{
+  max-width:760px;
+  margin:0;
+  color:#91a5bd;
+  line-height:1.5;
+}
+.sim-lineup-heading{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+}
+.sim-lineup-heading h2{margin:0}
+.sim-lineup-heading p{margin:5px 0 0}
+.sim-lineup-editors{
+  margin-top:12px;
+}
+.sim-lineup-editors .sim-roster-editor{
+  grid-template-columns:58px minmax(0,1fr);
+}
+.sim-lineup-editors .sim-roster-editor em{display:none}
+.sim-lineup-sync-panel{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:14px;
+  align-items:center;
+  border-color:#2d5849;
+}
+.sim-lineup-sync-panel .sim-test-result{
+  grid-column:1/-1;
+}
+.sim-primary-action{
+  min-height:44px;
+  padding-inline:18px;
+  background:#155a4b;
+  border-color:#3d8d73;
+  color:#eafff6;
+  font-weight:800;
+}
+.sim-primary-action:hover:not(:disabled){
+  background:#1b715e;
+}
+.sim-lineup-stage .sim-ban-row{
+  display:none;
+}
+.sim-lineup-stage .sim-player-row{
+  opacity:1;
+}
+.sim-lineup-stage .sim-pick-avatar{
+  border-color:#ffffff33;
+}
+.sim-lineup-stage .sim-player-row.locked .sim-lock-cue{
+  display:none;
+}
+.sim-lineup-center{
+  display:grid;
+  align-content:center;
+  gap:28px;
+}
+.sim-lineup-center-copy{
+  max-width:520px;
+  margin:0 auto;
+  padding:26px 32px;
+  border:1px solid #31574d;
+  border-radius:12px;
+  background:#091914d9;
+  text-align:center;
+}
+.sim-lineup-center-copy b{
+  display:block;
+  margin-bottom:10px;
+  color:#dff8ef;
+  font-size:22px;
+}
+.sim-lineup-center-copy p{
+  color:#a8c4ba;
+  line-height:1.55;
+}
+.sim-lineup-center-copy span{
+  display:block;
+  margin-top:12px;
+  color:#718f85;
+  font-size:12px;
+}
+@media(max-width:780px){
+  .sim-lineup-heading,
+  .sim-lineup-sync-panel{
+    grid-template-columns:1fr;
+    display:grid;
+  }
+  .sim-lineup-sync-panel .sim-primary-action{
+    width:100%;
+  }
+}
