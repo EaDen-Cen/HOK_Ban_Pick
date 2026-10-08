@@ -16,6 +16,29 @@ import heroes from '../src/components/HeroList.js';
 const apply=(s:Store,a:Action)=>s.apply(randomUUID(),s.data.revision,a);
 const ids=['Alpha','Bravo','Charlie','Delta','Echo'];
 const permutations=(v:number[]):number[][]=>v.length<=1?[v]:v.flatMap((x,i)=>permutations(v.filter((_,j)=>i!==j)).map(r=>[x,...r]));
+test('both player orders update and undo atomically; stale red roster or invalid red order changes neither side',()=>{
+  const s=new Store(),base=initialState();base.blueTeam.players=[...ids];base.redTeam.players=ids.map(id=>'Red'+id);
+  apply(s,{type:'settings',settings:base});
+  const expectedPlayers:[string[],string[]]=[base.blueTeam.players,base.redTeam.players];
+  const before=s.data.revision;
+  for(const action of [
+    {type:'set_player_slot_orders' as const,blue:[4,3,2,1,0],red:[0,0,2,3,4],expectedPlayers},
+    {type:'set_player_slot_orders' as const,blue:[4,3,2,1,0],red:[4,3,2,1,0],expectedPlayers:[ids,ids] as [string[],string[]]},
+  ])assert.throws(()=>apply(s,action));
+  assert.equal(s.data.revision,before);
+  assert.deepEqual(s.data.state.bluePlayerSlotOrder,[0,1,2,3,4]);
+  assert.deepEqual(s.data.state.redPlayerSlotOrder,[0,1,2,3,4]);
+  apply(s,{type:'set_player_slot_orders',blue:[4,3,2,1,0],red:[1,2,3,4,0],expectedPlayers});
+  assert.equal(s.data.revision,before+1);
+  assert.deepEqual(s.data.state.bluePlayerSlotOrder,[4,3,2,1,0]);
+  assert.deepEqual(s.data.state.redPlayerSlotOrder,[1,2,3,4,0]);
+  apply(s,{type:'undo'});
+  assert.deepEqual(s.data.state.bluePlayerSlotOrder,[0,1,2,3,4]);
+  assert.deepEqual(s.data.state.redPlayerSlotOrder,[0,1,2,3,4]);
+  phases('match').forEach((phase,index)=>apply(s,{type:'draft_action',...phase,heroId:heroes[index].id}));
+  apply(s,{type:'commit_game'});
+  assert.throws(()=>apply(s,{type:'set_player_slot_orders',blue:[4,3,2,1,0],red:[1,2,3,4,0],expectedPlayers}),/gameAlreadyCommitted/);
+});
 test('all 120 player permutations resolve globally without duplicate identities',()=>{
   for(const order of permutations([0,1,2,3,4])){
     const result=solvePlayerSlots(order.map(i=>ids[i]),ids)!;

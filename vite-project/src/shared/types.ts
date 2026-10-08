@@ -163,6 +163,7 @@ export type Action =
   | { type: 'swap_picks'; team: Side; from: number; to: number } // legacy alias: swaps assignments, never pick order
   | { type: 'swap_assignments'; team: Side; from: number; to: number }
   | { type: 'set_player_slot_order'; side: Side; order: number[]; expectedPlayers: string[] }
+  | { type: 'set_player_slot_orders'; blue: number[]; red: number[]; expectedPlayers: [string[], string[]] }
   | { type: 'set_lineup_assignments'; blue: number[]; red: number[] }
   | { type: 'settings'; settings: MatchSettings }
   | { type: 'hero_art_override'; heroId: number; override: HeroArtOverride }

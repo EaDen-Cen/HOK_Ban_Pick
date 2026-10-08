@@ -31,12 +31,30 @@ test('resident offline OCR batches ten names and ten numeric fields without mode
 });
 
 test('wide dim right-aligned ID strips retain ink and real Chinese screenshot text',async()=>{
-  const provider=new PlayerRecognitionProvider(undefined,'eng+chi_sim');
+  const provider=new PlayerRecognitionProvider(undefined,'chi_sim+eng');
   try{
     await provider.prepare();assert.equal(provider.status,'ready',provider.error);
     const fixture=JSON.parse(readFileSync(new URL('./fixtures/player-id-dim-strip.json',import.meta.url),'utf8'));
     const screenshot=await provider.recognizePlayerIds(Array(10).fill(fixture.image));
     assert.ok(screenshot.candidates.every(row=>row.some(candidate=>candidate.text.replace(/\s/g,'')==='听雨')));
+    const whiteElm=JSON.parse(readFileSync(new URL('./fixtures/player-id-white-elm.json',import.meta.url),'utf8'));
+    const chinese=await provider.recognizePlayerIds(Array(10).fill(whiteElm.image));
+    assert.ok(chinese.candidates.every(row=>row.some(candidate=>candidate.text.replace(/\s/g,'')==='白榆')));
+    const novaFixture=JSON.parse(readFileSync(new URL('./fixtures/player-id-nova-zero.json',import.meta.url),'utf8'));
+    const nova=await provider.recognizePlayerIds(Array(10).fill(novaFixture.image));
+    assert.ok(nova.candidates.every(row=>row.some(candidate=>candidate.text.replace(/\s/g,'')==='Nova0')));
+    const trickyRoster=['Nova0','0cean','Iline','Ocean0','B8ta'];
+    const trickyImages=await Promise.all(trickyRoster.map(async(text,index)=>index===0?novaFixture.image:
+      'data:image/png;base64,'+(await sharp(Buffer.from(`<svg width="420" height="60"><rect width="100%" height="100%" fill="#182030"/><text x="16" y="42" font-family="DejaVu Sans" font-size="36" font-weight="700" fill="white">${text}</text></svg>`)).png().toBuffer()).toString('base64')));
+    const tricky=await provider.recognizePlayerIds([...trickyImages,...trickyImages],[trickyRoster,trickyRoster]);
+    for(const offset of [0,5]){
+      const solution=solvePlayerSlotCandidates(tricky.candidates.slice(offset,offset+5),trickyRoster)!;
+      assert.deepEqual(solution.order,[0,1,2,3,4]);
+      assert.equal(solution.automatic,true,JSON.stringify(solution));
+    }
+    const numbers=['8','2','10','12.5','35','14000','72000','0','99','100'];
+    const numeric=await Promise.all(numbers.map(async(text)=>'data:image/png;base64,'+(await sharp(Buffer.from(`<svg width="420" height="60"><rect width="100%" height="100%" fill="white"/><text x="16" y="42" font-family="DejaVu Sans" font-size="36" fill="black">${text}</text></svg>`)).png().toBuffer()).toString('base64')));
+    assert.deepEqual((await provider.recognize(numeric)).texts,numbers);
     const names=['Alpha','Bravo','Charlie','Delta','Echo','Fox','Golf','Hotel','India','Juliet'];
     const order=[3,0,4,1,2];
     const ids=[...order.map(index=>names[index]),...order.map(index=>names[index+5])];
@@ -44,7 +62,8 @@ test('wide dim right-aligned ID strips retain ink and real Chinese screenshot te
       const svg=`<svg width="570" height="90"><defs><linearGradient id="bg"><stop stop-color="#202334"/><stop offset="1" stop-color="#58192e"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#bg)"/><text x="${index<5?18:550}" y="53" text-anchor="${index<5?'start':'end'}" font-family="DejaVu Sans" font-size="20" font-weight="700" fill="#88818b">${text}</text></svg>`;
       return 'data:image/png;base64,'+(await sharp(Buffer.from(svg)).png().toBuffer()).toString('base64');
     }));
-    const result=await provider.recognizePlayerIds(images);
+    const result=await provider.recognizePlayerIds(images,[names.slice(0,5),names.slice(5)]);
+    assert.ok(result.candidates.every(row=>row.length>0&&row.every(candidate=>candidate.variant==='soft')),'confident first pass skips threshold retries');
     for(const offset of [0,5]){
       const solution=solvePlayerSlotCandidates(result.candidates.slice(offset,offset+5),names.slice(offset,offset+5))!;
       assert.deepEqual(solution.order,order);

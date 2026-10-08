@@ -1,6 +1,7 @@
 import { initialState } from '../src/shared/types';
 import { test,expect } from '@playwright/test';
 import { harness } from './harness';
+import { defaultCaptureSlots, type CaptureSlotKey } from '../src/control/bpCaptureLayout';
 test('player mapping renders correct owner, HUD reconnects, MVP switches and recovery exports omit secrets',async({page,baseURL})=>{
   const h=await harness(baseURL);
   try{
@@ -27,6 +28,60 @@ test('player mapping renders correct owner, HUD reconnects, MVP switches and rec
   }finally{await h.send({type:'reset_match'});await h.send({type:'settings',settings:initialState()});h.close();}
 });
 
+test('operator can apply the visible red proposal during a slow scan and late OCR cannot overwrite it',async({page,baseURL})=>{
+  const h=await harness(baseURL);let release=()=>{};
+  try{
+    await h.send({type:'reset_match'});const base=h.state();base.bpInputMode='screen';base.language='eng';base.blueTeam.players=['Alpha','Bravo','Charlie','Delta','Echo'];base.redTeam.players=['Fox','Golf','Hotel','India','Juliet'];await h.send({type:'settings',settings:base});
+    await page.addInitScript(()=>{localStorage.setItem('hok-player-slot-auto','1');Object.defineProperty(navigator.mediaDevices,'getDisplayMedia',{value:async()=>{const canvas=document.createElement('canvas');canvas.width=1920;canvas.height=1080;canvas.getContext('2d')!.fillRect(0,0,1920,1080);return canvas.captureStream(10);}});});
+    let calls=0,lateCompleted=false;
+    await page.route('**/api/v1/recognition/players',async route=>{
+      if(route.request().method()==='GET')return route.fulfill({json:{status:'ready'}});
+      calls++;
+      if(calls>1)await new Promise<void>(resolve=>{release=resolve;});
+      const solution={order:calls===1?[4,3,2,1,0]:[1,2,3,4,0],confidence:[.9,.9,.9,.9,.77],average:.87,margin:.2,automatic:false,anomalies:[4]};
+      await route.fulfill({json:{texts:['Alpha','Bravo','Charlie','Delta','Echo','Juliet','India','Hotel','Golf','Fox'],confidences:Array(10).fill(.9),blue:solution,red:solution,elapsedMs:200}});
+      if(calls>1)lateCompleted=true;
+    });
+    await page.goto('/control');await page.getByRole('button',{name:'Choose game window',exact:true}).click();
+    await expect.poll(()=>calls).toBe(2);
+    const apply=page.locator('.player-slot-team-card.red').getByRole('button',{name:'Apply suggestion',exact:true});
+    await expect(apply).toBeEnabled();await apply.click();
+    await expect.poll(()=>h.state().redPlayerSlotOrder.join(',')).toBe('4,3,2,1,0');
+    await expect(page.locator('.player-slot-alignment input[type=checkbox]')).not.toBeChecked();
+    release();
+    await expect.poll(()=>lateCompleted).toBe(true);
+    await expect(page.getByRole('button',{name:'Restore auto',exact:true})).toBeEnabled();
+    await expect.poll(()=>h.state().redPlayerSlotOrder.join(',')).toBe('4,3,2,1,0');
+  }finally{release();await h.send({type:'reset_match'});await h.send({type:'settings',settings:initialState()});h.close();}
+});
+
+test('real offline OCR captures and synchronizes both teams within two seconds',async({page,baseURL})=>{
+  const h=await harness(baseURL);
+  try{
+    await h.send({type:'reset_match'});const base=h.state();base.bpInputMode='screen';base.language='eng';base.blueTeam.players=['Alpha','Bravo','Charlie','Delta','Echo'];base.redTeam.players=['Fox','Golf','Hotel','India','Juliet'];await h.send({type:'settings',settings:base});
+    const order=[4,3,2,1,0];
+    const labels=(['blue','red'] as const).flatMap(side=>order.map((roster,index)=>{
+      const pick=defaultCaptureSlots[`${side}Pick${index+1}` as CaptureSlotKey];
+      const height=Math.max(.032,Math.min(.065,pick.height*.52));
+      return {text:base[`${side}Team`].players[roster],x:side==='blue'?pick.x+pick.width+.004:pick.x-.164,y:pick.y+Math.max(0,(pick.height-height)/2),height};
+    }));
+    await page.addInitScript(({labels,slots})=>{
+      localStorage.setItem('hok-player-slot-auto','1');localStorage.setItem('hok-window-capture-slots-v3',JSON.stringify(slots));
+      Object.defineProperty(navigator.mediaDevices,'getDisplayMedia',{value:async()=>{
+        const canvas=document.createElement('canvas');canvas.width=1920;canvas.height=1080;const ctx=canvas.getContext('2d')!;
+        ctx.fillStyle='#182030';ctx.fillRect(0,0,1920,1080);ctx.font='bold 28px DejaVu Sans';ctx.fillStyle='#e8eaf2';
+        for(const label of labels)ctx.fillText(label.text,label.x*1920+12,(label.y+label.height/2)*1080+10);
+        return canvas.captureStream(30);
+      }});
+    },{labels,slots:defaultCaptureSlots});
+    await page.goto('/control');
+    await expect.poll(async()=>{const r=await page.request.get('/api/v1/recognition/players',{headers:{Authorization:'Bearer e2e-control'}});return (await r.json()).status;}).toBe('ready');
+    const start=Date.now();await page.getByRole('button',{name:'Choose game window',exact:true}).click();
+    await expect.poll(()=>`${h.state().bluePlayerSlotOrder}|${h.state().redPlayerSlotOrder}`,{intervals:[20,30,50]}).toBe('4,3,2,1,0|4,3,2,1,0');
+    const elapsed=Date.now()-start;console.log(`Real capture → OCR → both authoritative orders: ${elapsed} ms`);expect(elapsed).toBeLessThan(2000);
+  }finally{await h.send({type:'reset_match'});await h.send({type:'settings',settings:initialState()});h.close();}
+});
+
 test('shared capture auto-aligns both teams once and manual correction remains authoritative',async({page,baseURL})=>{
   const h=await harness(baseURL);
   try{
@@ -35,7 +90,19 @@ test('shared capture auto-aligns both teams once and manual correction remains a
     await page.route('**/api/v1/recognition/players',async route=>{if(route.request().method()==='GET')return route.fulfill({json:{status:'ready'}});const solution={order:[4,3,2,1,0],confidence:[.95,.95,.95,.95,.95],average:.95,margin:.2,automatic:true,anomalies:[]};await route.fulfill({json:{texts:['Echo','Delta','Charlie','Bravo','Alpha','Juliet','India','Hotel','Golf','Fox'],blue:solution,red:solution,elapsedMs:200}});});
     await page.goto('/control');await page.getByRole('button',{name:'Choose game window',exact:true}).click();
     await expect.poll(()=>h.state().bluePlayerSlotOrder.join(',')).toBe('4,3,2,1,0');await expect.poll(()=>h.state().redPlayerSlotOrder.join(',')).toBe('4,3,2,1,0');
+    await page.locator('.player-slot-team-card.blue').getByRole('button',{name:'Manual edit',exact:true}).click();
     await page.getByRole('combobox',{name:'blue P1 player',exact:true}).selectOption('0');await expect.poll(()=>h.state().bluePlayerSlotOrder.join(',')).toBe('0,3,2,1,4');
     await expect(page.locator('.player-slot-alignment input[type=checkbox]')).not.toBeChecked();
+    await page.locator('.player-slot-team-card.red').getByRole('button',{name:'Manual edit',exact:true}).click();
+    await page.getByRole('combobox',{name:'red P1 player',exact:true}).selectOption('0');
+    await expect.poll(()=>h.state().redPlayerSlotOrder.join(',')).toBe('0,3,2,1,4');
+    const beforeRestore=h.state().bluePlayerSlotOrder.join(',');
+    expect(beforeRestore).toBe('0,3,2,1,4');
+    await page.getByRole('button',{name:'Restore auto',exact:true}).click();
+    await expect.poll(()=>h.state().bluePlayerSlotOrder.join(',')).toBe('4,3,2,1,0');
+    await expect.poll(()=>h.state().redPlayerSlotOrder.join(',')).toBe('4,3,2,1,0');
+    await expect(page.locator('.player-slot-alignment input[type=checkbox]')).toBeChecked();
+    await expect(page.locator('.player-slot-summary')).toContainText('Both synced');
+    await expect(page.getByRole('combobox',{name:'red P1 player',exact:true})).toHaveCount(0);
   }finally{await h.send({type:'reset_match'});await h.send({type:'settings',settings:initialState()});h.close();}
 });

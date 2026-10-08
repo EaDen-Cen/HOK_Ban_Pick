@@ -20,7 +20,7 @@ import { uploadPortrait, servePortrait } from './portraits.js';
 import { captureRegion, captureRegions, localCaptureRequest, recognizeClientFrame, recognizeLineup, recognizeScreen } from './capture.js';
 
 const recognitionProvider:HeroRecognitionProvider={id:'local-template-v1',recognize:input=>recognizeClientFrame(input.image,input.allowedHeroIds,input.shape)};
-const playerRecognition = new PlayerRecognitionProvider(process.env.HOK_OCR_MODEL_DIR, process.env.HOK_OCR_LANGUAGES || 'eng+chi_sim');
+const playerRecognition = new PlayerRecognitionProvider(process.env.HOK_OCR_MODEL_DIR, process.env.HOK_OCR_LANGUAGES || 'chi_sim+eng');
 void playerRecognition.prepare();
 const production = process.env.NODE_ENV === 'production';
 const project = fileURLToPath(new URL('../', import.meta.url));
@@ -133,7 +133,7 @@ const server = createServer(async (req, res) => {
         const context=JSON.stringify([state.blueTeam.players,state.redTeam.players,state.gameNumber,state.draftGameNumber,state.committedGameId]);
         if (JSON.stringify(input.players)!==JSON.stringify([state.blueTeam.players,state.redTeam.players]) || input.gameNumber!==state.gameNumber || state.committedGameId) {json(409,{error:'Roster or game changed'});return;}
         if(playerRecognition.status!=='ready'){json(503,{error:playerRecognition.error||'Local OCR model is not ready'});return;}
-        const result=await playerRecognition.recognizePlayerIds(input.images);
+        const result=await playerRecognition.recognizePlayerIds(input.images,[state.blueTeam.players,state.redTeam.players]);
         const current=store.data.state;
         if(context!==JSON.stringify([current.blueTeam.players,current.redTeam.players,current.gameNumber,current.draftGameNumber,current.committedGameId])){json(409,{error:'Roster or game changed'});return;}
         json(200,{

@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { PlayerRecognitionProvider } from '../server/playerRecognition.js';
 import { solvePlayerSlotCandidates } from '../src/shared/playerSlots.js';
 const directory=process.env.HOK_OCR_MODEL_DIR;
-const provider=new PlayerRecognitionProvider(directory?resolve(directory):undefined,process.env.HOK_OCR_LANGUAGES||'eng+chi_sim');
+const provider=new PlayerRecognitionProvider(directory?resolve(directory):undefined,process.env.HOK_OCR_LANGUAGES||'chi_sim+eng');
 const names=['Alpha','Bravo','Charlie','Delta','Echo'];
 try {
   const preload=performance.now();await provider.prepare();
@@ -15,7 +15,7 @@ try {
     return 'data:image/png;base64,'+(await sharp(Buffer.from(svg)).png().toBuffer()).toString('base64');
   }));
   for(let i=0;i<3;i++){
-    const result=await provider.recognizePlayerIds(images);
+    const result=await provider.recognizePlayerIds(images,[names,names]);
     const solutions=[0,5].map(offset=>solvePlayerSlotCandidates(result.candidates.slice(offset,offset+5),names));
     console.log(JSON.stringify({iteration:i+1,elapsedMs:Math.round(result.elapsedMs),texts:result.texts,solutions}));
     if(solutions.some(solution=>!solution?.automatic||solution.order.some((value,index)=>value!==order[index])))throw new Error('Player OCR did not recover the expected automatic mapping');

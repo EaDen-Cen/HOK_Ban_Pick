@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { existsSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
+import { solvePlayerSlotCandidates } from '../src/shared/playerSlots.js';
 
 const require=createRequire(import.meta.url);
 function dirnameOfModel(code:string){
@@ -22,12 +23,13 @@ interface DecodedCrop {
   darkBackground:boolean;
 }
 
-/** One resident offline worker; ten crops are batched into one OCR page. */
+/** Resident offline language workers; ID crops are batched into OCR pages. */
 export class PlayerRecognitionProvider {
-  readonly id='local-tesseract-player-v3';
+  readonly id='local-tesseract-player-v4';
   status:'disabled'|'loading'|'ready'|'error'='disabled';
   error='';
   private worker?:Worker;
+  private workers:Worker[]=[];
   private loading?:Promise<void>;
   private busy=false;
 
@@ -47,20 +49,23 @@ export class PlayerRecognitionProvider {
         if(staging)for(const code of this.languages.split('+')){
           copyFileSync(resolve(dirnameOfModel(code),'4.0.0_best_int',`${code}.traineddata.gz`),resolve(staging,`${code}.traineddata.gz`));
         }
-        this.worker=await createWorker(this.languages,OEM.LSTM_ONLY,{
+        // Independent language workers avoid English-first segmentation
+        // turning Chinese glyphs into Latin letters and preserve English IDs.
+        this.workers=await Promise.all(this.languages.split('+').map(language=>createWorker(language,OEM.LSTM_ONLY,{
           langPath:resolve(this.modelDirectory||staging!),
           gzip:!this.modelDirectory,
           cacheMethod:'none',
           errorHandler:()=>{},
-        });
+        })));
+        this.worker=this.workers[0];
       }finally{
         if(staging)rmSync(staging,{recursive:true,force:true});
       }
-      await this.worker.setParameters({
+      await Promise.all(this.workers.map(worker=>worker.setParameters({
         tessedit_pageseg_mode:PSM.SINGLE_BLOCK,
         preserve_interword_spaces:'1',
         user_defined_dpi:'150',
-      });
+      })));
       this.status='ready';
     })().catch(error=>{
       this.status='error';
@@ -161,7 +166,7 @@ export class PlayerRecognitionProvider {
       .extract({left,top,width:right-left+1,height:bottom-top+1}).png().toBuffer()};
   }
 
-  private async readPage(crops:Buffer[],rowHeight=64) {
+  private async readPage(crops:Buffer[],rowHeight=64,worker=this.worker) {
     const width=640;
     const page=await sharp({
       create:{width,height:rowHeight*crops.length,channels:3,background:'#fff'},
@@ -169,7 +174,7 @@ export class PlayerRecognitionProvider {
       .composite(crops.map((input,index)=>({input,left:16,top:index*rowHeight+12})))
       .png()
       .toBuffer();
-    const result=await this.worker!.recognize(page,{}, {text:true,blocks:true});
+    const result=await worker!.recognize(page,{}, {text:true,blocks:true});
     const texts=Array<string>(crops.length).fill('');
     const confidences=Array<number>(crops.length).fill(0);
     for(const block of result.data.blocks??[]){
@@ -192,7 +197,8 @@ export class PlayerRecognitionProvider {
     try{
       const decoded=await this.decode(source);
       const crops=await Promise.all(decoded.map(crop=>this.prepareDefault(crop,640)));
-      const result=await this.readPage(crops);
+      const english=this.languages.split('+').indexOf('eng');
+      const result=await this.readPage(crops,64,this.workers[english]??this.worker);
       return {...result,elapsedMs:performance.now()-start};
     }finally{
       this.busy=false;
@@ -201,33 +207,41 @@ export class PlayerRecognitionProvider {
 
   /**
    * Player IDs use a stylized light-on-dark esports font. Keep anti-aliased
-   * strokes once and also try two high-contrast thresholds in the same OCR
-   * page. The roster matcher chooses which candidate is actually useful.
+   * strokes first, then retry unresolved teams with high-contrast thresholds.
+   * Independent language workers supply candidates to the roster matcher.
    */
-  async recognizePlayerIds(images:unknown) {
+  async recognizePlayerIds(images:unknown,players?:[string[],string[]]) {
     const source=this.validate(images);
     this.busy=true;
     const start=performance.now();
     try{
       const decoded=await Promise.all((await this.decode(source)).map(crop=>this.localizePlayerInk(crop)));
       const variants:PlayerOcrCandidate['variant'][]=['soft','threshold170','threshold190'];
-      const crops:Buffer[]=[];
-      for(const variant of variants){
-        crops.push(...await Promise.all(decoded.map(crop=>this.preparePlayerVariant(crop,640,variant))));
-      }
-      const result=await this.readPage(crops);
       const candidates=Array.from({length:10},()=>[] as PlayerOcrCandidate[]);
-      for(let variantIndex=0;variantIndex<variants.length;variantIndex++){
-        for(let slot=0;slot<10;slot++){
-          const index=variantIndex*10+slot;
-          const text=result.texts[index]?.trim()||'';
-          if(!text)continue;
-          candidates[slot].push({
-            text,
-            confidence:result.confidences[index]??0,
-            variant:variants[variantIndex],
-          });
+      // Production fast path: read ten soft crops first. Only retry unresolved
+      // teams, instead of paying for thirty OCR rows on every opening frame.
+      const batches=players?[variants.slice(0,1),variants.slice(1)]:[variants];
+      let slots=Array.from({length:10},(_,index)=>index);
+      for(const batch of batches){
+        if(!slots.length)break;
+        const jobs=batch.flatMap(variant=>slots.map(slot=>({slot,variant})));
+        const crops=await Promise.all(jobs.map(({slot,variant})=>this.preparePlayerVariant(decoded[slot],640,variant)));
+        const results=await Promise.all(this.workers.map(worker=>this.readPage(crops,64,worker)));
+        for(const result of results){
+          for(let index=0;index<jobs.length;index++){
+            const {slot,variant}=jobs[index];
+            const text=result.texts[index]?.trim()||'';
+            if(!text)continue;
+            candidates[slot].push({
+              text,
+              confidence:result.confidences[index]??0,
+              variant,
+            });
+          }
         }
+        if(players)slots=[0,1].flatMap(side=>
+          solvePlayerSlotCandidates(candidates.slice(side*5,side*5+5),players[side])?.automatic
+            ? [] : Array.from({length:5},(_,index)=>side*5+index));
       }
       const texts=Array<string>(10).fill('');
       const confidences=Array<number>(10).fill(0);
@@ -249,6 +263,6 @@ export class PlayerRecognitionProvider {
   }
 
   async close(){
-    await this.worker?.terminate();
+    await Promise.all(this.workers.map(worker=>worker.terminate()));
   }
 }

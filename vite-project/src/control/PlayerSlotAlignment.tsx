@@ -67,6 +67,7 @@ function idRegion(slots: CaptureSlots, side: Side, index: number): NormalizedCap
 }
 
 interface Scan {
+  context:string;
   texts:string[];
   blue?:PlayerSlotSolution;
   red?:PlayerSlotSolution;
@@ -95,11 +96,11 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
   const [idRegionPresetName,setIdRegionPresetName]=useState('');
 
   const video=useRef<HTMLVideoElement>(null);
-  const latest=useRef({state,disabled,send});
+  const latest=useRef({state,disabled,send,scanContext:scan?.context});
   const inFlight=useRef(false);
   const generation=useRef(0);
   const accepted=useRef<Partial<Record<Side,string>>>({});
-  latest.current={state,disabled,send};
+  latest.current={state,disabled,send,scanContext:scan?.context};
 
   const context=JSON.stringify([state.blueTeam.players,state.redTeam.players,state.gameNumber]);
   const contextRef=useRef(context);
@@ -134,7 +135,7 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
 
   function apply(side:Side,solution:PlayerSlotSolution) {
     const current=latest.current;
-    if(current.disabled||current.state.committedGameId)return;
+    if(current.disabled||current.state.committedGameId||current.scanContext!==contextRef.current)return;
     current.send({
       type:'set_player_slot_order',
       side,
@@ -165,22 +166,28 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
   useEffect(()=>{
     if(state.bpInputMode!=='screen'||state.committedGameId||(!auto&&manualScan===0))return;
     let active=true;
+    let providerReady=false;
     const api=(import.meta.env.VITE_API_URL||'').replace(/\/$/,'');
     const headers={Authorization:`Bearer ${token}`};
 
     async function run() {
       const current=latest.current;
-      if(inFlight.current||(auto&&accepted.current.blue&&accepted.current.red))return;
+      if(inFlight.current||(auto&&(['blue','red'] as const).every(side=>
+        accepted.current[side]===current.state[`${side}PlayerSlotOrder`].join(',')
+      )))return;
       inFlight.current=true;
       const epoch=generation.current;
       try{
-        const health=await fetch(`${api}/api/v1/recognition/players`,{headers}).then(r=>r.json());
-        if(!active)return;
-        if(health.status!=='ready'){
-          setStatus(zh?`选手 OCR 未就绪：${health.error||health.status}`:`Player OCR not ready: ${health.error||health.status}`);
-          return;
-        }
         if(!ready||current.disabled||current.state.committedGameId||!video.current?.videoWidth)return;
+        if(!providerReady){
+          const health=await fetch(`${api}/api/v1/recognition/players`,{headers}).then(r=>r.json());
+          if(!active)return;
+          if(health.status!=='ready'){
+            setStatus(zh?`选手 OCR 未就绪：${health.error||health.status}`:`Player OCR not ready: ${health.error||health.status}`);
+            return;
+          }
+          providerReady=true;
+        }
 
         const source=video.current;
         const frame=document.createElement('canvas');
@@ -228,7 +235,7 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
         }
 
         if(!active||epoch!==generation.current||capturedContext!==contextRef.current)return;
-        setScan(result);
+        setScan({...result,context:capturedContext});
         setStatus(zh
           ? `本地 OCR ${Math.round(result.elapsedMs)} ms${usedFallback?' · 已自动扩大 ID 区域':''}`
           : `Local OCR ${Math.round(result.elapsedMs)} ms${usedFallback?' · automatic wide-ID fallback':''}`);
@@ -243,7 +250,7 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
     }
 
     if(auto){
-      const timer=setInterval(()=>void run(),450);
+      const timer=setInterval(()=>void run(),100);
       void run();
       return()=>{active=false;clearInterval(timer);};
     }
@@ -252,13 +259,25 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
   },[auto,manualScan,ready,state.bpInputMode,state.committedGameId,token,zh]);
 
   useEffect(()=>{
-    if(!auto||disabled||!scan||state.committedGameId)return;
+    if(!auto||disabled||!scan||scan.context!==contextRef.current||state.committedGameId)return;
+    // The channel permits one pending action. Apply a trusted ten-slot frame
+    // atomically instead of depending on a later render/OCR frame for red.
+    if(scan.blue?.automatic&&scan.red?.automatic&&(
+      !sameOrder(state.bluePlayerSlotOrder,scan.blue.order)||
+      !sameOrder(state.redPlayerSlotOrder,scan.red.order)
+    )){
+      latest.current.send({type:'set_player_slot_orders',blue:scan.blue.order,red:scan.red.order,
+        expectedPlayers:[[...state.blueTeam.players],[...state.redTeam.players]]});
+      return;
+    }
     for(const side of ['blue','red'] as const){
       const solution=scan[side];
       if(!solution?.automatic)continue;
       const signature=solution.order.join(',');
       if(state[`${side}PlayerSlotOrder`].join(',')===signature){accepted.current[side]=signature;continue;}
-      if(accepted.current[side]===signature)continue;
+      // An earlier accepted signature must not suppress restoration after a
+      // manual or external order change. Authoritative state decides success.
+      delete accepted.current[side];
       apply(side,solution);
       break;
     }
@@ -402,7 +421,7 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
     return()=>clearInterval(timer);
   },[calibrationOpen,ready,selectedIndex,selectedSide,slots]);
 
-  const confirmedSides=(['blue','red'] as const).filter(side=>scan?.[side]&&sameOrder(state[`${side}PlayerSlotOrder`],scan[side]!.order)).length;
+  const confirmedSides=(['blue','red'] as const).filter(side=>scan?.[side]&&(!auto||scan[side]!.automatic)&&sameOrder(state[`${side}PlayerSlotOrder`],scan[side]!.order)).length;
   const recognizedSlots=(['blue','red'] as const).reduce((sum,side)=>sum+(scan?.[side]?.confidence.filter(value=>value>=.8).length??0),0);
 
   function renderTeam(side:Side) {
@@ -410,7 +429,7 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
     const currentOrder=state[`${side}PlayerSlotOrder`];
     const solution=scan?.[side];
     const displayOrder=solution?.order??currentOrder;
-    const confirmed=!!solution&&sameOrder(currentOrder,solution.order);
+    const confirmed=!!solution&&(!auto||solution.automatic)&&sameOrder(currentOrder,solution.order);
     const needsReview=!!solution&&!solution.automatic;
     const statusText=!solution
       ? (zh?'等待识别':'Waiting')
@@ -418,7 +437,7 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
         ? (zh?'已同步':'Synced')
         : solution.automatic
           ? (zh?'高置信度':'High confidence')
-          : (zh?'需确认':'Review');
+          : (auto?(zh?'自动复核中':'Retrying OCR'):(zh?'需确认':'Review'));
 
     return <article className={`player-slot-team-card ${side}`} key={side}>
       <header>
@@ -450,7 +469,16 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
       </div>
 
       <div className="player-slot-card-actions">
-        {solution&&!confirmed&&<button disabled={disabled||!!state.committedGameId||busy} onClick={()=>apply(side,solution)}>{zh?'采用建议':'Apply suggestion'}</button>}
+        {solution&&!confirmed&&<button disabled={disabled||!!state.committedGameId} onClick={()=>{
+          // Freeze the visible proposal before applying it. A background OCR
+          // response must not overwrite the operator's explicit choice.
+          generation.current++;
+          setAuto(false);
+          localStorage.setItem('hok-player-slot-auto','0');
+          setManualScan(0);
+          setBusy(false);
+          apply(side,solution);
+        }}>{zh?'采用建议':'Apply suggestion'}</button>}
         <button className="secondary" disabled={disabled||!!state.committedGameId} onClick={()=>setManualEdit(value=>({...value,[side]:!value[side]}))}>
           {manualEdit[side]?(zh?'收起手动调整':'Close manual edit'):(zh?'手动调整':'Manual edit')}
         </button>
