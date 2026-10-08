@@ -24,8 +24,8 @@ test('initial-only matching is limited to Chinese mode while normal text search 
 });
 
 test('Enter target is the first eligible filtered hero only when a query exists',()=>{
-  const eligible=[{id:105},{id:54}];
-  assert.equal(enterTarget(eligible,'lplp')?.id,105);
+  const eligible=[{id:111},{id:88}];
+  assert.equal(enterTarget(eligible,'lplp')?.id,111);
   assert.equal(enterTarget(eligible,'   '),undefined);
   assert.equal(enterTarget([],'lplp'),undefined);
 });
