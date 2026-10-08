@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import heroes from '../components/HeroList';
-import type { MatchState, Side } from '../shared/types';
-import { simulatorAllSlotKeys, type SimulatorPlayerProfile, type SimulatorScene, type SimulatorTestMode } from './bpSimulatorModel';
-import { migrateLegacyHeroId } from '../data/heroIdOrder';
+import heroes from '../components/HeroList.js';
+import type { MatchState, Side } from '../shared/types.js';
+import { simulatorAllSlotKeys, type SimulatorPlayerProfile, type SimulatorScene, type SimulatorTestMode } from './bpSimulatorModel.js';
+import { migrateLegacyHeroId } from '../data/heroIdOrder.js';
 
 export type SimulatorSlotMap = Record<string,number>;
 
