@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { Diagnostics } from './diagnostics.js';
 import { acquireBackendLock, RecoveryManager, archiveData } from './recovery.js';
 import { PlayerRecognitionProvider } from './playerRecognition.js';
-import { solvePlayerSlots } from '../src/shared/playerSlots.js';
+import { solvePlayerSlotCandidates } from '../src/shared/playerSlots.js';
 import type { HeroRecognitionProvider } from './recognitionProvider.js';
 import { AccessStore } from './access.js';
 import { createServer } from 'node:http';
@@ -133,10 +133,14 @@ const server = createServer(async (req, res) => {
         const context=JSON.stringify([state.blueTeam.players,state.redTeam.players,state.gameNumber,state.draftGameNumber,state.committedGameId]);
         if (JSON.stringify(input.players)!==JSON.stringify([state.blueTeam.players,state.redTeam.players]) || input.gameNumber!==state.gameNumber || state.committedGameId) {json(409,{error:'Roster or game changed'});return;}
         if(playerRecognition.status!=='ready'){json(503,{error:playerRecognition.error||'Local OCR model is not ready'});return;}
-        const result=await playerRecognition.recognize(input.images);
+        const result=await playerRecognition.recognizePlayerIds(input.images);
         const current=store.data.state;
         if(context!==JSON.stringify([current.blueTeam.players,current.redTeam.players,current.gameNumber,current.draftGameNumber,current.committedGameId])){json(409,{error:'Roster or game changed'});return;}
-        json(200,{...result,blue:solvePlayerSlots(result.texts.slice(0,5),state.blueTeam.players,result.confidences.slice(0,5)),red:solvePlayerSlots(result.texts.slice(5),state.redTeam.players,result.confidences.slice(5))});
+        json(200,{
+          ...result,
+          blue:solvePlayerSlotCandidates(result.candidates.slice(0,5),state.blueTeam.players),
+          red:solvePlayerSlotCandidates(result.candidates.slice(5),state.redTeam.players),
+        });
       } catch(error) {json(400,{error:error instanceof Error?error.message:'Player recognition failed'});}
       return;
     }
