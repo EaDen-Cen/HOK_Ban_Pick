@@ -79,6 +79,8 @@ function newHero(args: {
   occupation: string;
   campId: number;
   imageLink: string;
+  recognitionImageLink?: string;
+  iconCrop?: Hero['iconCrop'];
   artLink?: string;
 }): Hero {
   const hero: Hero = {
@@ -89,6 +91,8 @@ function newHero(args: {
     altOccupation: '',
     campId: args.campId,
     imageLink: args.imageLink,
+    recognitionImageLink: args.recognitionImageLink,
+    iconCrop: args.iconCrop,
     artLink: args.artLink,
     combo: [],
     counter: [],
@@ -135,12 +139,14 @@ async function applyUpdate(
       } catch (error) {
         manualReview.push(
           `Catalog detail fetch failed for new hero ${remote.englishName} (${remote.campId}): ${error instanceof Error ? error.message : 'unknown error'}. ` +
-          `The sync will use confirmed official key art as the temporary picker image when available.`,
+          `The sync will use the official HERO DATA portrait as the temporary picker image when available; wide key art is never used as a grid icon.`,
         );
       }
     }
 
     let imageLink: string | undefined;
+    let recognitionImageLink: string | undefined;
+    let iconCrop: Hero['iconCrop'] | undefined;
     if (remote.imageUrl) {
       const asset = await downloadHeroAsset({
         heroId: id,
@@ -150,16 +156,18 @@ async function applyUpdate(
       });
       assets.push(asset);
       imageLink = asset.localPath;
-    } else if (evidence.confirmed && evidence.artUrl) {
-      imageLink = evidence.artUrl;
+    } else if (evidence.confirmed && evidence.portraitUrl) {
+      imageLink = evidence.portraitUrl;
+      recognitionImageLink = evidence.portraitUrl;
+      iconCrop = { x: 62, y: 36, scale: 1.65 };
       manualReview.push(
-        `New hero ${remote.englishName} (${remote.campId}) has no downloadable catalog icon yet; using official HOK key art as a temporary remote picker image. A later catalog imageUrl will replace it with a local /heroesImg asset automatically.`,
+        `New hero ${remote.englishName} (${remote.campId}) has no downloadable catalog icon yet; using the official HERO DATA portrait with a close square icon crop. Wide key art remains artLink-only. A later catalog imageUrl will replace the temporary display source with a local /heroesImg asset automatically.`,
       );
     }
 
     if (!imageLink) {
       manualReview.push(
-        `Skipped new hero ${remote.englishName} (${remote.campId}): neither a catalog icon nor confirmed official key art is available.`,
+        `Skipped new hero ${remote.englishName} (${remote.campId}): no catalog icon or confirmed official HERO DATA portrait is available. Key art is not accepted as a picker icon.`,
       );
       continue;
     }
@@ -177,6 +185,8 @@ async function applyUpdate(
       occupation: remote.occupation,
       campId: remote.campId,
       imageLink,
+      recognitionImageLink,
+      iconCrop,
       artLink: evidence.confirmed ? evidence.artUrl : undefined,
     });
     autoHeroes.push(created);
@@ -340,7 +350,11 @@ async function applyUpdate(
         publicDir,
       });
       assets.push(asset);
-      const next: HeroOverride = { imageLink: asset.localPath, campId: match.remote.campId };
+      const next: HeroOverride = {
+        imageLink: asset.localPath,
+        iconCrop: { x: 50, y: 50, scale: 1 },
+        campId: match.remote.campId,
+      };
       overrides[match.local.id] = mergeOverride(overrides[match.local.id], next);
       overrideAudit.push({ localId: match.local.id, campId: match.remote.campId, fields: next });
     }

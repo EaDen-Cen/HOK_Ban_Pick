@@ -65,12 +65,12 @@
 
 1. 先查询官方 HOK 英雄页确认英文身份，并尝试读取官方中文名与 Character / Key Art；
 2. 再尝试辅助目录详情页补齐 Icon；
-3. 如果辅助详情页临时失败，但官方身份已确认且已有可信 Key Art，则仍可加入英雄，临时用官方远程素材作为 Picker / Overlay 图片；
-4. 后续同步一旦拿到辅助目录的官方 CDN Icon，会继续下载到 `public/heroesImg/`，把英雄恢复为本地 Icon + 官方 Full Art 的常规结构。
+3. 如果辅助详情页临时失败，但官方身份已确认且能提取 HERO DATA 人物肖像，则仍可加入英雄；Picker / Ban 使用肖像 + iconCrop，Key Art 只进入 `artLink`；
+4. 后续同步一旦拿到辅助目录的官方 CDN Icon，会继续下载到 `public/heroesImg/`，把英雄恢复为本地 Icon + 官方 Full Art 的常规结构；如果只有 Key Art 而没有可用头像，宁可要求人工复核，也不再把横向大图塞进头像网格。
 
 当前已加入 **Wang Wei / 王维，本地 ID 120，Camp ID 138，Mid Lane**。关系数据保持空数组和 `unverified`，不会因为新英雄同步而自动生成 Counter / Combo。
 
-王维官网同时提供了带装饰圆框的人物肖像和横向 Key Art。圆框肖像不再作为 UI `imageLink`，否则 Hero Picker / Ban 小头像会把金色边框一起显示。当前 UI 临时使用官方 Key Art 通过 `object-fit: cover` 做方形裁切；原圆框肖像只保存在 `recognitionImageLink` 作为识别模板来源。等辅助目录恢复稳定 Icon 后，`imageLink` 仍会切换回本地 `/heroesImg/120.*`。
+王维官网同时提供了带装饰圆框的人物肖像和横向 Key Art。横向 Key Art **不再允许作为 Hero Picker / Ban 的 `imageLink`**，因为即使 `object-fit: cover` 也会和现有近景方形英雄头像风格明显不一致。当前临时方案改为使用官方 HERO DATA 人物肖像，同时用独立 `iconCrop`（王维为 `x=62, y=36, scale=1.65`）把外圈装饰裁掉，保留接近现有英雄头像的头肩近景；`artLink` 继续只负责 Panel / Side 大图，`recognitionImageLink` 继续供 Auto BP。等辅助目录恢复稳定 Icon 后，`imageLink` 会切换回本地 `/heroesImg/120.*`，同时把 iconCrop 归一为 1x。
 
 ## Panel / Side 裁切数据如何同步
 

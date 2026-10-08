@@ -6,13 +6,14 @@ import { compareLocalHeroes, makePlan, nextLocalIds } from './compare.js';
 import { mergeOverride } from './generated.js';
 import { preferredChineseHeroName } from './localizedNames.js';
 import { normalizeName } from './normalize.js';
-import { extractOfficialHeroArt, extractOfficialPickRate } from './fetchOfficial.js';
+import { extractOfficialHeroArt, extractOfficialHeroPortrait, extractOfficialPickRate } from './fetchOfficial.js';
 import { heroArtCrop } from '../../src/data/heroArtFocus.js';
 import sharedHeroArtFocusOverrides from '../../src/data/heroArtFocusOverrides.js';
 import { mergeRuntimeHeroArtFocus, renderHeroArtFocusOverrides } from './artFocusSync.js';
 import type { CatalogHero, SourceSnapshot } from './types.js';
 import heroes from '../../src/components/HeroList.js';
 import { sortHeroes } from '../../src/control/heroSort.js';
+import { heroIconStyle } from '../../src/shared/heroIcon.js';
 
 const local = (overrides: Partial<Hero> = {}): Hero => ({
   id: 1,
@@ -54,12 +55,21 @@ test('Wang Wei uses reviewed simplified Chinese display name', () => {
   assert.equal(wangWei.campId, 138);
 });
 
-test('Wang Wei never exposes the framed official portrait as the UI icon', () => {
+test('Wang Wei uses a close-cropped official portrait for square icons and keeps key art separate', () => {
   const wangWei = heroes.find(hero => hero.id === 120)!;
-  assert.equal(wangWei.imageLink, wangWei.artLink);
-  assert.notEqual(wangWei.imageLink, wangWei.recognitionImageLink);
-  assert.match(wangWei.imageLink, /17895496027563\.jpg$/);
-  assert.match(wangWei.recognitionImageLink || '', /17893719635393\.png$/);
+  assert.match(wangWei.imageLink, /17893719635393\.png$/);
+  assert.equal(wangWei.imageLink, wangWei.recognitionImageLink);
+  assert.match(wangWei.artLink || '', /17895496027563\.jpg$/);
+  assert.deepEqual(wangWei.iconCrop, { x: 62, y: 36, scale: 1.65 });
+});
+
+test('temporary icon crop is disabled after a proper replacement icon takes over', () => {
+  const wangWei = heroes.find(hero => hero.id === 120)!;
+  assert.equal(heroIconStyle(wangWei)?.transform, 'scale(1.65)');
+  assert.equal(
+    heroIconStyle({ ...wangWei, imageLink: '/heroesImg/120.png' }),
+    undefined,
+  );
 });
 
 test('normalization matches historical aliases without creating a duplicate hero', () => {
@@ -171,6 +181,18 @@ test('image magic validation supports PNG/JPEG/WebP and rejects text', () => {
   assert.equal(detectImage(new TextEncoder().encode('not an image')), undefined);
 });
 
+test('official portrait parser selects HERO DATA portrait instead of wide key art', () => {
+  const html = `
+    <img class="hero-kv character-cover" src="https://camp.honorofkings.com/art/wang-wei-wide.jpg" alt="WANG WEI" width="1920" height="1080">
+    <img class="hero-data portrait" src="/zlkdatasys/ip/hero/en/image/wang-wei-portrait.png" alt="HERO DATA-WANG WEI" width="512" height="512">
+    <section>SKIN APPRECIATION</section>
+  `;
+  assert.equal(
+    extractOfficialHeroPortrait(html, 'https://world.honorofkings.com/zlkdatasys/ip/hero/en/138.html', 'Wang Wei'),
+    'https://world.honorofkings.com/zlkdatasys/ip/hero/en/image/wang-wei-portrait.png',
+  );
+});
+
 test('official artwork parser prefers main hero key art and ignores skins/icons', () => {
   const html = `
     <img class="site-logo" src="https://world.honorofkings.com/logo.png" alt="logo">
@@ -196,12 +218,16 @@ test('official artwork parser accepts trusted relative official assets and rejec
   );
 });
 
-test('safe override merge supports artwork metadata without touching relationships', () => {
+test('safe override merge supports icon and artwork metadata without touching relationships', () => {
   const result = mergeOverride(undefined, {
+    iconCrop: { x: 50, y: 50, scale: 1 },
+    recognitionImageLink: 'https://world.honorofkings.com/portrait.png',
     artLink: 'https://camp.honorofkings.com/art/hero.jpg',
     artPosition: '50% 22%',
     campId: 563,
   });
+  assert.deepEqual(result.iconCrop, { x: 50, y: 50, scale: 1 });
+  assert.equal(result.recognitionImageLink, 'https://world.honorofkings.com/portrait.png');
   assert.equal(result.artLink, 'https://camp.honorofkings.com/art/hero.jpg');
   assert.equal(result.artPosition, '50% 22%');
   assert.equal(result.campId, 563);
@@ -209,21 +235,21 @@ test('safe override merge supports artwork metadata without touching relationshi
 });
 
 
-test('broadcast artwork uses layout-specific crop presets and per-hero overrides', () => {
-  assert.deepEqual(heroArtCrop(1, 'panel'), { x: 50, y: 31, scale: 1.12 });
-  assert.deepEqual(heroArtCrop(1, 'side'), { x: 50, y: 29, scale: 1.22 });
-  assert.deepEqual(heroArtCrop(19, 'panel'), { x: 80, y: 34, scale: 1.16 });
-  assert.deepEqual(heroArtCrop(19, 'side'), { x: 83, y: 33, scale: 1.28 });
+test('broadcast artwork uses the current version-controlled per-hero crop presets', () => {
+  assert.deepEqual(heroArtCrop(1, 'panel'), sharedHeroArtFocusOverrides[1]?.panel);
+  assert.deepEqual(heroArtCrop(1, 'side'), sharedHeroArtFocusOverrides[1]?.side);
+  assert.deepEqual(heroArtCrop(19, 'panel'), sharedHeroArtFocusOverrides[19]?.panel);
+  assert.deepEqual(heroArtCrop(19, 'side'), sharedHeroArtFocusOverrides[19]?.side);
 });
 
 
-test('runtime director crop overrides static and default artwork framing', () => {
+test('runtime director crop overrides version-controlled artwork framing', () => {
   assert.deepEqual(
     heroArtCrop(19, 'side', { side: { x: 44, y: 23, scale: 1.41 } }),
     { x: 44, y: 23, scale: 1.41 },
   );
-  assert.deepEqual(heroArtCrop(19, 'panel'), { x: 80, y: 34, scale: 1.16 });
-  assert.deepEqual(heroArtCrop(1, 'side'), { x: 50, y: 29, scale: 1.22 });
+  assert.deepEqual(heroArtCrop(19, 'panel'), sharedHeroArtFocusOverrides[19]?.panel);
+  assert.deepEqual(heroArtCrop(1, 'side'), sharedHeroArtFocusOverrides[1]?.side);
 });
 
 test('runtime hero crop metadata can be promoted into tracked shared defaults', () => {

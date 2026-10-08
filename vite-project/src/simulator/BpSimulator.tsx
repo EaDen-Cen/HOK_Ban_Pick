@@ -1,4 +1,5 @@
 import { ViewportCanvas } from '../shared/ViewportCanvas';
+import { heroIconStyle } from '../shared/heroIcon';
 import { useEffect, useMemo } from 'react';
 import heroes from '../components/HeroList';
 import { phases, type Side } from '../shared/types';
@@ -13,8 +14,12 @@ function heroName(id:number|undefined) {
   return hero?.chineseName||hero?.englishName||'—';
 }
 
+function heroById(id:number|undefined) {
+  return heroes.find(item=>item.id===id);
+}
+
 function heroImage(id:number|undefined) {
-  return heroes.find(item=>item.id===id)?.imageLink||'';
+  return heroById(id)?.imageLink||'';
 }
 
 function LockCue() {
@@ -124,13 +129,14 @@ export function BpSimulator() {
     const side=key.startsWith('blue')?'blue':'red';
     const stateForSlot=visibleState(key);
     const id=state.slotHeroes[key];
+    const hero=heroById(id);
     return <div
       className={'sim-ban-slot '+side+' '+(stateForSlot.isCurrent?'active ':'')+(stateForSlot.visible?'visible ':'')+(stateForSlot.isLocked?'locked':'')}
       key={key}
       data-slot={key}
     >
       <div className="sim-ban-avatar" style={{width:state.banSize,height:state.banSize}}>
-        {stateForSlot.visible&&!stateForSlot.empty&&<img src={heroImage(id)} alt={heroName(id)} />}
+        {stateForSlot.visible&&!stateForSlot.empty&&<img src={heroImage(id)} alt={heroName(id)} style={heroIconStyle(hero)} />}
         {stateForSlot.visible&&stateForSlot.empty&&<span className="sim-empty-ban">∅</span>}
         {stateForSlot.isLocked&&<LockCue />}
       </div>
@@ -141,13 +147,14 @@ export function BpSimulator() {
     const key=side+'Pick'+(index+1);
     const stateForSlot=visibleState(key);
     const id=state.slotHeroes[key];
+    const hero=heroById(id);
     return <div
       className={'sim-player-row '+side+' '+(stateForSlot.isCurrent?'active ':'')+(stateForSlot.visible?'visible ':'')+(stateForSlot.isLocked?'locked':'')}
       key={key}
       data-slot={key}
     >
       <div className="sim-pick-avatar" style={{width:state.pickSize,height:state.pickSize}}>
-        {stateForSlot.visible&&<img src={heroImage(id)} alt={heroName(id)} />}
+        {stateForSlot.visible&&<img src={heroImage(id)} alt={heroName(id)} style={heroIconStyle(hero)} />}
         {!stateForSlot.visible&&<span className="sim-player-placeholder">{index+1}</span>}
       </div>
       <div className="sim-player-copy">
@@ -207,7 +214,7 @@ export function BpSimulator() {
           {heroPool.map(hero=>{
             const selected=activeHeroId===hero.id&&!!active;
             return <div className={'sim-hero-cell '+(selected?'selected':'')} key={hero.id}>
-              <img src={hero.imageLink} alt="" />
+              <img src={hero.imageLink} alt="" style={heroIconStyle(hero)} />
               <span>{hero.englishName}</span>
             </div>;
           })}

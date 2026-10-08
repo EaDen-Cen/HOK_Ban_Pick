@@ -1,5 +1,12 @@
 > [文档索引](../README.md) · 除特别注明外，文件路径以仓库根目录为基准，npm 命令在 `vite-project/` 中执行。
 
+## 2026-10-08：Wang Wei 方形头像风格二次修正
+
+- 用户对比现有英雄头像后确认：把横向 Key Art 直接 `object-fit: cover` 成方图虽然去掉了金色圆框，但人物比例和背景复杂度仍与现有近景方形 Icon 差异明显。
+- 新方案改用官方 HERO DATA 人物肖像作为临时 `imageLink`，新增 `Hero.iconCrop`，王维使用 `62% 36% / 1.65x` 近景裁切以去掉圆框并放大到头肩构图。
+- `artLink` 继续保留横向 Key Art，`recognitionImageLink` 继续作为识别模板；三种用途不再互相污染。
+- Hero Sync 新增 HERO DATA portrait 解析；辅助目录 Icon 缺失时只允许“官方人物肖像 + iconCrop”作为临时 UI 方案，**不再把横向 Key Art 当 Picker / Ban 图标**。
+- Control Hero Picker、英雄图片编辑器网格、Broadcast Ban/Board、Draft History、Simulator 等主要头像入口统一应用 `iconCrop`。
 ## 2026-10-08：Wang Wei 小头像来源修正
 
 - 现场截图确认 Wang Wei 的 `imageLink` 指向官网带装饰圆框的人物肖像，导致 Hero Picker / Ban 小头像直接显示金色圆框。
