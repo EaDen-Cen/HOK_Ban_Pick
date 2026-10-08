@@ -6,6 +6,11 @@ import { initialState, phases, type Action } from '../src/shared/types.js';
 import { normalizeState, pickRestriction } from '../src/shared/draftRules.js';
 import { playerAtSlot, solvePlayerSlots } from '../src/shared/playerSlots.js';
 import { createCaptureSlotPreset, readCaptureSlotPresets } from '../src/control/captureSlotPresets.js';
+import {
+  createPlayerIdRegionPreset,
+  readPlayerIdRegionPresets,
+  updatePlayerIdRegionPreset,
+} from '../src/control/playerIdRegionPresets.js';
 import { defaultCaptureSlots } from '../src/control/bpCaptureLayout.js';
 import heroes from '../src/components/HeroList.js';
 const apply=(s:Store,a:Action)=>s.apply(randomUUID(),s.data.revision,a);
@@ -64,4 +69,25 @@ test('invalid permutations and stale rosters are atomic; legacy state upgrades; 
   assert.deepEqual(readCaptureSlotPresets(JSON.stringify([preset]))[0].slots.playerIds,slots.playerIds);
   const legacy={...preset,playerIdLayoutVersion:undefined};
   assert.equal(readCaptureSlotPresets(JSON.stringify([legacy]))[0].slots.playerIds,undefined);
+});
+
+
+test('player ID region presets save, load and update independently from BP slots',()=>{
+  const regions={
+    blue1:{x:.1,y:.2,width:.2,height:.04},
+    blue2:{x:.1,y:.3,width:.2,height:.04},
+    red1:{x:.7,y:.2,width:.2,height:.04},
+  };
+  const preset=createPlayerIdRegionPreset({id:'ids-1',name:'Arena 1600x900',regions,sourceWidth:1600,sourceHeight:900,now:10});
+  const parsed=readPlayerIdRegionPresets(JSON.stringify([preset]));
+  assert.equal(parsed.length,1);
+  assert.equal(parsed[0].name,'Arena 1600x900');
+  assert.deepEqual(parsed[0].regions,regions);
+  assert.equal(parsed[0].sourceWidth,1600);
+  const updated=updatePlayerIdRegionPreset(parsed[0],{name:'Arena v2',regions:{...regions,blue1:{x:.11,y:.21,width:.19,height:.05}},now:20});
+  assert.equal(updated.name,'Arena v2');
+  assert.equal(updated.updatedAt,20);
+  assert.deepEqual(updated.regions.blue1,{x:.11,y:.21,width:.19,height:.05});
+  assert.deepEqual(defaultCaptureSlots.bluePick1,defaultCaptureSlots.bluePick1);
+  assert.deepEqual(readPlayerIdRegionPresets('invalid'),[]);
 });
