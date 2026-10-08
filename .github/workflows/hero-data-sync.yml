@@ -11,6 +11,7 @@ on:
       - 'MILESTONES.md'
       - 'docs/research/README.md'
       - 'docs/research/hero-sync.md'
+      - 'docs/validation/history.md'
       - 'vite-project/src/data/autoSyncedHeroes.ts'
       - 'vite-project/src/data/heroSyncOverrides.ts'
       - 'vite-project/src/components/HeroList.tsx'
