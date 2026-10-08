@@ -2,6 +2,7 @@ import heroes from '../components/HeroList.js';
 import { draftHeroUsed, draftRestriction } from '../shared/draftRules.js';
 import { phases, type MatchState, type Side } from '../shared/types.js';
 import { draftTurnAtPhase, previousDraftTurnStart } from '../shared/draftTurns.js';
+import { migrateLegacyHeroId } from '../data/heroIdOrder.js';
 
 export interface SimulatorPhaseSlot {
   side: Side;
@@ -16,6 +17,13 @@ export const simulatorAllSlotKeys = [
   'bluePick1','bluePick2','bluePick3','bluePick4','bluePick5',
   'redPick1','redPick2','redPick3','redPick4','redPick5',
 ] as const;
+
+
+export function migrateLegacySimulatorSlotHeroes(slotHeroes:Record<string,number>|undefined) {
+  return Object.fromEntries(
+    Object.entries(slotHeroes??{}).map(([key,id])=>[key,migrateLegacyHeroId(Number(id)) as number]),
+  ) as Record<string,number>;
+}
 
 export type SimulatorTestMode = 'bp' | 'lineup' | 'player-order';
 export type SimulatorScene = 'lobby' | 'draft';
