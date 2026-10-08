@@ -2,10 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import heroes from '../components/HeroList';
 import { useAccess } from '../shared/access';
 import { useMatch } from '../shared/useMatch';
-import { initialState, phases, type Side } from '../shared/types';
+import { initialState, phases, type MatchSettings, type MatchState, type Side } from '../shared/types';
 import {
   simulatorAllSlotKeys,
   randomizeSimulatorSlots,
+  simulatorPlayerOrdersMatch,
+  simulatorPlayerTestRoster,
+  simulatorRandomPlayerOrder,
+  type SimulatorPlayerProfile,
+  type SimulatorTestMode,
   simulatorNextTurnPhase,
   simulatorPreviousTurnPhase,
   simulatorRandomDelayMs,
@@ -26,10 +31,39 @@ function unique<T>(values:T[]) {
   return [...new Set(values)];
 }
 
+function sameNumbers(a:readonly (number|null)[],b:readonly number[]) {
+  return a.length===b.length&&a.every((value,index)=>value===b[index]);
+}
+
+function settingsWithPlayers(state:MatchState,bluePlayers:string[],redPlayers:string[]):MatchSettings {
+  return {
+    blueTeam:{...state.blueTeam,players:[...bluePlayers]},
+    redTeam:{...state.redTeam,players:[...redPlayers]},
+    blueScore:state.blueScore,
+    redScore:state.redScore,
+    gameNumber:state.gameNumber,
+    seriesFormat:state.seriesFormat,
+    stage:state.stage,
+    draftMode:state.draftMode,
+    draftRuleMode:state.draftRuleMode,
+    flowbornFormsIndependent:state.flowbornFormsIndependent,
+    firstPickSide:state.firstPickSide,
+    sideSwapMode:state.sideSwapMode,
+    language:state.language,
+    overlayLayout:state.overlayLayout,
+    scoreDisplay:state.scoreDisplay,
+    bpInputMode:'screen',
+    recognitionAutoAccept:state.recognitionAutoAccept,
+    recognitionThreshold:state.recognitionThreshold,
+    showHeroName:state.showHeroName,
+    artSourceMode:state.artSourceMode,
+  };
+}
+
 export function BpSimulatorControl() {
   const [state,update]=useBpSimulatorState();
   const access=useAccess('control');
-  const {snapshot}=useMatch('control',access.token,access.saveToken);
+  const {snapshot,status:controlStatus,error:controlError,pending:controlPending,send:sendControl,acknowledged}=useMatch('control',access.token,access.saveToken);
   const rules=snapshot?.state ?? initialState();
   const [ruleError,setRuleError]=useState('');
   const randomize=(current:typeof state, keys:string[],autoPlay=current.autoPlay)=>{
@@ -39,6 +73,13 @@ export function BpSimulatorControl() {
   const [swapSide,setSwapSide]=useState<Side>('blue');
   const [swapA,setSwapA]=useState(0);
   const [swapB,setSwapB]=useState(1);
+
+  const [controlLink,setControlLink]=useState(()=>localStorage.getItem('hok-simulator-control-link')==='1');
+  const [integrationMessage,setIntegrationMessage]=useState('');
+  const [setup,setSetup]=useState<{step:'resetting'|'syncing';blue:string[];red:string[]}>();
+  const [swapStartedAt,setSwapStartedAt]=useState<number|null>(null);
+  const [swapCompletedAt,setSwapCompletedAt]=useState<number|null>(null);
+  const [clock,setClock]=useState(Date.now());
 
   const sequence=useMemo(()=>phases(state.mode,state.firstPickSide),[state.mode,state.firstPickSide]);
   const activeSlots=simulatorSlotsForTurn(state.mode,state.firstPickSide,state.phaseIndex);
