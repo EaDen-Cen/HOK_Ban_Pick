@@ -49,6 +49,18 @@ stop-bp-simulator.bat
 
 它会停止监听 5173 端口的 Simulator。正常使用不再需要一直保留一个 CMD/PowerShell 窗口。
 
+## 英雄构图同步快捷脚本
+
+在 Control 中调好底部横排 Panel / 左右竖排 Side 的英雄裁切并点击保存后，可以双击：
+
+```text
+sync-hero-crops.bat
+```
+
+它等价于 `npm run hero:crop-sync`，会读取本机 `data/match.json` 中的英雄裁切覆盖，只把 Panel / Side 的 x/y/scale 写入 Git 跟踪的 `src/data/heroArtFocusOverrides.ts`。
+
+该脚本**不会自动上传 GitHub**。运行完成后应在 GitHub Desktop / Git 中检查这个文件的 diff，再正常 commit 和 push。这样可以避免把本机 `data/` 中的比赛、队伍或访问配置误提交。
+
 ## Director app window
 
 `start-broadcast.bat` now calls `vite-project/open-director.ps1` for the local operator.
