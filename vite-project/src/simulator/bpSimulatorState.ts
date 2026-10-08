@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import heroes from '../components/HeroList.js';
 import type { MatchState, Side } from '../shared/types.js';
-import { simulatorAllSlotKeys, type SimulatorPlayerProfile, type SimulatorScene, type SimulatorTestMode } from './bpSimulatorModel.js';
-import { migrateLegacyHeroId } from '../data/heroIdOrder.js';
+import { migrateLegacySimulatorSlotHeroes, simulatorAllSlotKeys, type SimulatorPlayerProfile, type SimulatorScene, type SimulatorTestMode } from './bpSimulatorModel.js';
 
 export type SimulatorSlotMap = Record<string,number>;
 
@@ -75,12 +74,6 @@ function clamp(value:number,min:number,max:number) {
   return Math.max(min,Math.min(max,value));
 }
 
-
-export function migrateLegacySimulatorSlotHeroes(slotHeroes:SimulatorSlotMap|undefined):SimulatorSlotMap {
-  return Object.fromEntries(
-    Object.entries(slotHeroes??{}).map(([key,id])=>[key,migrateLegacyHeroId(Number(id)) as number]),
-  );
-}
 
 function normalizeState(value:Partial<BpSimulatorState>|undefined,migrateLegacyIds=false):BpSimulatorState {
   const defaults=createDefaultBpSimulatorState();
