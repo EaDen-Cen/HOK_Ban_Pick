@@ -113,6 +113,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
   const zh=state.language==='zh';
   const t=translator(state.language);
   const [slots,setSlots]=useState<CaptureSlots>(readCaptureSlots);
+  useEffect(()=>{const refresh=()=>setSlots(readCaptureSlots());window.addEventListener('hok-capture-slots-changed',refresh);return()=>window.removeEventListener('hok-capture-slots-changed',refresh);},[]);
   const [autoWatch,setAutoWatch]=useState(()=>localStorage.getItem('hok-capture-auto-watch')==='1');
   const [busy,setBusy]=useState(false);
   const [message,setMessage]=useState('');
@@ -192,6 +193,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     const updated={...slots,[key]:region};
     setSlots(updated);
     localStorage.setItem(SLOTS_STORAGE,JSON.stringify(updated));
+    window.dispatchEvent(new Event('hok-capture-slots-changed'));
     setCalibrationPreview(buildCalibrationPreview(region));
     return updated;
   },[buildCalibrationPreview,slots]);
@@ -262,6 +264,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
     const next=normalizeCaptureSlots(selectedCapturePreset.slots);
     setSlots(next);
     localStorage.setItem(SLOTS_STORAGE,JSON.stringify(next));
+    window.dispatchEvent(new Event('hok-capture-slots-changed'));
     setCalibratingSlot(undefined);
     setCalibrationPreview('');
     setMessage(t('capturePresetLoaded',{name:selectedCapturePreset.name}));
@@ -997,6 +1000,7 @@ export function ScreenInput({ state, revision, token, disabled, send }: { state:
               const next=normalizeCaptureSlots(defaultCaptureSlots);
               setSlots(next);
               localStorage.setItem(SLOTS_STORAGE,JSON.stringify(next));
+              window.dispatchEvent(new Event('hok-capture-slots-changed'));
               setCalibratingSlot(undefined);
               setCalibrationPreview('');
               setMessage(t('captureExplicitSlotsReset'));

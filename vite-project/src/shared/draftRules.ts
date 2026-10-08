@@ -1,3 +1,4 @@
+import { normalizePlayerSlotOrder, playerAtSlot } from './playerSlots.js';
 import heroes from '../components/HeroList.js';
 import { initialState, type GameDraftRecord, type MatchState, type Side, type Team } from './types.js';
 
@@ -30,8 +31,8 @@ function historyIncludesHero(state: MatchState, ids: number[], heroId: number) {
 }
 
 export function historyForTeam(record: GameDraftRecord, teamId: string) {
-  if (record.blueTeam.id === teamId) return { team: record.blueTeam, bans: record.blueBans ?? [], picks: record.bluePicks, assignments: record.blueAssignments };
-  if (record.redTeam.id === teamId) return { team: record.redTeam, bans: record.redBans ?? [], picks: record.redPicks, assignments: record.redAssignments };
+  if (record.blueTeam.id === teamId) return { team: record.blueTeam, bans: record.blueBans ?? [], picks: record.bluePicks, assignments: record.blueAssignments, playerSlotOrder: normalizePlayerSlotOrder(record.bluePlayerSlotOrder) };
+  if (record.redTeam.id === teamId) return { team: record.redTeam, bans: record.redBans ?? [], picks: record.redPicks, assignments: record.redAssignments, playerSlotOrder: normalizePlayerSlotOrder(record.redPlayerSlotOrder) };
   return undefined;
 }
 
@@ -46,12 +47,13 @@ export function pickRestriction(state: MatchState, side: Side, playerIndex: numb
     })) return 'usedByTeam';
     return;
   }
-  const identity = playerIdentity(team.players[playerIndex] || '');
+  const identity = playerIdentity(playerAtSlot(state, side, playerIndex).id);
   if (!identity) return 'playerMissing';
   // Identity follows the person when a substitute changes slots or a team changes sides.
   if (state.draftHistory.some(record => record.id !== state.committedGameId && (['blue', 'red'] as const).some(recordSide =>
     record[`${recordSide}Team`].players.some((player, index) => {
-      const assigned = record[`${recordSide}Assignments`][index];
+      const slot = normalizePlayerSlotOrder(record[`${recordSide}PlayerSlotOrder`]).indexOf(index);
+      const assigned = record[`${recordSide}Assignments`][slot];
       return playerIdentity(player) === identity && sameDraftHero(state, assigned, heroId);
     })))) return 'usedByPlayer';
 }
@@ -92,6 +94,8 @@ export function normalizeState(raw: MatchState): MatchState {
   const normalizeAssignments = (value: Array<number | null> | undefined, picks: number[]) =>
     Array.from({ length: 5 }, (_, index) => value?.[index] ?? picks[index] ?? null);
   const state = { ...defaults, ...raw,
+    bluePlayerSlotOrder: normalizePlayerSlotOrder(raw.bluePlayerSlotOrder),
+    redPlayerSlotOrder: normalizePlayerSlotOrder(raw.redPlayerSlotOrder),
     blueTeam: normalizeTeam(raw.blueTeam, 'blue'), redTeam: normalizeTeam(raw.redTeam, 'red'),
     blueAssignments: normalizeAssignments(raw.blueAssignments, raw.bluePicks ?? []),
     redAssignments: normalizeAssignments(raw.redAssignments, raw.redPicks ?? []),
@@ -100,6 +104,8 @@ export function normalizeState(raw: MatchState): MatchState {
     heroArtOverrides: raw.heroArtOverrides ?? {},
     heroDataOverrides: raw.heroDataOverrides ?? {},
     draftHistory: (raw.draftHistory ?? []).map(record => ({ ...record,
+      bluePlayerSlotOrder: normalizePlayerSlotOrder(record.bluePlayerSlotOrder),
+      redPlayerSlotOrder: normalizePlayerSlotOrder(record.redPlayerSlotOrder),
       firstPickSide: record.firstPickSide ?? 'blue',
       blueTeam: normalizeTeam(record.blueTeam, 'blue'), redTeam: normalizeTeam(record.redTeam, 'red'),
       blueBans: [...(record.blueBans ?? [])],

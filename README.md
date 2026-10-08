@@ -229,3 +229,7 @@ vite-project/       应用与 npm 命令执行目录
 开发和验证命令见 [应用目录说明](vite-project/README.md)。OBS、跨设备公网和音画同步仍需真实设备彩排；历史自动测试结果不能代替现场验收。
 
 基于 qiqi47 的原项目，保留原英雄数据及 [MIT 许可](LICENSE.txt)。[原中英文 README](docs/archive/legacy/upstream-readme.md) 已完整归档，其旧站点及旧安装说明仅作历史参考。
+
+## 选手对齐、恢复、HUD 与赛后 MVP
+
+已接入每局选手槽位映射、常驻本地 OCR、备份/停机恢复、局内 HUD 和赛后数据草稿/MVP 页面。参见 [功能与操作说明](docs/guides/player-alignment-recovery-hud.md)。真实游戏和 OBS 验收状态见项目里程碑。

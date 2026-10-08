@@ -8,7 +8,7 @@ export type CaptureSlotKey =
   | 'bluePick1' | 'bluePick2' | 'bluePick3' | 'bluePick4' | 'bluePick5'
   | 'redPick1' | 'redPick2' | 'redPick3' | 'redPick4' | 'redPick5';
 
-export type CaptureSlots = Record<CaptureSlotKey, NormalizedCaptureRegion>;
+export type CaptureSlots = Record<CaptureSlotKey, NormalizedCaptureRegion> & { playerIds?: Record<string, NormalizedCaptureRegion> };
 
 export interface LegacyCaptureZones {
   bluePick: NormalizedCaptureRegion;
@@ -94,10 +94,12 @@ export function slotsFromLegacyZones(zones:LegacyCaptureZones):CaptureSlots {
 export const defaultCaptureSlots:CaptureSlots=slotsFromLegacyZones(defaultLegacyZones);
 
 export function normalizeCaptureSlots(value:Partial<CaptureSlots>|undefined):CaptureSlots {
-  return Object.fromEntries(captureSlotKeys.map(key=>[
+  const result = Object.fromEntries(captureSlotKeys.map(key=>[
     key,
     normalizeCaptureRegion(value?.[key] ?? defaultCaptureSlots[key]),
-  ])) as CaptureSlots;
+  ])) as unknown as CaptureSlots;
+  if (value?.playerIds) result.playerIds = Object.fromEntries(Object.entries(value.playerIds).filter(([key])=>/^(blue|red)[1-5]$/.test(key)).map(([key,region])=>[key,normalizeCaptureRegion(region)]));
+  return result;
 }
 
 export function slotMeta(key:CaptureSlotKey) {

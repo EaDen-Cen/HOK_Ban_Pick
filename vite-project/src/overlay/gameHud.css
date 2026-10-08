@@ -1,0 +1,20 @@
+.game-hud { position:absolute; top:20px; left:50%; transform:translateX(-50%); width:1100px; color:#f4f5f9; font-family:Arial,sans-serif; filter:drop-shadow(0 5px 12px #0008); }
+.game-hud header {display:flex; align-items:center; background:#111720ef; border:1px solid #818b9b70; border-radius:8px 8px 0 0; min-height:70px;}
+.game-hud-team {flex:1; display:flex; align-items:center; gap:14px; padding:12px 22px; min-width:0; border-top:3px solid #48b5ee;}
+.game-hud-team.red {border-color:#f07180;}
+.game-hud-team:last-child {flex-direction:row-reverse;}
+.game-hud-team strong {font-size:25px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.game-hud-logo {width:42px; height:42px; object-fit:contain;}
+.game-hud-series {font-size:38px; font-weight:800; margin-left:auto;}
+.game-hud-team:last-child .game-hud-series {margin-left:0; margin-right:auto;}
+.game-hud-center {text-align:center; width:225px; flex-shrink:0;}
+.game-hud-center b {font-size:22px;}
+.game-hud-center small {display:block; margin-top:5px; color:#bec7d4; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.game-hud-stats {display:flex; gap:24px; align-items:center; justify-content:center; background:#111720dd; padding:9px 16px; border-radius:0 0 8px 8px; font-size:16px;}
+.game-hud-stats span {display:flex; align-items:center; gap:10px;}
+.game-hud-stats b {font-size:21px;}
+.game-hud-stats img {width:22px; height:22px; object-fit:contain;}
+.game-hud.compact {width:900px;}
+
+.game-hud-stats {flex-wrap:wrap;}
+.game-hud-stats em {font-style:normal;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}

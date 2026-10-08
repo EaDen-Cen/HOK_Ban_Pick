@@ -1,3 +1,7 @@
+import { postGameMetrics } from '../src/shared/postGame.js';
+import { normalizePlayerSlotOrder } from '../src/shared/playerSlots.js';
+import { nextLiveGameStats } from '../src/shared/liveGame.js';
+import { validPlayerSlotOrder } from '../src/shared/playerSlots.js';
 import { existsSync, mkdirSync, readFileSync, renameSync, openSync, writeSync, fsyncSync, closeSync } from 'node:fs';
 import type { TeamPresetStore } from './teamPresets.js';
 import { dirname } from 'node:path';
@@ -34,7 +38,9 @@ function portraitURL(value: unknown): asserts value is string {
   throw new Error('portraitInvalid');
 }
 function clearDraft(state: MatchState) {
+  state.liveGameStats = nextLiveGameStats(state.liveGameStats);
   Object.assign(state, {
+    bluePlayerSlotOrder: [0,1,2,3,4], redPlayerSlotOrder: [0,1,2,3,4],
     blueBans: [], redBans: [], bluePicks: [], redPicks: [],
     blueAssignments: [null, null, null, null, null],
     redAssignments: [null, null, null, null, null],
@@ -146,6 +152,49 @@ export class Store {
     const next = copy(this.data);
     const state = next.state;
     switch (action.type) {
+    case 'post_game_begin': {
+      const game=state.draftHistory.find(record=>record.id===state.committedGameId);
+      if(!game)throw new Error('先确认有效局阵容 / Commit the game first');
+      next.history.push(copy(state));state.activePostGameReportId=game.id;
+      if(!state.postGameReports.some(report=>report.id===game.id))state.postGameReports.push({id:game.id,gameNumber:game.gameNumber,seriesFormat:state.seriesFormat,stage:state.stage,selectedMvpPlayerId:null,selectedMvpRowId:null,players:(['blue','red'] as const).flatMap(side=>game[`${side}Assignments`].map((heroId,slot)=>{
+        const team=game[`${side}Team`],rosterIndex=normalizePlayerSlotOrder(game[`${side}PlayerSlotOrder`])[slot];
+        return {rowId:`${team.id}:${rosterIndex}`,playerId:team.players[rosterIndex],side,slot,rosterIndex,teamName:team.name,portrait:team.playerPortraits[rosterIndex],role:team.playerRoles[rosterIndex],heroId,fields:{}};
+      }))});
+      break;
+    }
+    case 'post_game_fields': {
+      const report=state.postGameReports.find(r=>r.id===action.reportId);
+      if(!report||!Array.isArray(action.updates)||action.updates.length<1||action.updates.length>100)throw new Error('赛后报告无效 / Invalid post-game report');
+      for(const update of action.updates){
+        if(!report.players.some(p=>p.rowId===update.rowId)||!postGameMetrics.includes(update.metric))throw new Error('赛后字段无效 / Invalid post-game field');
+        const field=update.field;
+        if(!field||typeof field.value!=='number'||!Number.isFinite(field.value)||field.value<0||field.value>1e9||typeof field.confidence!=='number'||!Number.isFinite(field.confidence)||field.confidence<0||field.confidence>1||typeof field.manual!=='boolean'||!['overview','survival','damage','team'].includes(field.sourcePage))throw new Error('赛后数据无效 / Invalid post-game value');
+        if(['damageShare','participation'].includes(update.metric)&&field.value>100)throw new Error('百分比必须在 0–100 / Percentage must be 0–100');
+        if(['kills','deaths','assists','gold','totalDamage','healing','damageTaken'].includes(update.metric)&&!Number.isInteger(field.value))throw new Error('此项须输入整数 / Integer required');
+        if(field.evidence!==undefined){shortText(field.evidence,200);if(!/^\/uploads\/player-portraits\/[a-f0-9-]{36}\.png$/.test(field.evidence))throw new Error('Invalid evidence');}
+      }
+      next.history.push(copy(state));
+      for(const update of action.updates){const field=update.field,player=report.players.find(p=>p.rowId===update.rowId)!;if(player.fields[update.metric]?.manual&&!field.manual)continue;player.fields[update.metric]={value:field.value,confidence:field.confidence,manual:field.manual,sourcePage:field.sourcePage,...(field.evidence?{evidence:field.evidence}:{})};}
+      break;
+    }
+    case 'select_mvp': {
+      const report=state.postGameReports.find(r=>r.id===action.reportId),player=report?.players.find(p=>p.rowId===action.rowId);
+      if(!report||(action.rowId!==null&&!player))throw new Error('MVP 选手无效 / Invalid MVP player');
+      next.history.push(copy(state));state.activePostGameReportId=report.id;
+      report.selectedMvpRowId=player?.rowId??null;report.selectedMvpPlayerId=player?.playerId??null;
+      break;
+    }
+    case 'live_game_stats': {
+      const stats=action.stats;
+      if(!stats || !['compact','full'].includes(stats.density) || !Array.isArray(stats.neutralObjectives) || stats.neutralObjectives.length>6) throw new Error('局内统计格式无效 / Invalid live stats');
+      for(const value of [stats.blueKills,stats.redKills,stats.blueTowers,stats.redTowers]) integer(value,0,999);
+      for(const item of stats.neutralObjectives){shortText(item.id,100);shortText(item.name,24);if(!item.id||!item.name.trim())throw new Error('资源名称不能为空 / Objective name required');portraitURL(item.icon);integer(item.blue,0,999);integer(item.red,0,999);}
+      if(new Set(stats.neutralObjectives.map(item=>item.id)).size!==stats.neutralObjectives.length)throw new Error('资源编号重复 / Duplicate objective ID');
+      next.history.push(copy(state));
+      state.liveGameStats={blueKills:stats.blueKills,redKills:stats.redKills,blueTowers:stats.blueTowers,redTowers:stats.redTowers,density:stats.density,neutralObjectives:stats.neutralObjectives.map(item=>({id:item.id,name:item.name.trim(),icon:item.icon,blue:item.blue,red:item.red}))};
+      break;
+    }
+
     case 'load_team_preset': {
       if (state.currentPhase !== 0 || state.draftHistory.length || state.committedGameId) throw new Error('presetLocked');
       if (!['blue', 'red'].includes(action.side)) throw new Error('presetInvalid');
@@ -158,6 +207,7 @@ export class Store {
         if (new Set(ids).size !== ids.length) throw new Error('duplicatePlayerIds');
       }
       next.history.push(copy(state));
+      state[`${action.side}PlayerSlotOrder`] = [0,1,2,3,4];
       state[action.side === 'blue' ? 'blueTeam' : 'redTeam'] = { id: preset.id, name: preset.name, logo: preset.logo, players: [...preset.players], playerRoles: [...preset.playerRoles], playerPortraits: [...preset.playerPortraits] };
       break;
     }
@@ -237,6 +287,7 @@ export class Store {
       state.draftHistory.push({
         id, firstPickSide: state.firstPickSide, gameNumber: currentGame(state), committedAt: this.clock(),
         blueTeam: copy(state.blueTeam), redTeam: copy(state.redTeam),
+        bluePlayerSlotOrder: [...state.bluePlayerSlotOrder], redPlayerSlotOrder: [...state.redPlayerSlotOrder],
         blueBans: [...state.blueBans], redBans: [...state.redBans],
         bluePicks: [...state.bluePicks], redPicks: [...state.redPicks],
         blueAssignments: [...state.blueAssignments] as number[],
@@ -254,6 +305,7 @@ export class Store {
     case 'swap_sides': {
       if (state.currentPhase > 0 || state.committedGameId) throw new Error('swapOnlyBetweenGames');
       next.history.push(copy(state));
+      [state.bluePlayerSlotOrder, state.redPlayerSlotOrder] = [state.redPlayerSlotOrder, state.bluePlayerSlotOrder];
       [state.blueTeam, state.redTeam] = [state.redTeam, state.blueTeam];
       [state.blueScore, state.redScore] = [state.redScore, state.blueScore];
       if (state.sideSwapMode === 'colorsOnly') state.displayLeftSide = state.displayLeftSide === 'blue' ? 'red' : 'blue';
@@ -269,6 +321,15 @@ export class Store {
       const assignments = state[`${action.team}Assignments`];
       [assignments[action.from], assignments[action.to]] = [assignments[action.to], assignments[action.from]];
       validateLineup(state, true);
+      break;
+    }
+    case 'set_player_slot_order': {
+      if (state.committedGameId) throw new Error('gameAlreadyCommitted');
+      if (!['blue','red'].includes(action.side) || !validPlayerSlotOrder(action.order)) throw new Error('选手顺序必须包含五名不同选手 / Invalid player order');
+      if (JSON.stringify(action.expectedPlayers) !== JSON.stringify(state[`${action.side}Team`].players)) throw new Error('阵容已改变，请重新识别 / Roster changed; scan again');
+      next.history.push(copy(state));
+      state[`${action.side}PlayerSlotOrder`] = [...action.order];
+      if (state.draftComplete) validateLineup(state, true);
       break;
     }
     case 'set_lineup_assignments': {
@@ -309,6 +370,7 @@ export class Store {
       // Reset match progress but preserve tournament configuration. This mirrors
       // the proven LoL workflow: clearing a match should not force the director
       // to rebuild event identity, BO format, BP rules or presentation settings.
+      reset.liveGameStats = nextLiveGameStats(state.liveGameStats);
       reset.stage = state.stage;
       reset.seriesFormat = state.seriesFormat;
       reset.draftMode = state.draftMode;
