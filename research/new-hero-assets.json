@@ -1,6 +1,6 @@
 [
   {
-    "id": 97,
+    "id": 114,
     "englishName": "Yango",
     "campId": 125,
     "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/en5o11rK.png",
@@ -11,7 +11,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/125"
   },
   {
-    "id": 98,
+    "id": 104,
     "englishName": "Flowborn (Tank)",
     "campId": 581,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/jbrX5mQc.jpeg",
@@ -22,7 +22,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/581"
   },
   {
-    "id": 99,
+    "id": 110,
     "englishName": "Garuda",
     "campId": 110,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/default/h6UHy1TN.png",
@@ -33,7 +33,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/110"
   },
   {
-    "id": 100,
+    "id": 98,
     "englishName": "Arke",
     "campId": 116,
     "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/IUMPYUy4.png",
@@ -44,7 +44,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/116"
   },
   {
-    "id": 101,
+    "id": 102,
     "englishName": "Bai Qi",
     "campId": 120,
     "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/uY7c38Tt.png",
@@ -55,7 +55,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/120"
   },
   {
-    "id": 102,
+    "id": 103,
     "englishName": "Fatih",
     "campId": 128,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/default/6IY77h7c.png",
@@ -66,7 +66,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/128"
   },
   {
-    "id": 103,
+    "id": 109,
     "englishName": "Umbrosa",
     "campId": 558,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/ioDVAbAf.jpg",
@@ -77,7 +77,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/558"
   },
   {
-    "id": 104,
+    "id": 107,
     "englishName": "Flowborn (Marksman)",
     "campId": 584,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/WuG07My1.jpeg",
@@ -88,7 +88,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/584"
   },
   {
-    "id": 105,
+    "id": 111,
     "englishName": "Lapulapu",
     "campId": 168,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/default/AuWJ7G0J.png",
@@ -99,7 +99,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/168"
   },
   {
-    "id": 106,
+    "id": 101,
     "englishName": "Chano",
     "campId": 177,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/default/sJURXorM.png",
@@ -110,7 +110,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/177"
   },
   {
-    "id": 107,
+    "id": 97,
     "englishName": "Xuance",
     "campId": 195,
     "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/keW8Hfo0.png",
@@ -121,7 +121,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/195"
   },
   {
-    "id": 108,
+    "id": 115,
     "englishName": "Annette",
     "campId": 640,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/49o0xBua.png",
@@ -132,7 +132,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/640"
   },
   {
-    "id": 109,
+    "id": 96,
     "englishName": "Yixing",
     "campId": 197,
     "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/RLA5jvBk.png",
@@ -143,7 +143,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/197"
   },
   {
-    "id": 110,
+    "id": 99,
     "englishName": "Sakeer",
     "campId": 534,
     "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/ionwVFtV.png",
@@ -154,7 +154,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/534"
   },
   {
-    "id": 111,
+    "id": 113,
     "englishName": "Haya",
     "campId": 521,
     "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/iIdXNhQ5.png",
@@ -165,7 +165,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/521"
   },
   {
-    "id": 112,
+    "id": 118,
     "englishName": "Devara",
     "campId": 537,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/default/MagzAk8i.png",
@@ -176,7 +176,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/537"
   },
   {
-    "id": 113,
+    "id": 100,
     "englishName": "Feyd",
     "campId": 542,
     "iconUrl": "https://camp.honorofkings.com/social/game/src/image_hero_head_128*128/m8aOqFQE.png",
@@ -187,7 +187,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/542"
   },
   {
-    "id": 114,
+    "id": 112,
     "englishName": "Chicha",
     "campId": 172,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/lkU98jAV.png",
@@ -198,7 +198,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/172"
   },
   {
-    "id": 115,
+    "id": 116,
     "englishName": "Florentino",
     "campId": 631,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/skJXGWLF.png",
@@ -209,7 +209,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/631"
   },
   {
-    "id": 116,
+    "id": 117,
     "englishName": "Lorion",
     "campId": 635,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/UDiFFfId.png",
@@ -220,7 +220,7 @@
     "catalogUrl": "https://wiki.bittopup.com/hok/635"
   },
   {
-    "id": 117,
+    "id": 105,
     "englishName": "Flowborn (Mage)",
     "campId": 582,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/66xErXNs.jpeg",
