@@ -88,15 +88,35 @@ export function BpSimulatorControl() {
   const activeKey=activeKeys[0]??'';
   const activeLocked=activeKeys.length>0&&activeKeys.every(key=>state.locked.includes(key));
 
+  const controlRosterMatches=!!snapshot
+    && snapshot.state.blueTeam.players.every((value,index)=>value===state.bluePlayers[index])
+    && snapshot.state.redTeam.players.every((value,index)=>value===state.redPlayers[index]);
+  const playerOrderMatched=!!snapshot&&controlRosterMatches
+    && simulatorPlayerOrdersMatch(snapshot.state.bluePlayerSlotOrder,state.bluePlayerOrder)
+    && simulatorPlayerOrdersMatch(snapshot.state.redPlayerSlotOrder,state.redPlayerOrder);
+  const swapExpected=[0,1,2,3,4].map(index=>state.slotHeroes[swapSide+'Pick'+(index+1)]).filter((value):value is number=>Number.isInteger(value));
+  const swapMatched=!!snapshot&&swapExpected.length===5&&sameNumbers(snapshot.state[`${swapSide}Assignments`],swapExpected);
+
   const patch=(partial:Partial<typeof state>)=>update(current=>({...current,...partial}));
 
-  const resetProgress=()=>update(current=>({
-    ...current,
-    phaseIndex:0,
-    emptyBans:[],
-    locked:[],
-    autoPlay:false,
-  }));
+  const resetProgress=()=>{
+    update(current=>({
+      ...current,
+      phaseIndex:0,
+      emptyBans:[],
+      locked:[],
+      autoPlay:false,
+      scene:current.testMode==='player-order'?'lobby':'draft',
+      bluePlayerOrder:current.testMode==='player-order'?[0,1,2,3,4]:current.bluePlayerOrder,
+      redPlayerOrder:current.testMode==='player-order'?[0,1,2,3,4]:current.redPlayerOrder,
+      playerOrderTestStartedAt:null,
+      playerOrderTestCompletedAt:null,
+    }));
+    if(controlLink&&snapshot&&!snapshot.state.committedGameId&&!controlPending&&controlStatus==='Connected') {
+      sendControl({type:'reset_draft'});
+      setIntegrationMessage('已同时发送 Control BP 重置；英雄/选手结果仍由屏幕识别重新写入。');
+    }
+  };
 
   const setDraftMode=(mode:typeof state.mode)=>update(current=>({
     ...current,
@@ -181,10 +201,110 @@ export function BpSimulatorControl() {
     };
   });
 
-  const swapPicks=()=>update(current=>({
+  const swapPicks=()=>{
+    update(current=>({
+      ...current,
+      testMode:'lineup',
+      scene:'draft',
+      slotHeroes:swapSimulatorPickHeroes(current.slotHeroes,swapSide,swapA,swapB),
+    }));
+    setSwapStartedAt(Date.now());
+    setSwapCompletedAt(null);
+  };
+
+  const setTestMode=(testMode:SimulatorTestMode)=>update(current=>({
     ...current,
-    slotHeroes:swapSimulatorPickHeroes(current.slotHeroes,swapSide,swapA,swapB),
+    testMode,
+    scene:testMode==='player-order'?'lobby':'draft',
+    autoPlay:false,
+    playerOrderTestStartedAt:null,
+    playerOrderTestCompletedAt:null,
   }));
+
+  const preparePlayerOrderTest=()=>{
+    const roster=simulatorPlayerTestRoster(state.playerProfile);
+    update(current=>({
+      ...current,
+      testMode:'player-order',
+      scene:'lobby',
+      bluePlayers:roster.blue,
+      redPlayers:roster.red,
+      bluePlayerOrder:[0,1,2,3,4],
+      redPlayerOrder:[0,1,2,3,4],
+      playerRosterPrepared:!controlLink,
+      playerOrderTestStartedAt:null,
+      playerOrderTestCompletedAt:null,
+      phaseIndex:0,
+      locked:[],
+      emptyBans:[],
+      autoPlay:false,
+    }));
+    setIntegrationMessage('');
+    if(!controlLink) return;
+    if(!snapshot||controlStatus!=='Connected'||controlPending) {
+      setIntegrationMessage('Control 尚未准备好，无法同步测试名单。');
+      return;
+    }
+    if(snapshot.state.committedGameId) {
+      setIntegrationMessage('当前 Control 已提交本局；请进入下一局或重置比赛后再准备玩家排序测试。');
+      return;
+    }
+    setSetup({step:'resetting',blue:roster.blue,red:roster.red});
+    sendControl({type:'reset_draft'});
+    setIntegrationMessage('正在重置 Control，并准备同步 10 个测试 Player ID…');
+  };
+
+  const startPlayerOrderTest=()=>update(current=>{
+    if(!current.playerRosterPrepared) return current;
+    return {
+      ...current,
+      testMode:'player-order',
+      scene:'draft',
+      phaseIndex:0,
+      locked:[],
+      emptyBans:[],
+      autoPlay:false,
+      bluePlayerOrder:simulatorRandomPlayerOrder(),
+      redPlayerOrder:simulatorRandomPlayerOrder(),
+      playerOrderTestStartedAt:Date.now(),
+      playerOrderTestCompletedAt:null,
+    };
+  });
+
+  useEffect(()=>{
+    if(!setup||setup.step!=='resetting'||acknowledged?.action.type!=='reset_draft'||controlPending) return;
+    sendControl({type:'settings',settings:settingsWithPlayers(rules,setup.blue,setup.red)});
+    setSetup({...setup,step:'syncing'});
+    setIntegrationMessage('Control 已重置，正在同步测试队伍名单…');
+  },[acknowledged,controlPending,rules,sendControl,setup]);
+
+  useEffect(()=>{
+    if(!setup||setup.step!=='syncing'||!snapshot) return;
+    const blueOk=snapshot.state.blueTeam.players.every((value,index)=>value===setup.blue[index]);
+    const redOk=snapshot.state.redTeam.players.every((value,index)=>value===setup.red[index]);
+    if(!blueOk||!redOk) return;
+    update(current=>({...current,playerRosterPrepared:true}));
+    setSetup(undefined);
+    setIntegrationMessage('测试名单已同步到 Control。现在可在采集页按 START。');
+  },[setup,snapshot,update]);
+
+  useEffect(()=>{
+    if(!state.playerOrderTestStartedAt||state.playerOrderTestCompletedAt||!playerOrderMatched) return;
+    update(current=>({...current,playerOrderTestCompletedAt:Date.now()}));
+  },[playerOrderMatched,state.playerOrderTestCompletedAt,state.playerOrderTestStartedAt,update]);
+
+  useEffect(()=>{
+    if(!swapStartedAt||swapCompletedAt||!swapMatched) return;
+    setSwapCompletedAt(Date.now());
+  },[swapCompletedAt,swapMatched,swapStartedAt]);
+
+  useEffect(()=>{
+    if((state.playerOrderTestStartedAt&&!state.playerOrderTestCompletedAt)||(swapStartedAt&&!swapCompletedAt)) {
+      const timer=window.setInterval(()=>setClock(Date.now()),50);
+      return()=>window.clearInterval(timer);
+    }
+    setClock(Date.now());
+  },[state.playerOrderTestStartedAt,state.playerOrderTestCompletedAt,swapStartedAt,swapCompletedAt]);
 
   useEffect(()=>{
     if(!state.autoPlay||state.phaseIndex>=sequence.length) return;
