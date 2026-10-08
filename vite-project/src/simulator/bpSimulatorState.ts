@@ -52,7 +52,7 @@ export function createDefaultBpSimulatorState():BpSimulatorState {
     autoPlay:false,
     intervalMinMs:900,
     intervalMaxMs:1800,
-    transitionHoldMs:950,
+    transitionHoldMs:1100,
     preselectSwitching:true,
     banSize:38,
     pickSize:72,
