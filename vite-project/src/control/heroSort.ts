@@ -15,12 +15,6 @@ const laneOrder: Record<string, number> = {
   Roaming: 4,
 };
 
-function releaseTime(hero: Hero) {
-  if (!hero.releaseDate) return undefined;
-  const value = Date.parse(hero.releaseDate);
-  return Number.isFinite(value) ? value : undefined;
-}
-
 function fallbackName(a: Hero, b: Hero) {
   return zhCollator.compare(a.chineseName, b.chineseName)
     || enCollator.compare(a.englishName, b.englishName)
@@ -33,14 +27,10 @@ export function compareHeroes(a: Hero, b: Hero, mode: HeroSortMode) {
     return zhCollator.compare(a.chineseName, b.chineseName) || enCollator.compare(a.englishName, b.englishName);
   case 'name-en':
     return enCollator.compare(a.englishName, b.englishName) || zhCollator.compare(a.chineseName, b.chineseName);
-  case 'release': {
-    const av = releaseTime(a);
-    const bv = releaseTime(b);
-    if (av === undefined && bv !== undefined) return 1;
-    if (av !== undefined && bv === undefined) return -1;
-    if (av !== undefined && bv !== undefined && av !== bv) return bv - av; // newest first
-    return fallbackName(a, b);
-  }
+  case 'release':
+    // Canonical hero IDs are assigned oldest -> newest launch order.
+    // Higher ID therefore means a newer global-server release.
+    return b.id - a.id;
   case 'pick-rate': {
     const av = a.officialPickRate;
     const bv = b.officialPickRate;
@@ -72,7 +62,7 @@ export function sortHeroes(
 }
 
 export function heroSortCoverage(source: Hero[], mode: HeroSortMode) {
-  if (mode === 'release') return source.filter(hero => Boolean(hero.releaseDate)).length;
+  if (mode === 'release') return source.length;
   if (mode === 'pick-rate') return source.filter(hero => hero.officialPickRate !== undefined).length;
   return source.length;
 }
