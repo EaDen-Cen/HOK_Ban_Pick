@@ -15,6 +15,24 @@
 
 `npm run benchmark:players` 用合成英文 ID 测量十区域批量 OCR。容器测试不能代替真实游戏字体、画面缩放、OBS 和导播电脑的约一秒级开局验收。
 
+## Simulator 联动测试
+
+BP Simulator 控制台现在按用途分成 **BP 识别、换英雄同步、选手 ID 排序** 三种测试。采集页仍保持为独立窗口，Control 应选择该采集页而不是 Simulator 控制页。
+
+开启“Control 联动测试”是一个显式安全开关：浏览器无法可靠、跨端口确认 `getDisplayMedia` 当前究竟选中了哪个窗口，因此 Simulator 不会仅凭 Control 的“屏幕识别”状态就擅自改比赛。只有开启这个开关后，“重置进度”才会同时发送 `reset_draft`，选手 ID 测试才会把生成的赛前 10 人名单写入 Control。英雄 Pick、换英雄结果和 P1–P5 顺序**不会直接同步答案**，仍必须由 Control 从 Simulator 画面识别，以免测试失真。
+
+选手 ID 排序测试流程：
+
+1. 选择测试集：默认混合英文+简中，也可单独测试英文/数字/符号、OCR 易混淆字符、简中或日文。
+2. 点击“随机 10 个 ID / 准备房间”。开启 Control 联动时，Simulator 先重置 Control Draft，再把这 10 个 ID 按双方各五人同步为赛前 roster；此时 P1–P5 仍是正常 roster 顺序。
+3. 采集页显示自定义房间等待页面。点击 START 后，蓝方五人和红方五人**分别在各自队伍内部**随机排序，不会跨队交换；同时开始计时并进入 BP 画面。
+4. Control 的 Player Slot Alignment 从 BP 画面 OCR ID 并更新 `bluePlayerSlotOrder` / `redPlayerSlotOrder`。Simulator 持有随机后的 ground truth，双方顺序完全一致时自动停止计时。
+5. 每次随机函数都会避免得到完整 identity 顺序，确保测试真正发生了重排。
+
+默认本地 OCR 仍只保证 `eng+chi_sim`。日文假名测试页已提供，但应在 `HOK_OCR_MODEL_DIR` / `HOK_OCR_LANGUAGES` 配置 `jpn` traineddata 后再作为正式通过项；默认配置下它属于故障/扩展能力压力测试。
+
+换英雄模式会在交换 Simulator 的两个 Pick 槽后开始计时；它不会直接调用 `set_lineup_assignments`。只有 Control 已完成 BP、正在采集 Simulator 且现有 LineupAssignments 识别到变化后，Control assignments 与 Simulator ground truth 一致，计时才结束。这样测到的是实际识别链路耗时。
+
 ## 备份与恢复（M15）
 
 后端每分钟检查数据变化，变更后备份；Control 的“备份与恢复”可查看状态、立即备份、导出比赛。最近 20 份完整备份位于数据目录的 `backups/`，覆盖比赛状态、队伍资料库、访问设置与上传媒体（选手照片及赛后字段证据）。完整备份包含私有访问凭据，保存权限为本机私有；比赛导出不包含 `access.json`。
