@@ -24,7 +24,7 @@ interface DecodedCrop {
 
 /** One resident offline worker; ten crops are batched into one OCR page. */
 export class PlayerRecognitionProvider {
-  readonly id='local-tesseract-player-v2';
+  readonly id='local-tesseract-player-v3';
   status:'disabled'|'loading'|'ready'|'error'='disabled';
   error='';
   private worker?:Worker;
@@ -115,33 +115,50 @@ export class PlayerRecognitionProvider {
     width:number,
     variant:PlayerOcrCandidate['variant'],
   ) {
-    if(!crop.darkBackground)return sharp(crop.input)
-      .flatten({background:'#fff'})
-      .resize(width-32,40,{fit:'contain',background:'#fff'})
-      .greyscale()
-      .normalize()
-      .png()
-      .toBuffer();
+    // Materialize contrast BEFORE adding the 608px padding. Otherwise Sharp's
+    // percentile normalization measures mostly padding and erases dim strokes.
+    const contrast=await sharp(crop.input).flatten({background:'#fff'})
+      .greyscale().normalize().png().toBuffer();
+    let ink=sharp(contrast);
+    if(variant!=='soft')ink=ink.threshold(variant==='threshold170'?170:190);
+    if(crop.darkBackground)ink=ink.negate({alpha:false});
+    const prepared=await ink.png().toBuffer();
+    return sharp(prepared).resize(width-32,40,{fit:'contain',background:'#fff'})
+      .png().toBuffer();
+  }
 
-    const base=sharp(crop.input)
-      .flatten({background:'#000'})
-      .resize(width-32,40,{fit:'contain',background:'#000'})
-      .greyscale()
-      .normalize();
-
-    if(variant==='soft')return base
-      .clone()
-      .negate({alpha:false})
-      .png()
-      .toBuffer();
-
-    const threshold=variant==='threshold170'?170:190;
-    return base
-      .clone()
-      .threshold(threshold)
-      .negate({alpha:false})
-      .png()
-      .toBuffer();
+  /** Locate light/dark ink before resizing: a wide ID strip is mostly empty.
+   * Scaling the entire strip to 40px used to shrink dim glyphs into a few pixels.
+   * Use the source luminance, not normalized background gradients, to find ink.
+   */
+  private async localizePlayerInk(crop:DecodedCrop):Promise<DecodedCrop> {
+    const {data,info}=await sharp(crop.input).flatten({background:'#fff'})
+      .greyscale().raw().toBuffer({resolveWithObject:true});
+    const histogram=Array<number>(256).fill(0);
+    for(const value of data)histogram[crop.darkBackground?value:255-value]++;
+    const percentile=(fraction:number)=>{
+      let count=0;
+      for(let value=0;value<256;value++){
+        count+=histogram[value];
+        if(count>=data.length*fraction)return value;
+      }
+      return 255;
+    };
+    const background=percentile(.5),ink=percentile(.995);
+    if(ink-background<12)return crop;
+    const cutoff=background+(ink-background)*.55;
+    let left=info.width,top=info.height,right=-1,bottom=-1;
+    for(let y=0;y<info.height;y++)for(let x=0;x<info.width;x++){
+      const value=data[y*info.width+x];
+      if((crop.darkBackground?value:255-value)<=cutoff)continue;
+      left=Math.min(left,x);right=Math.max(right,x);
+      top=Math.min(top,y);bottom=Math.max(bottom,y);
+    }
+    if(right-left<2||bottom-top<2)return crop;
+    left=Math.max(0,left-2);top=Math.max(0,top-2);
+    right=Math.min(info.width-1,right+2);bottom=Math.min(info.height-1,bottom+2);
+    return {...crop,input:await sharp(crop.input)
+      .extract({left,top,width:right-left+1,height:bottom-top+1}).png().toBuffer()};
   }
 
   private async readPage(crops:Buffer[],rowHeight=64) {
@@ -192,7 +209,7 @@ export class PlayerRecognitionProvider {
     this.busy=true;
     const start=performance.now();
     try{
-      const decoded=await this.decode(source);
+      const decoded=await Promise.all((await this.decode(source)).map(crop=>this.localizePlayerInk(crop)));
       const variants:PlayerOcrCandidate['variant'][]=['soft','threshold170','threshold190'];
       const crops:Buffer[]=[];
       for(const variant of variants){

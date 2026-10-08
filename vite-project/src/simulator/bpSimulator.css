@@ -97,6 +97,7 @@ linear-gradient(90deg,rgba(4,44,84,.95) 0,rgba(15,65,112,.65) 17%,transparent 39
 
 /* Player-ID test keeps the ID centered beside the portrait so the derived
    OCR strip works without per-slot manual calibration. */
+.sim-player-id-test .sim-player-row{opacity:1}
 .sim-player-id-test .sim-player-copy{height:100%;display:flex;flex-direction:column;justify-content:center;gap:3px;box-sizing:border-box}
 .sim-player-id-test .sim-player-copy strong{font-size:clamp(15px,1.08cqw,21px);letter-spacing:.015em;line-height:1.1;background:#07101ce8;padding:3px 6px;border-radius:3px;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .sim-player-id-test .sim-player-copy span{font-size:clamp(7px,.48cqw,10px);opacity:.68}.sim-player-id-test .sim-player-copy small{display:none}

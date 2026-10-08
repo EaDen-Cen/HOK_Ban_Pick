@@ -13,7 +13,9 @@
 
 自定义本地模型可配置 `.env` 中的 `HOK_OCR_MODEL_DIR` 与 `HOK_OCR_LANGUAGES`，目录内放置未压缩的 `<语言>.traineddata`。默认自带 `eng+chi_sim`；其他文字需要对应本地模型。不要把模型文件、真实参赛 ID、照片或运行数据提交到仓库。
 
-`npm run benchmark:players` 用合成英文 ID 测量十区域批量 OCR。容器测试不能代替真实游戏字体、画面缩放、OBS 和导播电脑的约一秒级开局验收。
+识别前先在原始亮度上定位文字，再对文字范围增强对比度，最后放大并补白。不能先把整条宽区域缩到 40px 再 normalize：大量留白会参与百分位统计，低亮度笔画会被抹掉。回归测试包含故障截图中“听雨”的真实裁剪、左右对齐的低亮度英文 ID、空白区域以及原有赛后数字识别。
+
+`npm run benchmark:players` 使用与正式 API 相同的三候选 OCR 和排列求解，测量宽区域内低亮度英文 ID，双方正确自动对齐才算通过。容器测试不能代替真实游戏字体、画面缩放、OBS 和导播电脑的约一秒级开局验收。
 
 ## Simulator 联动测试
 
@@ -28,6 +30,8 @@ BP Simulator 控制台现在按用途分成 **BP 识别、换英雄同步、选�
 3. 采集页显示自定义房间等待页面。点击 START 后，蓝方五人和红方五人**分别在各自队伍内部**随机排序，不会跨队交换；同时开始计时并进入 BP 画面。
 4. Control 的 Player Slot Alignment 从 BP 画面 OCR ID 并更新 `bluePlayerSlotOrder` / `redPlayerSlotOrder`。Simulator 持有随机后的 ground truth，双方顺序完全一致时自动停止计时。
 5. 每次随机函数都会避免得到完整 identity 顺序，确保测试真正发生了重排。
+
+选手 ID 排序模式中的行始终保持完整不透明度；不会沿用普通 BP 未选英雄行的 38% 透明度，以免尚未 Pick 的选手名字也变暗。
 
 默认本地 OCR 仍只保证 `eng+chi_sim`。日文假名测试页已提供，但应在 `HOK_OCR_MODEL_DIR` / `HOK_OCR_LANGUAGES` 配置 `jpn` traineddata 后再作为正式通过项；默认配置下它属于故障/扩展能力压力测试。BP 自动脚本还可在 3–6 秒等极限等待窗口中随机切换预选英雄；真正锁定前保留约 1.2 秒稳定候选窗口，锁定 cue 默认保留 1.1 秒，便于验证 Control 是否能在快速 Draft 中连续取到确认帧。
 
