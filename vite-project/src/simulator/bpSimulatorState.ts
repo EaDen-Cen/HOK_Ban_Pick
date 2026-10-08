@@ -15,6 +15,8 @@ export interface BpSimulatorState {
   autoPlay: boolean;
   intervalMinMs: number;
   intervalMaxMs: number;
+  transitionHoldMs: number;
+  preselectSwitching: boolean;
   banSize: number;
   pickSize: number;
   testMode: SimulatorTestMode;
@@ -50,6 +52,8 @@ export function createDefaultBpSimulatorState():BpSimulatorState {
     autoPlay:false,
     intervalMinMs:900,
     intervalMaxMs:1800,
+    transitionHoldMs:950,
+    preselectSwitching:true,
     banSize:38,
     pickSize:72,
     testMode:'bp',
@@ -95,6 +99,8 @@ function normalizeState(value:Partial<BpSimulatorState>|undefined):BpSimulatorSt
     autoPlay:source.autoPlay===true,
     intervalMinMs,
     intervalMaxMs,
+    transitionHoldMs:clamp(Number(source.transitionHoldMs)||defaults.transitionHoldMs,500,2500),
+    preselectSwitching:source.preselectSwitching!==false,
     banSize:clamp(Number(source.banSize)||defaults.banSize,24,64),
     pickSize:clamp(Number(source.pickSize)||defaults.pickSize,48,104),
     testMode,
