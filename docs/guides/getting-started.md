@@ -99,12 +99,26 @@ Production 通信不送入节目总线；最终节目声音也不要回送到解
 ## 数据恢复与运行边界
 
 - 默认持久化文件：`vite-project/data/match.json`，包含当前状态、事件历史、Undo、请求 ID 和延迟。
+- `match.json` 的当前状态还包含导播保存的 `heroArtOverrides` / `heroDataOverrides`。它们属于本机运行数据，`data/` 被 Git 忽略，不会自动上传仓库。
 - 同目录临时文件写入并 fsync，然后 rename 替换；写入失败不推进内存状态。
 - 文件损坏时启动报错，不自动清空比赛。恢复上一份完整备份后重启。
 - **只运行一个后端进程**，不要用集群模式或多副本同时写同一个文件。
 - 赛前备份、赛后归档整个数据目录（比赛 JSON、队伍资料库和上传照片）；自定义 `UPLOAD_DIR` 时一并备份该目录。历史不自动裁剪；适合社区赛事的小规模操作量。
 - 浏览器刷新、WS 重连会恢复；仍需部署平台提供进程重启和持久化磁盘。
 - Overlay 无连接状态角标，导播应同时打开 Control 监控连接。
+
+## 共享英雄 Panel / Side 裁切
+
+如果只是在一台赛事机上临时调整英雄构图，直接在 Control 保存即可，数据会随 `match.json` 和备份恢复。
+
+如果要把这些构图变成仓库/Release 的公共默认值，在保存后运行：
+
+```powershell
+cd vite-project
+npm run hero:crop-sync
+```
+
+或双击 `sync-hero-crops.bat`。脚本只把 Panel / Side 的 x/y/scale 合并到受 Git 管理的 `src/data/heroArtFocusOverrides.ts`，不会读取并提交比赛身份、密码等私有内容。完成后仍需人工检查 diff，再用正常 Git commit/push/PR 发布；程序不会自行连接 GitHub 写仓库。
 
 ## 云端部署
 

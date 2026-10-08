@@ -117,19 +117,11 @@ async function applyUpdate(
   for (let index = 0; index < orderedAdditions.length; index++) {
     let remote = orderedAdditions[index];
     const id = ids[index];
-    if (!remote.imageUrl) {
-      try {
-        remote = await fetchCatalogHeroDetail(remote.campId);
-      } catch (error) {
-        manualReview.push(`Skipped new hero ${remote.englishName} (${remote.campId}): detail fetch failed (${error instanceof Error ? error.message : 'unknown error'}).`);
-        continue;
-      }
-    }
-    if (!remote.imageUrl) {
-      manualReview.push(`Skipped new hero ${remote.englishName} (${remote.campId}): no official CDN hero image found on catalog detail page.`);
-      continue;
-    }
 
+    // Confirm identity from the official HOK page first. The auxiliary catalog
+    // occasionally publishes a new hero card before its detail page stops
+    // returning 5xx; a temporary catalog failure must not hide an already-live
+    // official hero from the generated roster.
     const evidence = await fetchOfficialHeroEvidence(remote.campId, remote.englishName);
     if (!evidence.confirmed) {
       manualReview.push(
@@ -137,16 +129,44 @@ async function applyUpdate(
       );
     }
 
-    const asset = await downloadHeroAsset({
-      heroId: id,
-      campId: remote.campId,
-      sourceUrl: remote.imageUrl,
-      publicDir,
-    });
-    assets.push(asset);
+    if (!remote.imageUrl) {
+      try {
+        remote = await fetchCatalogHeroDetail(remote.campId);
+      } catch (error) {
+        manualReview.push(
+          `Catalog detail fetch failed for new hero ${remote.englishName} (${remote.campId}): ${error instanceof Error ? error.message : 'unknown error'}. ` +
+          `The sync will use confirmed official key art as the temporary picker image when available.`,
+        );
+      }
+    }
 
-    const chineseName = preferredChineseHeroName(remote.englishName, evidence.chineseName) || remote.englishName;
-    if (!preferredChineseHeroName(remote.englishName, evidence.chineseName)) {
+    let imageLink: string | undefined;
+    if (remote.imageUrl) {
+      const asset = await downloadHeroAsset({
+        heroId: id,
+        campId: remote.campId,
+        sourceUrl: remote.imageUrl,
+        publicDir,
+      });
+      assets.push(asset);
+      imageLink = asset.localPath;
+    } else if (evidence.confirmed && evidence.artUrl) {
+      imageLink = evidence.artUrl;
+      manualReview.push(
+        `New hero ${remote.englishName} (${remote.campId}) has no downloadable catalog icon yet; using official HOK key art as a temporary remote picker image. A later catalog imageUrl will replace it with a local /heroesImg asset automatically.`,
+      );
+    }
+
+    if (!imageLink) {
+      manualReview.push(
+        `Skipped new hero ${remote.englishName} (${remote.campId}): neither a catalog icon nor confirmed official key art is available.`,
+      );
+      continue;
+    }
+
+    const preferredChinese = preferredChineseHeroName(remote.englishName, evidence.chineseName);
+    const chineseName = preferredChinese || remote.englishName;
+    if (!preferredChinese) {
       manualReview.push(`No official zh-Hant name was available for ${remote.englishName}; Chinese display temporarily falls back to English.`);
     }
 
@@ -156,7 +176,7 @@ async function applyUpdate(
       chineseName,
       occupation: remote.occupation,
       campId: remote.campId,
-      imageLink: asset.localPath,
+      imageLink,
       artLink: evidence.confirmed ? evidence.artUrl : undefined,
     });
     autoHeroes.push(created);

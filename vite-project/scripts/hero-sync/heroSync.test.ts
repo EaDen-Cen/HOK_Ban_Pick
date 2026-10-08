@@ -8,6 +8,8 @@ import { preferredChineseHeroName } from './localizedNames.js';
 import { normalizeName } from './normalize.js';
 import { extractOfficialHeroArt, extractOfficialPickRate } from './fetchOfficial.js';
 import { heroArtCrop } from '../../src/data/heroArtFocus.js';
+import sharedHeroArtFocusOverrides from '../../src/data/heroArtFocusOverrides.js';
+import { mergeRuntimeHeroArtFocus, renderHeroArtFocusOverrides } from './artFocusSync.js';
 import type { CatalogHero, SourceSnapshot } from './types.js';
 import heroes from '../../src/components/HeroList.js';
 import { sortHeroes } from '../../src/control/heroSort.js';
@@ -41,6 +43,15 @@ test('Flowborn localized names replace generic or coming-soon placeholders', () 
   assert.equal(preferredChineseHeroName('Flowborn (Roamer)', '元流之子'), '元流之子（辅助）');
   assert.equal(preferredChineseHeroName('Flowborn (Support)', undefined), '元流之子（辅助）');
   assert.equal(preferredChineseHeroName('Flowborn (Mage)', '元流之子'), '元流之子（法师）');
+});
+
+test('Wang Wei uses reviewed simplified Chinese display name', () => {
+  assert.equal(preferredChineseHeroName('Wang Wei', '王維'), '王维');
+  const wangWei = heroes.find(hero => hero.id === 120);
+  assert.ok(wangWei);
+  assert.equal(wangWei.englishName, 'Wang Wei');
+  assert.equal(wangWei.chineseName, '王维');
+  assert.equal(wangWei.campId, 138);
 });
 
 test('normalization matches historical aliases without creating a duplicate hero', () => {
@@ -205,6 +216,27 @@ test('runtime director crop overrides static and default artwork framing', () =>
   );
   assert.deepEqual(heroArtCrop(19, 'panel'), { x: 80, y: 34, scale: 1.16 });
   assert.deepEqual(heroArtCrop(1, 'side'), { x: 50, y: 29, scale: 1.22 });
+});
+
+test('runtime hero crop metadata can be promoted into tracked shared defaults', () => {
+  const merged = mergeRuntimeHeroArtFocus(
+    sharedHeroArtFocusOverrides,
+    {
+      '1': {
+        useLegacyImage: true,
+        panel: { x: 42, y: 27, scale: 1.37 },
+        side: { x: 105, y: -4, scale: 0.5 },
+      },
+      '9999': { panel: { x: 1, y: 2, scale: 1.1 } },
+    },
+    new Set(heroes.map(hero => hero.id)),
+  );
+  assert.deepEqual(merged[1]?.panel, { x: 42, y: 27, scale: 1.37 });
+  assert.deepEqual(merged[1]?.side, { x: 100, y: 0, scale: 1 });
+  assert.equal(merged[9999], undefined);
+  const rendered = renderHeroArtFocusOverrides(merged);
+  assert.match(rendered, /heroArtFocusOverrides/);
+  assert.doesNotMatch(rendered, /"useLegacyImage"\s*:/);
 });
 
 

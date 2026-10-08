@@ -33,6 +33,16 @@
 
 详细协议见 [API 接口](api.md)，性能复测见 `vite-project/scripts/benchmark-recognition.ts`。
 
+## 英雄视觉数据的三层来源
+
+英雄图片/构图现在明确分为三层：
+
+1. `HeroList + autoSyncedHeroes + heroSyncOverrides`：仓库中的英雄身份、Icon、Full Art 等共享数据；Hero Sync 可以更新。
+2. `src/data/heroArtFocusOverrides.ts`：仓库中的 **Panel / Side 公共裁切默认值**，随 Git 和 Release 分发。
+3. `MatchState.heroArtOverrides / heroDataOverrides`：导播现场保存的运行时覆盖，持久化到 `data/match.json` 并进入备份，但 `data/` 被 Git 忽略。
+
+运行时裁切优先于共享默认值。需要把现场验证过的 Panel / Side 构图发布给所有用户时，用 `npm run hero:crop-sync` 把第 3 层中的裁切元数据提升到第 2 层，再人工审查 Git diff。这个命令不会导出其他比赛状态，也不会自动 push GitHub。
+
 ## Player ID 与实验性 HUD 状态
 
 开局 Player ID 对齐复用 Auto BP 的共享窗口流：Control 一次裁剪双方 10 个 ID，后端使用英文/简中常驻 OCR worker 生成候选，再在每队已知 5 人 roster 中求 120 种一一映射。双方都可信时通过 `set_player_slot_orders` 原子提交；单帧边缘结果可在连续相同排列下做两帧时间一致性复核。人工采用、人工交换、恢复自动和 ID 区域独立预设都不会修改 TeamPreset 本身。

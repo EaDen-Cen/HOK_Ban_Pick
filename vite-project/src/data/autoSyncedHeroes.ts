@@ -32,6 +32,20 @@ const autoSyncedHeroes: Hero[] = [
     "beCountered": [],
     "relationshipStatus": "unverified",
     "variantGroup": "flowborn"
+  },
+  {
+    "id": 120,
+    "englishName": "Wang Wei",
+    "chineseName": "王维",
+    "occupation": "Mid Lane",
+    "altOccupation": "",
+    "campId": 138,
+    "imageLink": "https://world.honorofkings.com/zlkdatasys/ip/hero/en//image/20260914/17893719635393.png",
+    "artLink": "https://world.honorofkings.com/zlkdatasys/ip/hero/en//image/20260916/17895496027563.jpg",
+    "combo": [],
+    "counter": [],
+    "beCountered": [],
+    "relationshipStatus": "unverified"
   }
 ];
 

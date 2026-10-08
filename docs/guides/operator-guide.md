@@ -47,6 +47,24 @@
 
 这套选择逻辑与比赛中的 Hero Picker 分开，不会提交 BP 操作。
 
+### Panel / Side 构图保存位置
+
+“英雄数据与图片”中的 Panel / Side 裁切点击保存后，会先作为 `heroArtOverrides` 写进当前服务器的 `data/match.json`。这保证刷新、重启与备份都能恢复，但 `data/` 属于本机运行目录，**不会自动同步到 GitHub**。
+
+如果这次裁切是你希望以后所有比赛机都共用的正式构图，在调好后运行：
+
+```text
+sync-hero-crops.bat
+```
+
+或：
+
+```powershell
+npm run hero:crop-sync
+```
+
+它会把 Panel / Side 的 x/y/scale 写入 Git 跟踪的 `src/data/heroArtFocusOverrides.ts`。随后检查 Git diff 并正常 commit/push。该流程不会把比赛数据、队伍、选手或访问凭据带进仓库；`useLegacyImage` 也继续保持为运行时选择。
+
 ## 选手照片
 
 比赛设置与队伍资料编辑中均可直接上传 PNG、JPEG、WebP，单张不超过 5 MB。

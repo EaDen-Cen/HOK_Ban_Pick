@@ -15,6 +15,17 @@
 
 API 与未来 AI 提供者接口见 [协议文档](docs/design/api.md)，软件打包计划见 [里程碑](MILESTONES.md)。
 
+## 英雄数据与广播裁切同步
+
+英雄数据同步已补上 **Wang Wei / 王维（本地 ID 120，Camp ID 138）**。此前同步器已经从远端目录发现 Wang Wei，但辅助目录的英雄详情页返回 HTTP 502，旧逻辑因此跳过；现在会先使用官方 HOK 英雄页确认身份，并在辅助详情暂时不可用时使用官方 Key Art 作为临时图片来源，等目录提供稳定 Icon 后再自动本地化。
+
+Panel（底部横排）和 Side（左右竖排）的裁切有两层存储：
+
+- Control 中点击“保存英雄图片”后，当前机器的调整仍保存在 `data/match.json -> state.heroArtOverrides`，会进入本机备份，但 `data/` 被 Git 忽略，**不会自己上传 GitHub**。
+- 可共享的默认裁切现在单独保存在 Git 跟踪文件 `src/data/heroArtFocusOverrides.ts`。在实际做过裁切的导播电脑上运行 `sync-hero-crops.bat`，或在 `vite-project/` 执行 `npm run hero:crop-sync`，会把运行时 Panel/Side 裁切提升到这个文件。检查 diff 后正常 commit/push，即可随 GitHub、Release 和其他电脑同步。
+
+同步命令只导出 `panel/side` 的 x/y/scale，不会把比赛、队伍、密码、选手资料或 `useLegacyImage` 一并提交。程序也不会在后台擅自推送 GitHub。
+
 ## 快速启动
 
 第一次使用建议先看 [新手上手教程](docs/guides/beginner-guide.md)。
@@ -36,7 +47,7 @@ Windows 现场使用可直接双击 `vite-project/start-broadcast.bat`；启动�
 <!-- HERO-SYNC:ROSTER:START -->
 ## 程序内英雄池
 
-当前 `main` 分支程序内共有 **118 个有效英雄条目**。英雄 ID 与程序持久化数据直接关联，因此旧 ID 不会复用；**ID 29 为历史保留空位**，不属于当前英雄池。
+当前 `main` 分支程序内共有 **119 个有效英雄条目**。英雄 ID 与程序持久化数据直接关联，因此旧 ID 不会复用；**ID 29 为历史保留空位**，不属于当前英雄池。
 
 > 本表由 Hero Data Synchronizer 自动生成，用于快速核对程序当前实际包含的英雄。请勿手工维护表格；英雄同步 PR 会自动刷新这里。
 
@@ -160,6 +171,7 @@ Windows 现场使用可直接双击 `vite-project/start-broadcast.bat`；启动�
 | 117 | 元流之子（法师） | Flowborn (Mage) |
 | 118 | 元流之子（刺客） | Flowborn (Assassin) |
 | 119 | 元流之子（辅助） | Flowborn (Roamer) |
+| 120 | 王维 | Wang Wei |
 <!-- HERO-SYNC:ROSTER:END -->
 
 ## BP 屏幕采集模拟器
