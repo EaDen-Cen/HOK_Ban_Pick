@@ -211,6 +211,16 @@ http://127.0.0.1:5173/tools/bp-simulator
 
 控制台按 **BP 识别 / 换英雄同步 / 选手 ID 排序** 三种模式独立测试，支持 Match / Normal BP、蓝/红先手、单选与双选、空 Ban、Pick 高亮与锁定、自动推进，以及最短/最长随机选角等待时间。BP 自动脚本可在思考期间随机切换当前预选英雄，最后保留稳定候选窗口；锁定后的 cue 保留时间可单独设置，默认约 1.1 秒，不再使用过短的 120ms 测试窗口。
 
+Simulator Control 顶部提供 **从 Control 同步模拟器数据**：
+
+- BP 测试：读取 Control 当前模式、先手方、已完成 Ban/Pick 与 phase；
+- 换英雄测试：要求 Control 已完成且未提交本局，直接把当前 `blue/redAssignments` 作为 Simulator 的 Ground Truth 基线，因此不需要为了测试换英雄重新造一套 BP；
+- Player ID：读取双方名单和当前 P1–P5 排序。
+
+这是**单向只读同步**，不需要开启“Control 联动测试”，也不会修改 Control。需要把 Simulator 人工配置反向装入 Control 时，才使用原来的联动基线按钮。
+
+换英雄测试开始计时后会锁定队伍/P1/P2选择，直到 Control 同步目标 assignments，避免测试过程中再次交换导致 Ground Truth 改变。旧 `hok-bp-simulator-state-v2` 中的英雄 ID 也会在首次打开新版 Simulator 时迁移到当前 release-order ID。
+
 结束：
 
 ~~~text

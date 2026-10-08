@@ -202,7 +202,7 @@ http://127.0.0.1:5173/tools/bp-simulator-control
 http://127.0.0.1:5173/tools/bp-simulator
 ```
 
-模拟器分为 **BP 识别、换英雄同步、选手 ID 排序** 三个独立测试模式，可复现 Pick、双选、圆形 Ban、空 Ban、蓝/红先手、预选英雄随机切换、换英雄与完整 BP phase 顺序；还可调整 Pick 头像/Ban 位尺寸并记录 Player ID 核查耗时。然后在 HOK Control 的 Auto BP 中选择 Simulator 的采集画面窗口即可。
+模拟器分为 **BP 识别、换英雄同步、选手 ID 排序** 三个独立测试模式，可复现 Pick、双选、圆形 Ban、空 Ban、蓝/红先手、预选英雄随机切换、换英雄与完整 BP phase 顺序；还可调整 Pick 头像/Ban 位尺寸并记录 Player ID 核查耗时。控制页新增 **“从 Control 同步模拟器数据”**：BP 模式读取当前 Ban/Pick 进度，换英雄模式直接读取当前最终 assignments 作为测试基线，Player ID 模式读取双方名单与 P1–P5 顺序；该按钮只读 Control，不会反向修改比赛。然后在 HOK Control 的 Auto BP 中选择 Simulator 的采集画面窗口即可。
 
 LoL 项目中值得移植的功能优化及已移植内容见 [HOK / LoL 功能对照审计](docs/research/lol-feature-parity-audit-2026-10-06.md)。
 

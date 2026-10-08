@@ -1,5 +1,13 @@
 > [文档索引](../README.md) · 除特别注明外，文件路径以仓库根目录为基准，npm 命令在 `vite-project/` 中执行。
 
+## 2026-10-08：Simulator 换英雄测试与 Control → Simulator 同步
+
+- 修复 release-order Hero ID 迁移后旧 `hok-bp-simulator-state-v2` 仍保存旧 hero ID 的问题：新版使用 v3 storage，首次读取 v2 时把全部 slotHeroes 一次迁移到新 ID。
+- Simulator Control 新增“从 Control 同步模拟器数据”只读按钮：BP 读取当前 Ban/Pick/phase；Lineup 读取最终 assignments；Player ID 读取队伍名单和 P1–P5 顺序。
+- 换英雄测试现在可以直接以 Control 当前已完成且未提交的 Draft 为 Ground Truth，不必先重置 Control 重建 fixture；原 Simulator → Control 基线同步仍保留。
+- 一轮换英雄计时未完成时，队伍、P1/P2 和再次交换按钮被锁定，防止识别过程中 Ground Truth 被二次修改。
+- 新增 unit / E2E 覆盖 Control 状态映射、旧 Simulator ID migration、非 Pick-order assignments 的反向同步和单轮 swap completion。
+
 ## 2026-10-08：119 位英雄 Release-order ID 迁移
 
 - 依据 World of Honor of Kings 英雄页的 **Launch Time** 顺序，将全部 119 位当前英雄改为从旧到新连续 ID `1..119`；ID 越大代表越晚上架。
