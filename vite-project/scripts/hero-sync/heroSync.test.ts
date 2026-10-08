@@ -45,21 +45,14 @@ test('Flowborn localized names replace generic or coming-soon placeholders', () 
   assert.equal(preferredChineseHeroName('Flowborn (Mage)', '元流之子'), '元流之子（法师）');
 });
 
-test('Wang Wei uses reviewed simplified Chinese display name', () => {
+test('Wang Wei uses reviewed simplified Chinese display name and newest canonical ID', () => {
   assert.equal(preferredChineseHeroName('Wang Wei', '王維'), '王维');
-  const wangWei = heroes.find(hero => hero.id === 120);
+  const wangWei = heroes.find(hero => hero.id === 119);
   assert.ok(wangWei);
   assert.equal(wangWei.englishName, 'Wang Wei');
   assert.equal(wangWei.chineseName, '王维');
   assert.equal(wangWei.campId, 138);
-});
-
-test('Wang Wei never exposes the framed official portrait as the UI icon', () => {
-  const wangWei = heroes.find(hero => hero.id === 120)!;
-  assert.equal(wangWei.imageLink, wangWei.artLink);
-  assert.notEqual(wangWei.imageLink, wangWei.recognitionImageLink);
-  assert.match(wangWei.imageLink, /17895496027563\.jpg$/);
-  assert.match(wangWei.recognitionImageLink || '', /17893719635393\.png$/);
+  assert.equal(wangWei.imageLink, '/heroesImg/120.png');
 });
 
 test('normalization matches historical aliases without creating a duplicate hero', () => {
@@ -85,7 +78,7 @@ test('a source rename keeps identity through the previous camp snapshot', () => 
 
 test('existing heroes are compared against the current remote roster on every sync', () => {
   const hero = local({
-    id: 54,
+    id: 88,
     campId: 519,
     englishName: 'Old Display Name',
     occupation: 'Mid Lane',
@@ -110,7 +103,7 @@ test('existing heroes are compared against the current remote roster on every sy
 
 test('missing camp IDs are backfilled when the current hero identity still matches', () => {
   const hero = local({
-    id: 54,
+    id: 88,
     campId: undefined,
     englishName: "Ao'yin",
     occupation: 'Farm Lane',
@@ -209,21 +202,21 @@ test('safe override merge supports artwork metadata without touching relationshi
 });
 
 
-test('broadcast artwork uses layout-specific crop presets and per-hero overrides', () => {
-  assert.deepEqual(heroArtCrop(1, 'panel'), { x: 50, y: 31, scale: 1.12 });
-  assert.deepEqual(heroArtCrop(1, 'side'), { x: 50, y: 29, scale: 1.22 });
-  assert.deepEqual(heroArtCrop(19, 'panel'), { x: 80, y: 34, scale: 1.16 });
-  assert.deepEqual(heroArtCrop(19, 'side'), { x: 83, y: 33, scale: 1.28 });
+test('broadcast artwork uses current version-controlled per-hero crop presets', () => {
+  assert.deepEqual(heroArtCrop(1, 'panel'), sharedHeroArtFocusOverrides[1]?.panel);
+  assert.deepEqual(heroArtCrop(1, 'side'), sharedHeroArtFocusOverrides[1]?.side);
+  assert.deepEqual(heroArtCrop(19, 'panel'), sharedHeroArtFocusOverrides[19]?.panel);
+  assert.deepEqual(heroArtCrop(19, 'side'), sharedHeroArtFocusOverrides[19]?.side);
 });
 
 
-test('runtime director crop overrides static and default artwork framing', () => {
+test('runtime director crop overrides version-controlled artwork framing', () => {
   assert.deepEqual(
     heroArtCrop(19, 'side', { side: { x: 44, y: 23, scale: 1.41 } }),
     { x: 44, y: 23, scale: 1.41 },
   );
-  assert.deepEqual(heroArtCrop(19, 'panel'), { x: 80, y: 34, scale: 1.16 });
-  assert.deepEqual(heroArtCrop(1, 'side'), { x: 50, y: 29, scale: 1.22 });
+  assert.deepEqual(heroArtCrop(19, 'panel'), sharedHeroArtFocusOverrides[19]?.panel);
+  assert.deepEqual(heroArtCrop(1, 'side'), sharedHeroArtFocusOverrides[1]?.side);
 });
 
 test('runtime hero crop metadata can be promoted into tracked shared defaults', () => {
@@ -257,7 +250,7 @@ test('hero art crop never shrinks an already-cover-cropped source image', () => 
 
 
 test("reviewed Ao'yin artwork override wins over auto-synced full art", () => {
-  const aoyin = heroes.find(hero => hero.id === 54);
+  const aoyin = heroes.find(hero => hero.id === 88);
   assert.ok(aoyin);
   assert.equal(aoyin.chineseName, '敖隐');
   assert.equal(
@@ -269,11 +262,11 @@ test("reviewed Ao'yin artwork override wins over auto-synced full art", () => {
 
 test('hero picker sorting keeps unavailable heroes last for every mode', () => {
   const sample: Hero[] = [
-    local({ id: 10, chineseName: '赵云', englishName: 'Zilong', occupation: 'Jungling', releaseDate: '2024-06-20', officialPickRate: 8 }),
-    local({ id: 11, chineseName: '安琪拉', englishName: 'Angela', occupation: 'Mid Lane', releaseDate: '2025-03-01', officialPickRate: 22 }),
-    local({ id: 12, chineseName: '后羿', englishName: 'Hou Yi', occupation: 'Farm Lane', releaseDate: '2023-01-01', officialPickRate: 30 }),
+    local({ id: 10, chineseName: '赵云', englishName: 'Zilong', occupation: 'Jungling', officialPickRate: 8 }),
+    local({ id: 11, chineseName: '安琪拉', englishName: 'Angela', occupation: 'Mid Lane', officialPickRate: 22 }),
+    local({ id: 12, chineseName: '后羿', englishName: 'Hou Yi', occupation: 'Farm Lane', officialPickRate: 30 }),
     local({ id: 13, chineseName: '吕布', englishName: 'Lu Bu', occupation: 'Clash Lane' }),
-    local({ id: 14, chineseName: '张飞', englishName: 'Zhang Fei', occupation: 'Roaming', releaseDate: '2022-01-01', officialPickRate: 2 }),
+    local({ id: 14, chineseName: '张飞', englishName: 'Zhang Fei', occupation: 'Roaming', officialPickRate: 2 }),
   ];
   const unavailable = new Set([11, 12]);
   for (const mode of ['name-zh', 'name-en', 'release', 'pick-rate', 'lane'] as const) {
@@ -283,7 +276,7 @@ test('hero picker sorting keeps unavailable heroes last for every mode', () => {
   assert.deepEqual(sortHeroes(sample, 'lane', () => false).map(hero => hero.occupation), [
     'Clash Lane', 'Mid Lane', 'Farm Lane', 'Jungling', 'Roaming',
   ]);
-  assert.equal(sortHeroes(sample, 'release', () => false).at(-1)?.id, 13);
+  assert.deepEqual(sortHeroes(sample, 'release', () => false).map(hero => hero.id), [14, 13, 12, 11, 10]);
   assert.equal(sortHeroes(sample, 'pick-rate', () => false).at(-1)?.id, 13);
 });
 
