@@ -2,11 +2,13 @@
 
 [返回项目首页](../README.md)
 
+> **v1.0.0 发布准备状态（2026-10-08）**：核心 BP / Auto BP / Player ID / 换英雄链路已进入 Release Candidate。局内 HUD `/overlay/game-hud` 仍为 **Experimental / 测试阶段**，可用于彩排和 OBS 预览，但真实比赛长时间稳定性、自动 HUD 数据识别与正式比分兜底尚未完成。
+
 | 类别 | 入口 | 用途 |
 | --- | --- | --- |
-| 当前操作 | [新手上手](guides/beginner-guide.md)、[运行指南](guides/getting-started.md)、[操作指南](guides/operator-guide.md)、[Auto BP](guides/screen-recognition.md)、[Windows 启动器](guides/windows-launcher.md) | 第一次使用、安装部署、现场操作与屏幕识别 |
+| 当前操作 | [新手上手](guides/beginner-guide.md)、[运行指南](guides/getting-started.md)、[操作指南](guides/operator-guide.md)、[Auto BP / Player ID](guides/screen-recognition.md)、[选手对齐 / 恢复 / HUD / MVP](guides/player-alignment-recovery-hud.md)、[Windows 启动器](guides/windows-launcher.md) | 第一次使用、安装部署、现场操作、屏幕识别、恢复与实验功能 |
 | 当前设计 | [系统结构](design/architecture.md)、[API 接口](design/api.md) | 代码职责、状态流与存储边界 |
-| 发布说明 | [v1.0.0](releases/v1.0.0.md) | 正式版本功能、升级和已知边界 |
+| 发布说明 | [v1.0.0](releases/v1.0.0.md) | Release Candidate 功能、发布检查、升级和已知边界 |
 | 验证记录 | [历次验证](validation/history.md) | 按日期/版本保留结果和未验收范围 |
 | 研究资料 | [研究索引](research/README.md)、[英雄自动同步](research/hero-sync.md) | 英雄核查、自动同步与原始 JSON 证据 |
 | 历史交接 | [归档索引](archive/README.md) | 版本交接、旧计划与原始说明 |
@@ -23,4 +25,4 @@
 
 ## 选手对齐、恢复、HUD 与赛后 MVP
 
-已接入每局选手槽位映射、常驻本地 OCR、备份/停机恢复、局内 HUD 和赛后数据草稿/MVP 页面。参见 [功能与操作说明](guides/player-alignment-recovery-hud.md)。真实游戏和 OBS 验收状态见项目里程碑。
+已接入每局选手槽位映射、常驻本地 OCR、双队原子顺序更新、时间一致性复核、ID 区域预设、备份/停机恢复与赛后数据草稿/MVP 页面。局内 HUD 已有人工统计与 OBS Overlay，但**仍处于测试阶段**；其自动识别、真实比赛长时间运行和正式比分可靠性尚未验收。参见 [功能与操作说明](guides/player-alignment-recovery-hud.md) 与 [项目里程碑](../MILESTONES.md)。
