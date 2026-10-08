@@ -235,21 +235,21 @@ test('safe override merge supports icon and artwork metadata without touching re
 });
 
 
-test('broadcast artwork uses layout-specific crop presets and per-hero overrides', () => {
-  assert.deepEqual(heroArtCrop(1, 'panel'), { x: 50, y: 31, scale: 1.12 });
-  assert.deepEqual(heroArtCrop(1, 'side'), { x: 50, y: 29, scale: 1.22 });
-  assert.deepEqual(heroArtCrop(19, 'panel'), { x: 80, y: 34, scale: 1.16 });
-  assert.deepEqual(heroArtCrop(19, 'side'), { x: 83, y: 33, scale: 1.28 });
+test('broadcast artwork uses the current version-controlled per-hero crop presets', () => {
+  assert.deepEqual(heroArtCrop(1, 'panel'), sharedHeroArtFocusOverrides[1]?.panel);
+  assert.deepEqual(heroArtCrop(1, 'side'), sharedHeroArtFocusOverrides[1]?.side);
+  assert.deepEqual(heroArtCrop(19, 'panel'), sharedHeroArtFocusOverrides[19]?.panel);
+  assert.deepEqual(heroArtCrop(19, 'side'), sharedHeroArtFocusOverrides[19]?.side);
 });
 
 
-test('runtime director crop overrides static and default artwork framing', () => {
+test('runtime director crop overrides version-controlled artwork framing', () => {
   assert.deepEqual(
     heroArtCrop(19, 'side', { side: { x: 44, y: 23, scale: 1.41 } }),
     { x: 44, y: 23, scale: 1.41 },
   );
-  assert.deepEqual(heroArtCrop(19, 'panel'), { x: 80, y: 34, scale: 1.16 });
-  assert.deepEqual(heroArtCrop(1, 'side'), { x: 50, y: 29, scale: 1.22 });
+  assert.deepEqual(heroArtCrop(19, 'panel'), sharedHeroArtFocusOverrides[19]?.panel);
+  assert.deepEqual(heroArtCrop(1, 'side'), sharedHeroArtFocusOverrides[1]?.side);
 });
 
 test('runtime hero crop metadata can be promoted into tracked shared defaults', () => {
