@@ -18,8 +18,8 @@ test('Windows native recognizer ranks a known image without capturing the deskto
   assert.ok(matches[0].confidence>.99);
   assert.ok(result.preview.startsWith('data:image/png;base64,'));
 });
-test('recognizer decodes and correctly matches every roster portrait',async()=>{
-  for (const hero of heroes) {
+test('recognizer decodes and correctly matches every local roster portrait',async()=>{
+  for (const hero of heroes.filter(item=>item.imageLink.startsWith('/'))) {
     const matches=await recognizeImage(await readFile(fileURLToPath(new URL(`../public${hero.imageLink}`,import.meta.url))));
     assert.ok(matches.some(match=>match.heroId===hero.id && match.confidence>.99),hero.englishName);
   }
