@@ -7,7 +7,6 @@ import { translator } from '../shared/i18n';
 import { phases, type Action, type MatchState } from '../shared/types';
 import { heroSortCoverage, heroSortModes, sortHeroes, type HeroSortMode } from './heroSort';
 import { enterTarget, heroMatchesSearch } from './heroSearch';
-import { heroIconStyle } from '../shared/heroIcon';
 
 export function ControlHeroPicker({ state, disabled, active, send, acknowledged }: {
   state: MatchState; disabled: boolean; active: boolean; send: (action: Action) => void;
@@ -102,7 +101,7 @@ export function ControlHeroPicker({ state, disabled, active, send, acknowledged 
       const reason = phase && draftRestriction(state,phase.team,phase.action,h.id);
       const label = state.language === 'zh' ? h.chineseName : h.englishName;
       return <button key={h.id} title={label} className={enterHero?.id === h.id ? 'enter-target' : ''} disabled={unavailable(h.id)} onClick={() => phase && send({type:'draft_action',...phase,heroId:h.id})}>
-        <img src={h.imageLink} alt="" style={heroIconStyle(h)}/><span>{label}</span>{reason && <small className="eligibility-reason">{t(reason)}</small>}
+        <img src={h.imageLink} alt=""/><span>{label}</span>{reason && <small className="eligibility-reason">{t(reason)}</small>}
       </button>;
     })}</div>{!visible.length && <p className="muted">{t('noMatchingHeroes')}</p>}</div>
     <small className="picker-note">{t('availabilityHint')}</small>

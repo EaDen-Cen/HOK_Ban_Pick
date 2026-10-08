@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { heroIconStyle } from '../shared/heroIcon';
 import HeroList from './HeroList';
 
 // Type definitions
@@ -335,7 +334,7 @@ const GameBanPickPanel = ({ phases }: { phases: Phase[] }) => {
                       const hero = getHeroById(id);
                       return hero && (
                         <div key={id} className="aspect-square bg-gray-700 rounded overflow-hidden opacity-50">
-                          <img                   src={hero.imageLink} style={heroIconStyle(hero)}
+                          <img                   src={hero.imageLink}
                             alt={hero.englishName} className="w-full h-full object-cover" />
                         </div>
                       );
@@ -349,7 +348,7 @@ const GameBanPickPanel = ({ phases }: { phases: Phase[] }) => {
                       const hero = getHeroById(id);
                       return hero && (
                         <div key={id} className="aspect-square bg-gray-700 rounded overflow-hidden">
-                          <img   src={hero.imageLink} style={heroIconStyle(hero)} alt={hero.englishName} className="w-full h-full object-cover" />
+                          <img   src={hero.imageLink} alt={hero.englishName} className="w-full h-full object-cover" />
                         </div> )
                     })}
                   </div>
@@ -376,7 +375,7 @@ const GameBanPickPanel = ({ phases }: { phases: Phase[] }) => {
 						`}
                 >
                   <img 
-                    src={item.imageLink} style={heroIconStyle(item)}
+                    src={item.imageLink}
                     alt={item.chineseName}
                     className="w-full h-full object-cover"
                   />
@@ -420,7 +419,7 @@ const GameBanPickPanel = ({ phases }: { phases: Phase[] }) => {
                       const hero = getHeroById(id);
                       return hero && (
                         <div key={id} className="aspect-square bg-gray-700 rounded overflow-hidden opacity-50">
-                          <img                   src={hero.imageLink} style={heroIconStyle(hero)}
+                          <img                   src={hero.imageLink}
                             alt={hero.englishName} className="w-full h-full object-cover" />
                         </div>
                       );
@@ -434,7 +433,7 @@ const GameBanPickPanel = ({ phases }: { phases: Phase[] }) => {
                       const hero = getHeroById(id);
                       return hero && (
                         <div key={id} className="aspect-square bg-gray-700 rounded overflow-hidden">
-                          <img   src={hero.imageLink} style={heroIconStyle(hero)} alt={hero.englishName} className="w-full h-full object-cover" />
+                          <img   src={hero.imageLink} alt={hero.englishName} className="w-full h-full object-cover" />
                         </div> )
                     })}
                   </div>
@@ -462,7 +461,7 @@ const GameBanPickPanel = ({ phases }: { phases: Phase[] }) => {
                     <div key={heroId} className="flex flex-col items-center">
                       <div className="aspect-square w-full bg-gray-700/50 rounded overflow-hidden">
                         <img 
-                          src={hero.imageLink} style={heroIconStyle(hero)}
+                          src={hero.imageLink}
                           alt={hero.englishName}
                           className="w-full h-full object-cover"
                         />
@@ -489,7 +488,7 @@ const GameBanPickPanel = ({ phases }: { phases: Phase[] }) => {
                     <div key={heroId} className="flex flex-col items-center">
                       <div className="aspect-square w-full bg-gray-700/50 rounded overflow-hidden">
                         <img 
-                          src={hero.imageLink} style={heroIconStyle(hero)}
+                          src={hero.imageLink}
                           alt={hero.englishName}
                           className="w-full h-full object-cover"
                         />
@@ -516,7 +515,7 @@ const GameBanPickPanel = ({ phases }: { phases: Phase[] }) => {
                     <div key={heroId} className="flex flex-col items-center">
                       <div className="aspect-square w-full bg-gray-700/50 rounded overflow-hidden">
                         <img 
-                          src={hero.imageLink} style={heroIconStyle(hero)}
+                          src={hero.imageLink}
                           alt={hero.englishName}
                           className="w-full h-full object-cover"
                         />
@@ -543,7 +542,7 @@ const GameBanPickPanel = ({ phases }: { phases: Phase[] }) => {
 						<div key={heroId} className="flex flex-col items-center">
 						<div className="aspect-square w-full bg-gray-700/50 rounded overflow-hidden">
 							<img 
-							src={hero.imageLink} style={heroIconStyle(hero)}
+							src={hero.imageLink}
 							alt={hero.englishName}
 							className="w-full h-full object-cover"
 							/>

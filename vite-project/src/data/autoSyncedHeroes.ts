@@ -40,13 +40,8 @@ const autoSyncedHeroes: Hero[] = [
     "occupation": "Mid Lane",
     "altOccupation": "",
     "campId": 138,
-    "imageLink": "https://world.honorofkings.com/zlkdatasys/ip/hero/en//image/20260914/17893719635393.png",
+    "imageLink": "https://world.honorofkings.com/zlkdatasys/ip/hero/en//image/20260916/17895496027563.jpg",
     "recognitionImageLink": "https://world.honorofkings.com/zlkdatasys/ip/hero/en//image/20260914/17893719635393.png",
-    "iconCrop": {
-      "x": 62,
-      "y": 36,
-      "scale": 1.65
-    },
     "artLink": "https://world.honorofkings.com/zlkdatasys/ip/hero/en//image/20260916/17895496027563.jpg",
     "combo": [],
     "counter": [],

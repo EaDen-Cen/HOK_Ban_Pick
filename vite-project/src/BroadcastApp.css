@@ -43,9 +43,8 @@
 .history-team.display-left { grid-column:1; grid-row:1; }
 .history-team.display-right { grid-column:3; grid-row:1; justify-content:flex-end; }
 .history-heroes { display:flex; gap:5px; }
-.history-hero-icon { width:36px; height:36px; flex:0 0 auto; overflow:hidden; display:block; border-bottom:2px solid #55baff; }
-.history-hero-icon img { width:100%; height:100%; object-fit:cover; display:block; }
-.history-team.red .history-hero-icon { border-color:#ff657c; }
+.history-heroes img { width:36px; height:36px; object-fit:cover; border-bottom:2px solid #55baff; }
+.history-team.red img { border-color:#ff657c; }
 .history-game-number { grid-column:2; grid-row:1; text-align:center; font-size:12px; color:#b3c3d6; }
 
 
@@ -78,7 +77,7 @@
 .broadcast-overlay .draft-history > header { margin-bottom:3px; }
 .broadcast-overlay .draft-history h2 { font-size:10px; color:#8fa4be; letter-spacing:2px; }
 .broadcast-overlay .history-game { margin-top:3px; gap:24px; }
-.broadcast-overlay .history-hero-icon { width:26px; height:26px; }
+.broadcast-overlay .history-heroes img { width:26px; height:26px; }
 .broadcast-overlay .history-heroes { gap:8px; }
 .broadcast-overlay .history-team.display-left { justify-content:flex-end; }
 .broadcast-overlay .history-team.display-right { justify-content:flex-start; }
@@ -341,7 +340,7 @@
     flex-wrap:wrap;
   }
 
-  .draft-history:not(.compact) .history-hero-icon {
+  .draft-history:not(.compact) .history-heroes img {
     width:22px;
     height:22px;
   }

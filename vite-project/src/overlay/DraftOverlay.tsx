@@ -11,7 +11,6 @@ import { draftRuleName, phaseName, stageName } from '../shared/display';
 import { translator } from '../shared/i18n';
 import { phases, type MatchState, type PlayerRole, type Side } from '../shared/types';
 import { heroArtCrop } from '../data/heroArtFocus';
-import { heroIconStyle } from '../shared/heroIcon';
 
 const rolePaths: Record<PlayerRole, string> = {
   clash: 'M7 4 20 17l-3 3L4 7V4h3Zm13 0h-3L4 17l3 3L20 7V4ZM3 21l4-4m10 0 4 4',
@@ -135,7 +134,7 @@ export function DraftOverlay({ state }: { state: MatchState }) {
           const hero = typeof value === 'number' ? heroForState(state, value) : undefined;
           const label = skipped ? t('emptyBan') : hero ? (state.language === 'zh' ? hero.chineseName : hero.englishName) : t('ban');
           return <div className={`hero-slot ban ${skipped ? 'skipped-ban' : ''}`} key={index} title={label}>
-            {hero ? <><img src={hero.imageLink} alt={label} style={heroIconStyle(hero)} /><b className="ban-mark">╱</b>{state.showHeroName && <span className="ban-name">{label}</span>}</>
+            {hero ? <><img src={hero.imageLink} alt={label} /><b className="ban-mark">╱</b>{state.showHeroName && <span className="ban-name">{label}</span>}</>
               : <span className={skipped ? 'empty skipped-ban-label' : 'empty'}>{skipped ? t('emptyBan') : '—'}</span>}
           </div>;
         })}</div></div>)}</div>

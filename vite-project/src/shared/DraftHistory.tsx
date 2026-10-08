@@ -2,7 +2,6 @@ import { heroForState } from './heroData';
 import { displaySides, historyForTeam } from './draftRules';
 import { translator } from './i18n';
 import type { MatchState } from './types';
-import { heroIconStyle } from './heroIcon';
 
 export function DraftHistory({ state, compact = false }: { state: MatchState; compact?: boolean }) {
   const t = translator(state.language);
@@ -17,8 +16,7 @@ export function DraftHistory({ state, compact = false }: { state: MatchState; co
           <div className="history-heroes">{entry?.assignments.map((id, index) => {
             const hero = heroForState(state, id);
             const name = state.language === 'zh' ? hero?.chineseName : hero?.englishName;
-            const title = `${name} · ${entry.team.players[entry.playerSlotOrder[index]] || t('playerNumber', { number: index + 1 })}`;
-            return <span key={index} className="history-hero-icon" title={title}><img src={hero?.imageLink} alt={name} style={heroIconStyle(hero)} /></span>;
+            return <img key={index} src={hero?.imageLink} alt={name} title={`${name} · ${entry.team.players[entry.playerSlotOrder[index]] || t('playerNumber', { number: index + 1 })}`} />;
           })}</div>
         </div>;
       })}

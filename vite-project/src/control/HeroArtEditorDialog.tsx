@@ -1,5 +1,4 @@
 import { createPortal } from 'react-dom';
-import { heroIconStyle } from '../shared/heroIcon';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import heroes from '../components/HeroList';
 import { heroesForState } from '../shared/heroData';
@@ -243,7 +242,7 @@ export function HeroArtEditorDialog({
                   onClick={()=>selectHero(item.id)}
                   title={item.englishName}
                 >
-                  <img src={item.imageLink} alt="" style={heroIconStyle(item)} />
+                  <img src={item.imageLink} alt="" />
                   <span>{displayName}</span>
                   <small>{item.occupation}</small>
                 </button>;

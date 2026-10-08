@@ -115,7 +115,6 @@ test('every hero has a local portrait or an explicitly trusted temporary officia
     if (!hero.imageLink.startsWith('/')) {
       assert.ok(trustedRemoteHeroImage(hero.imageLink), `${hero.englishName}: untrusted remote portrait`);
       assert.equal(hero.relationshipStatus, 'unverified', `${hero.englishName}: remote portrait is only allowed for a new unverified hero`);
-      assert.ok(hero.iconCrop && hero.iconCrop.scale > 1, `${hero.englishName}: temporary remote UI portrait must define a close square icon crop`);
       continue;
     }
     assert.match(hero.imageLink, /^\/heroesImg\/\d+\.(png|jpe?g|webp)$/);
