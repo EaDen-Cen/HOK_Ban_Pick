@@ -15,3 +15,5 @@ JSON 证据保留根目录 `research/` 原路径；文件内记录的素材路�
 
 
 - [HOK / LoL 功能对照审计（2026-10-06）](lol-feature-parity-audit-2026-10-06.md)：只比较功能、可靠性与导播工作流；记录哪些 LoL 优化已移植到 HOK、哪些应保持游戏专属。
+
+- [英雄 Release-order ID](hero-id-order.md)：119 位英雄的上架顺序编号、同批英雄规则、旧存档迁移与图标资产解耦。

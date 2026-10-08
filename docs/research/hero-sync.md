@@ -57,6 +57,13 @@
 - 官方 Full Art CDN 加载失败时自动退回本地 \`imageLink\` Icon，避免比赛画面出现空卡。
 - 自动任务只开 PR，不自动合并到 \`main\`。
 
+
+## Release-order Hero ID
+
+v1.0.0 前将全部 119 位英雄改为按国际服 **Launch Time 从旧到新连续编号**。当前编号范围为 `1..119`，ID 越大代表越晚上架；Control 的“上线时间（新→旧）”因此直接按 ID 降序，不再依赖缺失的 releaseDate 元数据。
+
+完整规则、Flowborn 多形态、Plus 2.0 AoV 英雄同批处理和旧存档迁移见 [hero-id-order.md](hero-id-order.md)。头像资产路径与 hero ID 已解耦，不会因为重新编号再次重命名你已经整理好的 `public/heroesImg/`。
+
 ## Wang Wei 与新英雄来源回退
 
 2026-10-08 的第一次检查其实已经发现了 `Wang Wei (campId 138)`，但当时辅助目录的 `/hok/138` 详情页返回 HTTP 502。旧实现必须先从该详情页补齐图片，因此审计记录为“Skipped new hero Wang Wei”。
@@ -68,9 +75,9 @@
 3. 如果辅助详情页临时失败，但官方身份已确认且已有可信 Key Art，则仍可加入英雄，临时用官方远程素材作为 Picker / Overlay 图片；
 4. 后续同步一旦拿到辅助目录的官方 CDN Icon，会继续下载到 `public/heroesImg/`，把英雄恢复为本地 Icon + 官方 Full Art 的常规结构。
 
-当前已加入 **Wang Wei / 王维，本地 ID 120，Camp ID 138，Mid Lane**。关系数据保持空数组和 `unverified`，不会因为新英雄同步而自动生成 Counter / Combo。
+当前已加入 **Wang Wei / 王维，release-order ID 119，Camp ID 138，Mid Lane**。关系数据保持空数组和 `unverified`，不会因为新英雄同步而自动生成 Counter / Combo。
 
-王维官网同时提供了带装饰圆框的人物肖像和横向 Key Art。圆框肖像不再作为 UI `imageLink`，否则 Hero Picker / Ban 小头像会把金色边框一起显示。当前 UI 临时使用官方 Key Art 通过 `object-fit: cover` 做方形裁切；原圆框肖像只保存在 `recognitionImageLink` 作为识别模板来源。等辅助目录恢复稳定 Icon 后，`imageLink` 仍会切换回本地 `/heroesImg/120.*`。
+王维官网同时提供了带装饰圆框的人物肖像和横向 Key Art。圆框肖像不再作为 UI `imageLink`，否则 Hero Picker / Ban 小头像会把金色边框一起显示。当前人工整理后的 UI 图标使用本地 `/heroesImg/120.png`；`artLink` 继续提供广播大图，`recognitionImageLink` 独立用于识别模板。注意这里的 `120.png` 是历史资产文件名，程序 hero ID 已迁移为 119。
 
 ## Panel / Side 裁切数据如何同步
 

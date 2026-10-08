@@ -5,7 +5,7 @@ import type { Hero } from './heroTypes.js';
 // Empty relationship arrays mean unverified, not that no relationship exists.
 const additionalHeroes: Hero[] = [
   {
-    "id": 97,
+    "id": 114,
     "englishName": "Yango",
     "chineseName": "元歌",
     "occupation": "Clash Lane",
@@ -18,7 +18,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 98,
+    "id": 104,
     "englishName": "Flowborn (Tank)",
     "chineseName": "元流之子（坦克）",
     "occupation": "Clash Lane",
@@ -32,7 +32,7 @@ const additionalHeroes: Hero[] = [
     "variantGroup": "flowborn"
   },
   {
-    "id": 99,
+    "id": 110,
     "englishName": "Garuda",
     "chineseName": "迦楼罗",
     "occupation": "Mid Lane",
@@ -45,7 +45,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 100,
+    "id": 98,
     "englishName": "Arke",
     "chineseName": "阿轲",
     "occupation": "Jungling",
@@ -58,7 +58,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 101,
+    "id": 102,
     "englishName": "Bai Qi",
     "chineseName": "白起",
     "occupation": "Clash Lane",
@@ -71,7 +71,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 102,
+    "id": 103,
     "englishName": "Fatih",
     "chineseName": "法提赫",
     "occupation": "Clash Lane",
@@ -84,7 +84,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 103,
+    "id": 109,
     "englishName": "Umbrosa",
     "chineseName": "影",
     "occupation": "Clash Lane",
@@ -97,7 +97,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 104,
+    "id": 107,
     "englishName": "Flowborn (Marksman)",
     "chineseName": "元流之子（射手）",
     "occupation": "Farm Lane",
@@ -111,7 +111,7 @@ const additionalHeroes: Hero[] = [
     "variantGroup": "flowborn"
   },
   {
-    "id": 105,
+    "id": 111,
     "englishName": "Lapulapu",
     "chineseName": "拉普拉普",
     "occupation": "Roaming",
@@ -124,7 +124,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 106,
+    "id": 101,
     "englishName": "Chano",
     "chineseName": "苍",
     "occupation": "Farm Lane",
@@ -137,7 +137,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 107,
+    "id": 97,
     "englishName": "Xuance",
     "chineseName": "百里玄策",
     "occupation": "Jungling",
@@ -150,7 +150,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 108,
+    "id": 115,
     "englishName": "Annette",
     "chineseName": "安奈特",
     "occupation": "Roaming",
@@ -164,7 +164,7 @@ const additionalHeroes: Hero[] = [
     "crossover": "aov"
   },
   {
-    "id": 109,
+    "id": 96,
     "englishName": "Yixing",
     "chineseName": "弈星",
     "occupation": "Mid Lane",
@@ -177,7 +177,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 110,
+    "id": 99,
     "englishName": "Sakeer",
     "chineseName": "桑启",
     "occupation": "Roaming",
@@ -190,7 +190,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 111,
+    "id": 113,
     "englishName": "Haya",
     "chineseName": "海月",
     "occupation": "Mid Lane",
@@ -203,7 +203,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 112,
+    "id": 118,
     "englishName": "Devara",
     "chineseName": "谛梵罗",
     "occupation": "Clash Lane",
@@ -216,7 +216,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 113,
+    "id": 100,
     "englishName": "Feyd",
     "chineseName": "暃",
     "occupation": "Jungling",
@@ -229,7 +229,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 114,
+    "id": 112,
     "englishName": "Chicha",
     "chineseName": "蚩奼",
     "aliases": ["蚩姹"],
@@ -243,7 +243,7 @@ const additionalHeroes: Hero[] = [
     "relationshipStatus": "unverified"
   },
   {
-    "id": 115,
+    "id": 116,
     "englishName": "Florentino",
     "chineseName": "弗洛伦",
     "aliases": ["弗洛倫"],
@@ -258,7 +258,7 @@ const additionalHeroes: Hero[] = [
     "crossover": "aov"
   },
   {
-    "id": 116,
+    "id": 117,
     "englishName": "Lorion",
     "chineseName": "洛里昂",
     "occupation": "Mid Lane",
@@ -272,7 +272,7 @@ const additionalHeroes: Hero[] = [
     "crossover": "aov"
   },
   {
-    "id": 117,
+    "id": 105,
     "englishName": "Flowborn (Mage)",
     "chineseName": "元流之子（法师）",
     "occupation": "Mid Lane",

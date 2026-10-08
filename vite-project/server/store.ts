@@ -6,13 +6,63 @@ import { existsSync, mkdirSync, readFileSync, renameSync, openSync, writeSync, f
 import type { TeamPresetStore } from './teamPresets.js';
 import { dirname } from 'node:path';
 import heroes from '../src/components/HeroList.js';
+import { migrateLegacyHeroId, migrateLegacyHeroIdRecord } from '../src/data/heroIdOrder.js';
 import { initialState, phases, type Action, type MatchState, type Role, type Snapshot } from '../src/shared/types.js';
 import { currentGame, draftHeroGroupKey, draftHeroUsed, draftRestriction, normalizeState, pickRestriction, playerIdentity, ruleLocked, seriesFinished } from '../src/shared/draftRules.js';
 import { draftTurnAtPhase } from '../src/shared/draftTurns.js';
 
 interface Event { id: string; timestamp: number; type: string; resultingState: MatchState; revision: number }
-interface Data { version: 1; state: MatchState; events: Event[]; history: MatchState[]; revision: number; delay: number; ids: string[] }
+interface Data { version: 2; state: MatchState; events: Event[]; history: MatchState[]; revision: number; delay: number; ids: string[] }
+interface LegacyData extends Omit<Data, 'version'> { version: 1 }
 const copy = <T>(v: T): T => structuredClone(v);
+
+function remapHeroIds(values: Array<number | null> | undefined) {
+  return (values || []).map(value => migrateLegacyHeroId(value) as number | null);
+}
+
+function migrateStateHeroIds(input: MatchState): MatchState {
+  const state = copy(input);
+  state.blueBans = remapHeroIds(state.blueBans);
+  state.redBans = remapHeroIds(state.redBans);
+  state.bluePicks = remapHeroIds(state.bluePicks) as number[];
+  state.redPicks = remapHeroIds(state.redPicks) as number[];
+  state.blueAssignments = remapHeroIds(state.blueAssignments);
+  state.redAssignments = remapHeroIds(state.redAssignments);
+  state.heroArtOverrides = migrateLegacyHeroIdRecord(state.heroArtOverrides || {});
+  state.heroDataOverrides = migrateLegacyHeroIdRecord(state.heroDataOverrides || {});
+
+  state.draftHistory = (state.draftHistory || []).map(game => ({
+    ...game,
+    blueBans: remapHeroIds(game.blueBans),
+    redBans: remapHeroIds(game.redBans),
+    bluePicks: remapHeroIds(game.bluePicks) as number[],
+    redPicks: remapHeroIds(game.redPicks) as number[],
+    blueAssignments: remapHeroIds(game.blueAssignments) as number[],
+    redAssignments: remapHeroIds(game.redAssignments) as number[],
+  }));
+
+  state.postGameReports = (state.postGameReports || []).map(report => ({
+    ...report,
+    players: report.players.map(player => ({
+      ...player,
+      heroId: migrateLegacyHeroId(player.heroId) as number,
+    })),
+  }));
+  return state;
+}
+
+function migrateLegacyData(data: LegacyData): Data {
+  return {
+    ...data,
+    version: 2,
+    state: migrateStateHeroIds(data.state),
+    history: data.history.map(migrateStateHeroIds),
+    events: data.events.map(event => ({
+      ...event,
+      resultingState: migrateStateHeroIds(event.resultingState),
+    })),
+  };
+}
 function integer(v: unknown, min: number, max: number): asserts v is number {
   if (!Number.isInteger(v) || Number(v) < min || Number(v) > max) throw new Error(`请输入 ${min} 至 ${max} 之间的整数`);
 }
@@ -99,10 +149,11 @@ function validateLineup(state: MatchState, requireComplete = state.draftComplete
 export class Store {
   data: Data;
   constructor(private file?: string, private clock = Date.now, private presets?: TeamPresetStore) {
-    this.data = file && existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {
-      version: 1, state: initialState(), events: [], history: [], revision: 0, delay: 180, ids: [],
-    };
-    if (this.data.version !== 1 || !Array.isArray(this.data.events) || !Array.isArray(this.data.history)) throw new Error('比赛存档无效，请恢复有效备份');
+    const loaded = file && existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) as Data | LegacyData : undefined;
+    this.data = loaded
+      ? loaded.version === 1 ? migrateLegacyData(loaded) : loaded
+      : { version: 2, state: initialState(), events: [], history: [], revision: 0, delay: 180, ids: [] };
+    if (this.data.version !== 2 || !Array.isArray(this.data.events) || !Array.isArray(this.data.history)) throw new Error('比赛存档无效，请恢复有效备份');
     this.data.state = normalizeState(this.data.state);
     this.data.history = this.data.history.map(normalizeState);
     this.data.events = this.data.events.map(event => ({ ...event, resultingState: normalizeState(event.resultingState) }));

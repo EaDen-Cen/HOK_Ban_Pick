@@ -11,7 +11,7 @@ const heroArtSourceOverrides: Record<number, Partial<Hero>> = {
   // Ao'yin / Loong / 敖隐
   // The auto-synced full-art source for camp 519 is not suitable in the broadcast
   // crop editor. Use Tencent's official Ao'yin reveal artwork instead.
-  54: {
+  88: {
     artLink: '/heroesArt/ao\'yin.jpg',
   },
 };

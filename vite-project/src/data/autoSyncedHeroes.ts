@@ -6,7 +6,7 @@ import type { Hero } from './heroTypes.js';
 //
 const autoSyncedHeroes: Hero[] = [
   {
-    "id": 118,
+    "id": 106,
     "englishName": "Flowborn (Assassin)",
     "chineseName": "Coming soon",
     "occupation": "Jungling",
@@ -20,7 +20,7 @@ const autoSyncedHeroes: Hero[] = [
     "variantGroup": "flowborn"
   },
   {
-    "id": 119,
+    "id": 108,
     "englishName": "Flowborn (Roamer)",
     "chineseName": "Coming soon",
     "occupation": "Roaming",
@@ -34,14 +34,13 @@ const autoSyncedHeroes: Hero[] = [
     "variantGroup": "flowborn"
   },
   {
-    "id": 120,
+    "id": 119,
     "englishName": "Wang Wei",
     "chineseName": "王维",
     "occupation": "Mid Lane",
     "altOccupation": "",
     "campId": 138,
     "imageLink": "/heroesImg/120.png",
-    "recognitionImageLink": "https://world.honorofkings.com/zlkdatasys/ip/hero/en//image/20260914/17893719635393.png",
     "artLink": "https://world.honorofkings.com/zlkdatasys/ip/hero/en//image/20260916/17895496027563.jpg",
     "combo": [],
     "counter": [],
