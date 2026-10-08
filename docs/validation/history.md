@@ -1,5 +1,18 @@
 > [文档索引](../README.md) · 除特别注明外，文件路径以仓库根目录为基准，npm 命令在 `vite-project/` 中执行。
 
+## 2026-10-08：v1.0.0 发布前识别稳定性与文档冻结
+
+基线：main `4d8f052`（PR #49 合并后）。
+
+- PR #49 的 GitHub Actions `validate-pr` 已通过：Hero data validation、TypeScript/Vite production build、服务器/单元测试、ESLint 全部成功。
+- Player ID 链路已覆盖：英文/简中独立常驻 OCR worker、soft 首轮快速识别、未通过队伍追加 threshold 170/190、120 种全局一一映射、双队原子更新、人工采用建议、恢复自动识别、ID 区域独立预设与两帧时间一致性复核。
+- 新增 E2E 覆盖“连续两帧顺序相同，但两帧分别有不同弱槽位”的情况；只有合并后仍满足每槽 `.80`、平均 `.90`、margin `.06` 才自动通过。
+- 当前 Simulator 现场测试观察：Player ID 完整核查最佳约 **1.8 秒**；BP 自动脚本在约 **1.5–2 秒**随机选角窗口下可稳定出结果。上述为当前测试环境观察值，不是所有赛事机/真实 HOK/OBS 并发环境的性能保证。
+- BP Simulator 已拆分为 BP 识别、换英雄同步、Player ID 排序三个独立测试，并支持随机切换预选英雄、可调锁定 cue、Pick/Ban 尺寸。
+- **M19 Game HUD 仍为 Experimental / 测试阶段**：当前人工统计与 Overlay 可用，但自动读取真实游戏 HUD、OBS 长时间稳定性和正式比分兜底尚未完成验证。发布文档不得把 HUD 描述为已正式验收功能。
+- M20 赛后 MVP 基础采集/展示链路可用；自动判页、真实结算页全覆盖仍待实机验收。
+- 仍需发布前人工 smoke test：真实 HOK BP、赛事机 + OBS 并发、录制音画稳定性、Quick Tunnel/远程解说、Game HUD（若启用）和 MVP 结算流程。
+
 ## 2026-10-07：性能、规则与访问流程
 
 环境：Linux，Node.js 24.19.0；基线提交 5850b83。

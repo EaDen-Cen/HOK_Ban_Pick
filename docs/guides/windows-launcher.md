@@ -2,6 +2,8 @@
 
 # Windows one-click broadcast launcher
 
+> v1.0.0 Release Candidate：启动器、Director app mode 与 Simulator 后台启停已进入发布准备状态。Game HUD 仍是测试功能；启动器只负责运行服务，不代表 HUD 已完成真实比赛验收。
+
 From `vite-project`, double-click `start-broadcast.bat`.
 
 首次使用或更新源码后可以直接运行启动器：它会根据 `package-lock.json` 检查依赖并执行生产构建。下文 `artifacts/` 路径均相对于 `vite-project/`。
@@ -31,7 +33,7 @@ If startup fails, inspect `artifacts/cloudflared.log` and the `HOK Broadcast Ser
 start-bp-simulator.bat
 ```
 
-启动器会检查 Node/npm、准备依赖、清理旧的 5173 端口进程，然后通过隐藏 PowerShell 后台启动 Vite Simulator。页面就绪后自动打开 Simulator Control，启动命令窗口随后关闭。
+启动器会检查 Node/npm、准备依赖、清理旧的 5173 端口进程，然后通过隐藏 PowerShell 后台启动 Vite Simulator。页面就绪后自动打开 Simulator Control，启动命令窗口随后关闭。Simulator Control 目前提供 BP 识别、换英雄同步、选手 ID 排序三个独立测试模式，并可调 Pick/Ban 尺寸、自动脚本等待与锁定 cue。
 
 后台日志：
 
@@ -59,6 +61,6 @@ vite-project/data/director-browser-profile/
 
 This keeps Control isolated from the operator's normal browser profile and avoids inheriting a saved per-site zoom level. The Auto BP calibration UI also blocks Ctrl/Cmd zoom shortcuts and Ctrl+wheel while it is mounted.
 
-This is the first desktopization step, not the final distributable EXE. It deliberately reuses the existing server and browser engine while the Auto BP workflow is still being validated. The planned Electron package can later bundle the same Control UI, server lifecycle, tunnel status and logs without changing match-state APIs.
+This is the first desktopization step, not the final distributable EXE. It deliberately reuses the existing server and browser engine while real-device Auto BP / Player ID / OBS validation continues. The planned Electron package can later bundle the same Control UI, server lifecycle, tunnel status and logs without changing match-state APIs.
 
 启动后本机窗口免登录。首次远程使用前在 Control 的“访问与网站设置”保存密码；Quick Tunnel 和其他代理连接需要密码或角色 token。模拟器可独立运行，读取 Control 规则需同时启动 Broadcast 后端。
