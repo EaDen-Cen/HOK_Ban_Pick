@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 import heroes from '../src/components/HeroList.js';
+import { trustedRemoteHeroImage } from './capture.js';
 
 const addedNames = [
   'Yango', 'Flowborn (Tank)', 'Garuda', 'Arke', 'Bai Qi', 'Fatih', 'Umbrosa',
@@ -103,8 +104,13 @@ test('hero relationships reference existing heroes and contain no self reference
   }
 });
 
-test('every hero has a valid local portrait at its declared image path', () => {
+test('every hero has a local portrait or an explicitly trusted temporary official portrait', () => {
   for (const hero of heroes) {
+    if (!hero.imageLink.startsWith('/')) {
+      assert.ok(trustedRemoteHeroImage(hero.imageLink), `${hero.englishName}: untrusted remote portrait`);
+      assert.equal(hero.relationshipStatus, 'unverified', `${hero.englishName}: remote portrait is only allowed for a new unverified hero`);
+      continue;
+    }
     assert.match(hero.imageLink, /^\/heroesImg\/\d+\.(png|jpe?g|webp)$/);
     const label = `${hero.englishName} (${hero.imageLink})`;
     const bytes = readFileSync(new URL(`../public${hero.imageLink}`, import.meta.url));
