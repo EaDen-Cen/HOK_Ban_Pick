@@ -76,6 +76,56 @@ interface Scan {
 
 const sameOrder=(a:readonly number[],b:readonly number[])=>a.length===b.length&&a.every((value,index)=>value===b[index]);
 
+interface VerificationEvidence {
+  signature:string;
+  frames:number;
+  bestConfidence:number[];
+  minMargin:number;
+}
+
+function mergeVerification(
+  previous:VerificationEvidence|undefined,
+  solution:PlayerSlotSolution|undefined,
+):{evidence?:VerificationEvidence;solution?:PlayerSlotSolution} {
+  if(!solution)return {};
+  if(solution.automatic)return {solution};
+
+  const signature=solution.order.join(',');
+  const evidence:VerificationEvidence=previous?.signature===signature
+    ? {
+      signature,
+      frames:previous.frames+1,
+      bestConfidence:solution.confidence.map((score,index)=>Math.max(score,previous.bestConfidence[index]??0)),
+      minMargin:Math.min(previous.minMargin,solution.margin),
+    }
+    : {
+      signature,
+      frames:1,
+      bestConfidence:[...solution.confidence],
+      minMargin:solution.margin,
+    };
+
+  const average=evidence.bestConfidence.reduce((sum,value)=>sum+value,0)/evidence.bestConfidence.length;
+  const verified=evidence.frames>=2
+    && evidence.minMargin>=.06
+    && evidence.bestConfidence.every(value=>value>=.80)
+    && average>=.90;
+
+  return {
+    evidence,
+    solution:verified
+      ? {
+        ...solution,
+        confidence:evidence.bestConfidence,
+        average,
+        anomalies:[],
+        automatic:true,
+        verificationFrames:evidence.frames,
+      }
+      : {...solution,verificationFrames:evidence.frames},
+  };
+}
+
 export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchState;token:string;disabled:boolean;send:(action:Action)=>void}) {
   const zh=state.language==='zh';
   const [ready,setReady]=useState(false);
@@ -100,6 +150,7 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
   const inFlight=useRef(false);
   const generation=useRef(0);
   const accepted=useRef<Partial<Record<Side,string>>>({});
+  const verification=useRef<Partial<Record<Side,VerificationEvidence>>>({});
   latest.current={state,disabled,send,scanContext:scan?.context};
 
   const context=JSON.stringify([state.blueTeam.players,state.redTeam.players,state.gameNumber]);
@@ -108,6 +159,7 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
 
   useEffect(()=>{
     accepted.current={};
+    verification.current={};
     setScan(undefined);
     setStatus('');
     setManualEdit({blue:false,red:false});
@@ -146,6 +198,7 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
 
   function requestRescan() {
     accepted.current={};
+    verification.current={};
     setScan(undefined);
     setStatus(zh?'准备重新识别…':'Preparing rescan…');
     generation.current++;
@@ -154,6 +207,7 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
 
   function restoreAutoRecognition() {
     accepted.current={};
+    verification.current={};
     setManualEdit({blue:false,red:false});
     setScan(undefined);
     setAuto(true);
@@ -235,10 +289,23 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
         }
 
         if(!active||epoch!==generation.current||capturedContext!==contextRef.current)return;
-        setScan({...result,context:capturedContext});
+        const blueMerged=mergeVerification(verification.current.blue,result.blue);
+        const redMerged=mergeVerification(verification.current.red,result.red);
+        verification.current.blue=blueMerged.evidence;
+        verification.current.red=redMerged.evidence;
+        const verifiedFrames=Math.max(
+          blueMerged.solution?.verificationFrames??0,
+          redMerged.solution?.verificationFrames??0,
+        );
+        setScan({
+          ...result,
+          context:capturedContext,
+          blue:blueMerged.solution,
+          red:redMerged.solution,
+        });
         setStatus(zh
-          ? `本地 OCR ${Math.round(result.elapsedMs)} ms${usedFallback?' · 已自动扩大 ID 区域':''}`
-          : `Local OCR ${Math.round(result.elapsedMs)} ms${usedFallback?' · automatic wide-ID fallback':''}`);
+          ? `本地 OCR ${Math.round(result.elapsedMs)} ms${usedFallback?' · 已自动扩大 ID 区域':''}${verifiedFrames>=2?' · 多帧复核通过':''}`
+          : `Local OCR ${Math.round(result.elapsedMs)} ms${usedFallback?' · automatic wide-ID fallback':''}${verifiedFrames>=2?' · temporal verification passed':''}`);
         if(!auto)setManualScan(0);
       }catch(error){
         if(active)setStatus(error instanceof Error?error.message:'OCR failed');
@@ -293,6 +360,7 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
     setSlots(normalized);
     window.dispatchEvent(new Event('hok-capture-slots-changed'));
     accepted.current={};
+    verification.current={};
     setScan(undefined);
     generation.current++;
   }
@@ -436,8 +504,12 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
       : confirmed
         ? (zh?'已同步':'Synced')
         : solution.automatic
-          ? (zh?'高置信度':'High confidence')
-          : (auto?(zh?'自动复核中':'Retrying OCR'):(zh?'需确认':'Review'));
+          ? (solution.verificationFrames&&solution.verificationFrames>=2
+            ? (zh?`${solution.verificationFrames} 帧复核通过`:`${solution.verificationFrames}-frame verified`)
+            : (zh?'高置信度':'High confidence'))
+          : (auto
+            ? (zh?`自动复核中${solution.verificationFrames&&solution.verificationFrames>1?` · ${solution.verificationFrames} 帧一致`:''}`:`Retrying OCR${solution.verificationFrames&&solution.verificationFrames>1?` · ${solution.verificationFrames} matching frames`:''}`)
+            : (zh?'需确认':'Review'));
 
     return <article className={`player-slot-team-card ${side}`} key={side}>
       <header>
@@ -473,6 +545,7 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
           // Freeze the visible proposal before applying it. A background OCR
           // response must not overwrite the operator's explicit choice.
           generation.current++;
+          verification.current={};
           setAuto(false);
           localStorage.setItem('hok-player-slot-auto','0');
           setManualScan(0);
@@ -491,6 +564,7 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
             const order=[...currentOrder];
             const other=order.indexOf(Number(e.target.value));
             [order[index],order[other]]=[order[other],order[index]];
+            verification.current={};
             setAuto(false);
             localStorage.setItem('hok-player-slot-auto','0');
             send({type:'set_player_slot_order',side,order,expectedPlayers:[...team.players]});
