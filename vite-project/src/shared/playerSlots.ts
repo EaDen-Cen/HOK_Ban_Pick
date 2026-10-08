@@ -47,7 +47,22 @@ function similarity(ocrText:string,player:string) {
 const permutations = (values: number[]): number[][] => values.length <= 1 ? [values] :
   values.flatMap((value,index)=>permutations(values.filter((_,i)=>i!==index)).map(rest=>[value,...rest]));
 const orders = permutations([0,1,2,3,4]);
-export interface PlayerSlotSolution { order: number[]; confidence: number[]; average: number; margin: number; automatic: boolean; anomalies: number[] }
+export interface PlayerSlotSolution {
+  order:number[];
+  confidence:number[];
+  average:number;
+  margin:number;
+  automatic:boolean;
+  anomalies:number[];
+  ocrConfidence?:number[];
+  ocrText?:string[];
+  ocrVariant?:string[];
+}
+export interface PlayerOcrCandidateInput {
+  text:string;
+  confidence:number;
+  variant?:string;
+}
 /** Globally solve all 120 bijections, rejecting blank/out-of-roster and ambiguous IDs. */
 export function solvePlayerSlots(texts: string[], players: string[], ocrConfidence: number[] = [1,1,1,1,1]): PlayerSlotSolution | undefined {
   if (texts.length !== 5 || players.length !== 5 || players.some(p=>!normalizePlayerText(p)) || new Set(players.map(normalizePlayerText)).size !== 5) return;
@@ -62,4 +77,74 @@ export function solvePlayerSlots(texts: string[], players: string[], ocrConfiden
   const confidence=best.confidence.map((score,index)=>Math.min(score,ocrConfidence[index]??0));
   const average=confidence.reduce((a,b)=>a+b,0)/5;
   return {...best,confidence,average,margin,anomalies,automatic:anomalies.length===0 && average>=.90 && margin>=.06};
+}
+
+
+/**
+ * Solve player slots from multiple OCR preprocessing candidates per row.
+ * UI confidence is roster-match confidence, while raw Tesseract confidence is
+ * retained separately for diagnostics. Exact/fuzzy roster matching therefore
+ * does not collapse to 0% merely because the stylized font got a low OCR score.
+ */
+export function solvePlayerSlotCandidates(
+  candidates:PlayerOcrCandidateInput[][],
+  players:string[],
+):PlayerSlotSolution|undefined {
+  if(
+    candidates.length!==5||
+    players.length!==5||
+    players.some(player=>!normalizePlayerText(player))||
+    new Set(players.map(normalizePlayerText)).size!==5
+  )return;
+
+  const cells=candidates.map(row=>players.map(player=>{
+    let best={match:0,ocr:0,text:'',variant:''};
+    for(const candidate of row){
+      const match=similarity(candidate.text,player);
+      if(match>best.match||(match===best.match&&candidate.confidence>best.ocr)){
+        best={
+          match,
+          ocr:Math.max(0,Math.min(1,candidate.confidence||0)),
+          text:candidate.text,
+          variant:candidate.variant||'',
+        };
+      }
+    }
+    return best;
+  }));
+
+  const ranked=orders.map(order=>{
+    const confidence=order.map((playerIndex,slot)=>cells[slot][playerIndex].match);
+    return {
+      order,
+      confidence,
+      average:confidence.reduce((sum,value)=>sum+value,0)/5,
+    };
+  }).sort((a,b)=>b.average-a.average);
+
+  const best=ranked[0];
+  if(!best)return;
+  const margin=best.average-(ranked[1]?.average??0);
+  const chosen=best.order.map((playerIndex,slot)=>cells[slot][playerIndex]);
+  const ocrConfidence=chosen.map(cell=>cell.ocr);
+  const ocrText=chosen.map(cell=>cell.text);
+  const ocrVariant=chosen.map(cell=>cell.variant);
+  const anomalies=best.confidence.flatMap((score,index)=>{
+    if(!ocrText[index])return [index];
+    if(score<.80)return [index];
+    // Extremely weak OCR is acceptable only when the normalized text exactly
+    // matches the known roster ID; otherwise require a small amount of OCR evidence.
+    if(ocrConfidence[index]<.15&&normalizePlayerText(ocrText[index])!==normalizePlayerText(players[best.order[index]]))return [index];
+    return [];
+  });
+
+  return {
+    ...best,
+    margin,
+    anomalies,
+    ocrConfidence,
+    ocrText,
+    ocrVariant,
+    automatic:anomalies.length===0&&best.average>=.90&&margin>=.06,
+  };
 }

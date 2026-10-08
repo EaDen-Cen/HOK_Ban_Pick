@@ -432,9 +432,14 @@ export function PlayerSlotAlignment({state,token,disabled,send}:{state:MatchStat
       <div className="player-slot-result-list">
         {displayOrder.map((roster,index)=>{
           const confidence=solution?.confidence[index];
-          const raw=scan?.texts[(side==='blue'?0:5)+index]||'';
+          const raw=solution?.ocrText?.[index]??scan?.texts[(side==='blue'?0:5)+index]??'';
+          const rawConfidence=solution?.ocrConfidence?.[index];
+          const variant=solution?.ocrVariant?.[index];
           const badgeClass=confidence===undefined?'idle':confidence>=.9?'high':confidence>=.8?'medium':'low';
-          return <div className="player-slot-result-row" key={index} title={raw?`${zh?'OCR 原文':'OCR'}: ${raw}`:''}>
+          const debugTitle=raw
+            ? `${zh?'匹配 OCR':'Matched OCR'}: ${raw}${rawConfidence===undefined?'':` · OCR ${Math.round(rawConfidence*100)}%`}${variant?` · ${variant}`:''}`
+            : '';
+          return <div className="player-slot-result-row" key={index} title={debugTitle}>
             <span className="player-slot-position">P{index+1}</span>
             <strong>{team.players[roster]||`${zh?'选手':'Player'} ${roster+1}`}</strong>
             {confidence===undefined
