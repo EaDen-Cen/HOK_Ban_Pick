@@ -75,12 +75,19 @@ function clamp(value:number,min:number,max:number) {
   return Math.max(min,Math.min(max,value));
 }
 
+
+export function migrateLegacySimulatorSlotHeroes(slotHeroes:SimulatorSlotMap|undefined):SimulatorSlotMap {
+  return Object.fromEntries(
+    Object.entries(slotHeroes??{}).map(([key,id])=>[key,migrateLegacyHeroId(Number(id)) as number]),
+  );
+}
+
 function normalizeState(value:Partial<BpSimulatorState>|undefined,migrateLegacyIds=false):BpSimulatorState {
   const defaults=createDefaultBpSimulatorState();
   const source=value??{};
   const incoming={...(source.slotHeroes??{})};
   const migratedIncoming=migrateLegacyIds
-    ? Object.fromEntries(Object.entries(incoming).map(([key,id])=>[key,migrateLegacyHeroId(Number(id)) as number]))
+    ? migrateLegacySimulatorSlotHeroes(incoming)
     : incoming;
   const slotHeroes={...defaults.slotHeroes,...migratedIncoming};
   const rawMin=clamp(Number(source.intervalMinMs)||Number((source as {intervalMs?:number}).intervalMs)||defaults.intervalMinMs,300,15000);
