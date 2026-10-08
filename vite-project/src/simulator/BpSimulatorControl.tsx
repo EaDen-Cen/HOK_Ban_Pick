@@ -340,6 +340,11 @@ export function BpSimulatorControl() {
     update,
   ]);
 
+  const playerElapsed=state.playerOrderTestStartedAt
+    ? (state.playerOrderTestCompletedAt??clock)-state.playerOrderTestStartedAt
+    : null;
+  const swapElapsed=swapStartedAt?(swapCompletedAt??clock)-swapStartedAt:null;
+
   const renderPickEditor=(side:Side,index:number)=>{
     const key=side+'Pick'+(index+1);
     const locked=state.locked.includes(key);
