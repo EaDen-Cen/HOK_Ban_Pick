@@ -323,6 +323,16 @@ export class Store {
       validateLineup(state, true);
       break;
     }
+    case 'set_player_slot_orders': {
+      if (state.committedGameId) throw new Error('gameAlreadyCommitted');
+      if (!validPlayerSlotOrder(action.blue) || !validPlayerSlotOrder(action.red)) throw new Error('选手顺序必须包含五名不同选手 / Invalid player order');
+      if (JSON.stringify(action.expectedPlayers) !== JSON.stringify([state.blueTeam.players,state.redTeam.players])) throw new Error('阵容已改变，请重新识别 / Roster changed; scan again');
+      next.history.push(copy(state));
+      state.bluePlayerSlotOrder = [...action.blue];
+      state.redPlayerSlotOrder = [...action.red];
+      if (state.draftComplete) validateLineup(state, true);
+      break;
+    }
     case 'set_player_slot_order': {
       if (state.committedGameId) throw new Error('gameAlreadyCommitted');
       if (!['blue','red'].includes(action.side) || !validPlayerSlotOrder(action.order)) throw new Error('选手顺序必须包含五名不同选手 / Invalid player order');

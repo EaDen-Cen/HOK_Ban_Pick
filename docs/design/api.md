@@ -24,6 +24,8 @@
 
 已接入每局选手槽位映射、常驻本地 OCR、备份/停机恢复、局内 HUD 和赛后数据草稿/MVP 页面。参见 [功能与操作说明](../guides/player-alignment-recovery-hud.md)。真实游戏和 OBS 验收状态见项目里程碑。
 
+Control action `set_player_slot_orders` 接收 `blue` / `red` 两个五人排列，以及 `expectedPlayers: [蓝方 roster, 红方 roster]`。一次校验、提交和撤销双方映射；任一排列非法、名单改变或本局已提交，均不修改任何一方。原 `set_player_slot_order` 继续用于单队及人工调整。
+
 新增 Control API：
 
 | 接口 | 行为 |
