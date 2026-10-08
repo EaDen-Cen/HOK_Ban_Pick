@@ -47,131 +47,131 @@ Windows 现场使用可直接双击 `vite-project/start-broadcast.bat`；启动�
 <!-- HERO-SYNC:ROSTER:START -->
 ## 程序内英雄池
 
-当前 `main` 分支程序内共有 **119 个有效英雄条目**。英雄 ID 与程序持久化数据直接关联，因此旧 ID 不会复用；**ID 29 为历史保留空位**，不属于当前英雄池。
+当前 `main` 分支程序内共有 **119 个有效英雄条目**。英雄 ID 现在按国际服官网 **Launch Time 从旧到新连续编号**：ID 越大代表越晚上架；“上线时间（新→旧）”排序可直接使用 ID，不再依赖缺失的 releaseDate 数据。
 
-> 本表由 Hero Data Synchronizer 自动生成，用于快速核对程序当前实际包含的英雄。请勿手工维护表格；英雄同步 PR 会自动刷新这里。
+> 本表由 Hero Data Synchronizer 自动生成。头像文件路径与英雄 ID 已解耦，因此你刚整理好的 `public/heroesImg/` 不需要为了这次编号迁移重新命名。
 
 | ID | 中文名 | English |
 | ---: | --- | --- |
-| 1 | 阿古朵 | Agudo |
-| 2 | 莱西奥 | Alessio |
-| 3 | 亚连 | Allain |
-| 4 | 安琪拉 | Angela |
-| 5 | 公孙离 | Arli |
-| 6 | 亚瑟 | Arthur |
-| 7 | 猪八戒 | Ata |
-| 8 | 雅典娜 | Athena |
-| 9 | 大司命 | Augran |
-| 10 | 狂铁 | Biron |
-| 11 | 刀锋宝贝 | Butterfly |
-| 12 | 蔡文姬 | Cai Yan |
-| 13 | 西施 | Shi |
-| 14 | 夏洛特 | Charlotte |
-| 15 | 云中君 | Cirrus |
-| 16 | 虞姬 | Consort Yu |
-| 17 | 大乔 | Da Qiao |
-| 18 | 妲己 | Daji |
-| 19 | 达摩 | Dharma |
-| 20 | 狄仁杰 | Di Renjie |
-| 21 | 典韦 | Dian Wei |
-| 22 | 貂蝉 | Diaochan |
-| 23 | 朵莉亚 | Dolia |
-| 24 | 东皇太一 | Donghuang |
-| 25 | 扁鹊 | Dr Bian |
-| 26 | 夏侯惇 | Dun |
-| 27 | 少司缘 | Dyadia |
-| 28 | 艾琳 | Erin |
-| 30 | 老夫子 | Fuzi |
-| 31 | 干将莫邪 | Gan & Mo |
-| 32 | 高渐离 | Gao |
-| 33 | 伽罗 | Garo |
-| 34 | 关羽 | Guan Yu |
-| 35 | 鬼谷子 | Guiguzi |
-| 36 | 韩信 | Han Xin |
-| 37 | 海诺 | Heino |
-| 38 | 后羿 | Hou Yi |
-| 39 | 黄忠 | Huang Zhong |
-| 40 | 镜 | Jing |
-| 41 | 凯 | Kaizer |
-| 42 | 诸葛亮 | Kongming |
-| 43 | 钟馗 | Kui |
-| 44 | 孙尚香 | Lady Sun |
-| 45 | 甄姬 | Lady Zhen |
-| 46 | 澜 | Lam |
-| 47 | 李白 | Li Bai |
-| 48 | 李信 | Li Xin |
-| 49 | 廉颇 | Lian Po |
-| 50 | 张良 | Liang |
-| 51 | 刘邦 | Liu Bang |
-| 52 | 刘备 | Liu Bei |
-| 53 | 刘禅 | Liu Shan |
-| 54 | 敖隐 | Ao'yin |
-| 55 | 吕布 | Lu Bu |
-| 56 | 劳拉 | Luara |
-| 57 | 鲁班七号 | Luban No.7 |
-| 58 | 露娜 | Luna |
-| 59 | 不知火舞 | Mai Shiranui |
-| 60 | 马可波罗 | Marco Polo |
-| 61 | 姬小满 | Mayene |
-| 62 | 蒙犽 | Meng Ya |
-| 63 | 梦奇 | Menki |
-| 64 | 米莱狄 | Milady |
-| 65 | 明世隐 | Ming |
-| 66 | 墨子 | Mozi |
-| 67 | 花木兰 | Mulan |
-| 68 | 宫本武藏 | Musashi |
-| 69 | 娜可露露 | Nakoruru |
-| 70 | 哪吒 | Nezha |
-| 71 | 女娲 | Nuwa |
-| 72 | 裴擒虎 | Pei |
-| 73 | 兰陵王 | Gao Changgong |
-| 74 | 王昭君 | Wang Zhaojun |
-| 75 | 上官婉儿 | Shangguan |
-| 76 | 百里守约 | Shouyue |
-| 77 | 司马懿 | Sima Yi |
-| 78 | 孙膑 | Sun Bin |
-| 79 | 孙策 | Sun Ce |
-| 80 | 橘右京 | Ukyo Tachibana |
-| 81 | 孙悟空 | Wukong |
-| 82 | 钟无艳 | Wuyan |
-| 83 | 项羽 | Xiang Yu |
-| 84 | 小乔 | Xiao Qiao |
-| 85 | 杨戬 | Yang Jian |
-| 86 | 曜 | Yao |
-| 87 | 瑶 | Yaria |
-| 88 | 杨玉环 | Yuhuan |
-| 89 | 李元芳 | Fang |
-| 90 | 张飞 | Zhang Fei |
-| 91 | 周瑜 | Zhou Yu |
-| 92 | 庄周 | Zhuangzi |
-| 93 | 赵云 | Zilong |
-| 94 | 姜子牙 | Ziya |
-| 95 | 云樱 | Ying |
-| 96 | 芈月 | Mi Yue |
-| 97 | 元歌 | Yango |
-| 98 | 元流之子（坦克） | Flowborn (Tank) |
-| 99 | 迦楼罗 | Garuda |
-| 100 | 阿轲 | Arke |
-| 101 | 白起 | Bai Qi |
-| 102 | 法提赫 | Fatih |
-| 103 | 影 | Umbrosa |
-| 104 | 元流之子（射手） | Flowborn (Marksman) |
-| 105 | 拉普拉普 | Lapulapu |
-| 106 | 苍 | Chano |
-| 107 | 百里玄策 | Xuance |
-| 108 | 安奈特 | Annette |
-| 109 | 弈星 | Yixing |
-| 110 | 桑启 | Sakeer |
-| 111 | 海月 | Haya |
-| 112 | 谛梵罗 | Devara |
-| 113 | 暃 | Feyd |
-| 114 | 蚩奼 | Chicha |
-| 115 | 弗洛伦 | Florentino |
-| 116 | 洛里昂 | Lorion |
-| 117 | 元流之子（法师） | Flowborn (Mage) |
-| 118 | 元流之子（刺客） | Flowborn (Assassin) |
-| 119 | 元流之子（辅助） | Flowborn (Roamer) |
-| 120 | 王维 | Wang Wei |
+| 1 | 杨戬 | Yang Jian |
+| 2 | 干将莫邪 | Gan & Mo |
+| 3 | 猪八戒 | Ata |
+| 4 | 云樱 | Ying |
+| 5 | 镜 | Jing |
+| 6 | 澜 | Lam |
+| 7 | 孙策 | Sun Ce |
+| 8 | 李信 | Li Xin |
+| 9 | 瑶 | Yaria |
+| 10 | 米莱狄 | Milady |
+| 11 | 裴擒虎 | Pei |
+| 12 | 公孙离 | Arli |
+| 13 | 凯 | Kaizer |
+| 14 | 诸葛亮 | Kongming |
+| 15 | 东皇太一 | Donghuang |
+| 16 | 蔡文姬 | Cai Yan |
+| 17 | 雅典娜 | Athena |
+| 18 | 女娲 | Nuwa |
+| 19 | 钟馗 | Kui |
+| 20 | 虞姬 | Consort Yu |
+| 21 | 李元芳 | Fang |
+| 22 | 张飞 | Zhang Fei |
+| 23 | 后羿 | Hou Yi |
+| 24 | 孙悟空 | Wukong |
+| 25 | 亚瑟 | Arthur |
+| 26 | 花木兰 | Mulan |
+| 27 | 兰陵王 | Gao Changgong |
+| 28 | 王昭君 | Wang Zhaojun |
+| 29 | 韩信 | Han Xin |
+| 30 | 安琪拉 | Angela |
+| 31 | 貂蝉 | Diaochan |
+| 32 | 老夫子 | Fuzi |
+| 33 | 项羽 | Xiang Yu |
+| 34 | 狄仁杰 | Di Renjie |
+| 35 | 马可波罗 | Marco Polo |
+| 36 | 李白 | Li Bai |
+| 37 | 宫本武藏 | Musashi |
+| 38 | 典韦 | Dian Wei |
+| 39 | 周瑜 | Zhou Yu |
+| 40 | 吕布 | Lu Bu |
+| 41 | 扁鹊 | Dr Bian |
+| 42 | 孙膑 | Sun Bin |
+| 43 | 钟无艳 | Wuyan |
+| 44 | 高渐离 | Gao |
+| 45 | 刘禅 | Liu Shan |
+| 46 | 庄周 | Zhuangzi |
+| 47 | 鲁班七号 | Luban No.7 |
+| 48 | 孙尚香 | Lady Sun |
+| 49 | 妲己 | Daji |
+| 50 | 墨子 | Mozi |
+| 51 | 赵云 | Zilong |
+| 52 | 小乔 | Xiao Qiao |
+| 53 | 廉颇 | Lian Po |
+| 54 | 不知火舞 | Mai Shiranui |
+| 55 | 娜可露露 | Nakoruru |
+| 56 | 梦奇 | Menki |
+| 57 | 云中君 | Cirrus |
+| 58 | 关羽 | Guan Yu |
+| 59 | 莱西奥 | Alessio |
+| 60 | 甄姬 | Lady Zhen |
+| 61 | 橘右京 | Ukyo Tachibana |
+| 62 | 夏洛特 | Charlotte |
+| 63 | 大乔 | Da Qiao |
+| 64 | 狂铁 | Biron |
+| 65 | 姬小满 | Mayene |
+| 66 | 张良 | Liang |
+| 67 | 达摩 | Dharma |
+| 68 | 明世隐 | Ming |
+| 69 | 百里守约 | Shouyue |
+| 70 | 露娜 | Luna |
+| 71 | 亚连 | Allain |
+| 72 | 阿古朵 | Agudo |
+| 73 | 艾琳 | Erin |
+| 74 | 司马懿 | Sima Yi |
+| 75 | 夏侯惇 | Dun |
+| 76 | 朵莉亚 | Dolia |
+| 77 | 海诺 | Heino |
+| 78 | 刀锋宝贝 | Butterfly |
+| 79 | 上官婉儿 | Shangguan |
+| 80 | 黄忠 | Huang Zhong |
+| 81 | 刘备 | Liu Bei |
+| 82 | 鬼谷子 | Guiguzi |
+| 83 | 伽罗 | Garo |
+| 84 | 杨玉环 | Yuhuan |
+| 85 | 哪吒 | Nezha |
+| 86 | 劳拉 | Luara |
+| 87 | 曜 | Yao |
+| 88 | 敖隐 | Ao'yin |
+| 89 | 大司命 | Augran |
+| 90 | 姜子牙 | Ziya |
+| 91 | 刘邦 | Liu Bang |
+| 92 | 少司缘 | Dyadia |
+| 93 | 蒙犽 | Meng Ya |
+| 94 | 西施 | Shi |
+| 95 | 芈月 | Mi Yue |
+| 96 | 弈星 | Yixing |
+| 97 | 百里玄策 | Xuance |
+| 98 | 阿轲 | Arke |
+| 99 | 桑启 | Sakeer |
+| 100 | 暃 | Feyd |
+| 101 | 苍 | Chano |
+| 102 | 白起 | Bai Qi |
+| 103 | 法提赫 | Fatih |
+| 104 | 元流之子（坦克） | Flowborn (Tank) |
+| 105 | 元流之子（法师） | Flowborn (Mage) |
+| 106 | 元流之子（刺客） | Flowborn (Assassin) |
+| 107 | 元流之子（射手） | Flowborn (Marksman) |
+| 108 | 元流之子（辅助） | Flowborn (Roamer) |
+| 109 | 影 | Umbrosa |
+| 110 | 迦楼罗 | Garuda |
+| 111 | 拉普拉普 | Lapulapu |
+| 112 | 蚩奼 | Chicha |
+| 113 | 海月 | Haya |
+| 114 | 元歌 | Yango |
+| 115 | 安奈特 | Annette |
+| 116 | 弗洛伦 | Florentino |
+| 117 | 洛里昂 | Lorion |
+| 118 | 谛梵罗 | Devara |
+| 119 | 王维 | Wang Wei |
 <!-- HERO-SYNC:ROSTER:END -->
 
 ## BP 屏幕采集模拟器
