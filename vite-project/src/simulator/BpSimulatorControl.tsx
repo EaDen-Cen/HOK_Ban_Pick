@@ -489,6 +489,61 @@ export function BpSimulatorControl() {
       {(integrationMessage||controlError)&&<p className="sim-integration-message" role="status">{integrationMessage||controlError}</p>}
     </section>
 
+    <section className="sim-control-panel sim-visual-size-panel">
+      <div className="sim-visual-size-heading">
+        <div>
+          <h2>采集画面尺寸</h2>
+          <p className="sim-control-note">实时调整 Simulator 采集页中的 Pick 头像与 Ban 位大小。设置会自动保存；Pick 头像大小同时用于 BP、换英雄和 Player ID 测试。</p>
+        </div>
+        <button className="secondary" onClick={()=>patch({pickSize:72,banSize:38})}>恢复默认</button>
+      </div>
+
+      <div className="sim-visual-size-grid">
+        <label className="sim-size-control">
+          <span>Pick 头像大小</span>
+          <input
+            type="range"
+            min={48}
+            max={104}
+            step={1}
+            value={state.pickSize}
+            onChange={event=>patch({pickSize:Number(event.target.value)})}
+          />
+          <input
+            type="number"
+            min={48}
+            max={104}
+            step={1}
+            value={state.pickSize}
+            onChange={event=>patch({pickSize:Number(event.target.value)})}
+          />
+          <strong>{state.pickSize}px</strong>
+        </label>
+
+        <label className="sim-size-control">
+          <span>Ban 位大小</span>
+          <input
+            type="range"
+            min={24}
+            max={64}
+            step={1}
+            value={state.banSize}
+            onChange={event=>patch({banSize:Number(event.target.value)})}
+          />
+          <input
+            type="number"
+            min={24}
+            max={64}
+            step={1}
+            value={state.banSize}
+            onChange={event=>patch({banSize:Number(event.target.value)})}
+          />
+          <strong>{state.banSize}px</strong>
+          <small>{state.testMode==='bp'?'当前 BP 采集页实时生效':'Ban 位只在 BP 识别测试中显示'}</small>
+        </label>
+      </div>
+    </section>
+
     {state.testMode==='bp'&&<>
       <section className="sim-control-panel sim-test-intro">
         <div><span>BP RECOGNITION</span><h2>完整 Ban / Pick 屏幕识别</h2><p>这个模式只测试 Draft 流程。Control 从 Phase 0 开始跟随 Simulator 画面记录 Ban/Pick；不会自动装载英雄答案。</p></div>
