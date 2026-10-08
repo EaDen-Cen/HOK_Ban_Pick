@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { phases } from '../src/shared/types.js';
-import { completedSimulatorSlots, simulatorBanVisualKeys, simulatorNextTurnPhase, simulatorPreviousTurnPhase, simulatorRandomDelayMs, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn, swapSimulatorPickHeroes } from '../src/simulator/bpSimulatorModel.js';
+import { completedSimulatorSlots, simulatorBanVisualKeys, simulatorNextTurnPhase, simulatorPlayerOrdersMatch, simulatorPlayerTestRoster, simulatorPreviousTurnPhase, simulatorRandomDelayMs, simulatorRandomPlayerOrder, simulatorSlotForPhase, simulatorSlotKey, simulatorSlotsForTurn, swapSimulatorPickHeroes } from '../src/simulator/bpSimulatorModel.js';
 
 test('simulator match mode follows the production 18-phase HOK draft order', () => {
   const sequence=phases('match','blue');
@@ -75,4 +75,27 @@ test('simulator random autoplay delay stays inside the configured range',()=>{
   assert.equal(simulatorRandomDelayMs(900,1800,()=>1),1800);
   assert.equal(simulatorRandomDelayMs(900,1800,()=>.5),1350);
   assert.equal(simulatorRandomDelayMs(1800,900,()=>0),900);
+});
+
+
+test('player-order simulator shuffles only inside each five-player team',()=>{
+  const values=[.99,.1,.8,.2,.7,.3,.6,.4,.5,.05];
+  let cursor=0;
+  const order=simulatorRandomPlayerOrder(()=>values[cursor++%values.length]);
+  assert.equal(order.length,5);
+  assert.deepEqual([...order].sort(),[0,1,2,3,4]);
+  assert.equal(order.every((value,index)=>value===index),false);
+});
+
+test('player-order simulator creates ten unique multilingual IDs without crossing team pools',()=>{
+  const roster=simulatorPlayerTestRoster('mixed',()=>.42);
+  assert.equal(roster.blue.length,5);
+  assert.equal(roster.red.length,5);
+  assert.equal(new Set([...roster.blue,...roster.red]).size,10);
+  assert.equal(roster.blue.some(id=>roster.red.includes(id)),false);
+});
+
+test('player-order comparison requires the exact P1-P5 permutation',()=>{
+  assert.equal(simulatorPlayerOrdersMatch([2,0,4,1,3],[2,0,4,1,3]),true);
+  assert.equal(simulatorPlayerOrdersMatch([2,0,4,3,1],[2,0,4,1,3]),false);
 });
