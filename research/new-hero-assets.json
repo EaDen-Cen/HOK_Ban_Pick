@@ -16,7 +16,7 @@
     "campId": 581,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/jbrX5mQc.jpeg",
     "occupation": "Clash Lane",
-    "localPath": "/heroesImg/98.jpeg",
+    "localPath": "/heroesImg/98.png",
     "sha256": "0DBA75C1F72B29B282553061856C9D114DD10215A7004312FB153753BAB94CC2",
     "fetchedAt": "2026-09-16",
     "catalogUrl": "https://wiki.bittopup.com/hok/581"
@@ -82,7 +82,7 @@
     "campId": 584,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/WuG07My1.jpeg",
     "occupation": "Farm Lane",
-    "localPath": "/heroesImg/104.jpeg",
+    "localPath": "/heroesImg/104.png",
     "sha256": "1C589EB6944BC7A92919BC2E0781A518AC6B27DF601D901E48BAC32AACD7BEE5",
     "fetchedAt": "2026-09-16",
     "catalogUrl": "https://wiki.bittopup.com/hok/584"
@@ -225,7 +225,7 @@
     "campId": 582,
     "iconUrl": "https://camp.honorofkings.com/camp/admin/hero/head_128-128/66xErXNs.jpeg",
     "occupation": "Mid Lane",
-    "localPath": "/heroesImg/117.jpeg",
+    "localPath": "/heroesImg/117.png",
     "sha256": "8F0C2A436DC1CECA91D28D7A10D2BF19905C078AB63904AE757BFE7102406444",
     "fetchedAt": "2026-09-16",
     "catalogUrl": "https://wiki.bittopup.com/hok/582"
