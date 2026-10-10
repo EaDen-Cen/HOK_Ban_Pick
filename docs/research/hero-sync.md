@@ -6,12 +6,12 @@
 - 最近同步检查：**2026-10-08**
 - 程序内有效英雄：**119**
 - 本次远端目录条目：**119**
-- README 英雄池、本文状态、研究索引和 M14 状态均由同步器自动刷新。
+- 独立英雄名单、本文状态、研究索引和 M14 状态均由同步器自动刷新。
 
 > 这些数字只描述最近一次成功生成候选更新时的仓库状态；是否允许进入具体赛事房仍需按赛事规则人工确认。
 <!-- HERO-SYNC:STATUS:END -->
 
-[文档索引](../README.md) · [研究索引](README.md)
+[文档索引](../README.md) · [研究索引](README.md) · [程序内英雄名单](hero-roster.md)
 
 ## 目的
 
@@ -149,7 +149,7 @@ src/data/heroSyncOverrides.ts
 public/heroesImg/
 ../research/hero-sync/catalog-snapshot.json
 ../research/hero-sync/YYYY-MM-DD.json
-../README.md
+../docs/research/hero-roster.md
 ../MILESTONES.md
 ../docs/research/README.md
 ../docs/research/hero-sync.md
