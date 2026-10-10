@@ -52,7 +52,7 @@ function rosterBlock(heroes: Hero[]) {
   const rows = heroes.map(hero => `| ${hero.id} | ${hero.chineseName} | ${hero.englishName} |`).join('\n');
   return `## 程序内英雄池
 
-当前 \`main\` 分支程序内共有 **${heroes.length} 个有效英雄条目**。英雄 ID 采用国际服官网 Launch Time 的**从旧到新连续编号**：ID 越大代表越晚上架；同批上线英雄采用固定的确定性顺序。旧版存档会在加载时自动迁移到这套编号。
+当前仓库版本程序内共有 **${heroes.length} 个有效英雄条目**。英雄 ID 采用国际服官网 Launch Time 的**从旧到新连续编号**：ID 越大代表越晚上架；同批上线英雄采用固定的确定性顺序。旧版存档会在加载时自动迁移到这套编号。
 
 > 本表由 Hero Data Synchronizer 自动生成，用于快速核对程序当前实际包含的英雄。请勿手工维护表格；英雄同步 PR 会自动刷新这里。头像资源文件名与英雄 ID 已解耦，历史 \`/heroesImg/*\` 文件无需随编号迁移重命名。
 
@@ -111,7 +111,7 @@ export async function updateHeroDocuments(args: {
   }
 
   let researchIndex = await readFile(researchIndexPath, 'utf8');
-  const indexBody = `- 当前 Hero Sync 基线：**${checkedDate}**，程序内 **${heroes.length}** 个有效英雄；最近远端目录 **${args.remoteCount}** 条。
+  const indexBody = `- 当前 Hero Sync 基线：**${checkedDate}**，程序内 **${heroes.length}** 个有效英雄条目；最近远端目录 **${args.remoteCount}** 条。
 - [程序内英雄名单](hero-roster.md)：当前有效英雄、中文/英文名称与 release-order ID。
 - [英雄数据自动同步](hero-sync.md)：每周检查国际服名单、自动刷新相关文档、生成审计记录并通过 PR 提交候选更新。`;
   if (researchIndex.includes(START_INDEX)) {
