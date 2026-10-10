@@ -12,7 +12,7 @@
 - 统一 v1.0.0 RC / Experimental / 未实现 / 待实机验收的边界；重写面向用户的 release notes 和当前里程碑，保留历史验证结果。
 - 修正 Caster 说明：BP、比分与比赛进度延迟，队伍/选手/赛事资料与展示配置实时更新。修正旧英雄名单路径、旧编号叙述、Simulator 顺序及启动器后台日志位置。
 - 英雄名单保持独立。使用本地有效数据离线重生成受管区块；保留最后远端检查日期 2026-10-08，不冒充本次联网同步。119 个有效条目。生成前后根 README 未被生成器修改；自动 PR 文件范围补入 hero-roster.md。
-- 内部 Markdown 链接与标题锚点：全部 28 份文件、184 个内部链接/锚点检查通过，无缺失目标；归档旧源码路径与本机 artifacts 是历史叙述，不作为可下载附件。
+- 内部 Markdown 链接与标题锚点：全部 28 份文件、182 个内部链接/锚点检查通过，无缺失目标；归档旧源码路径与本机 artifacts 是历史叙述，不作为可下载附件。
 - `npm run hero:validate`、`npm run build`、`npm run lint`：通过。
 - Windows `npm test`：161 项，159 通过、2 失败、0 跳过。失败均在 `server/playerRecognition.test.ts`：合成数字 0/100 被读为 [¢]/160；易混 ID 的排列正确但 margin 约 .04，未达到 .06 自动采用阈值。测试使用 DejaVu Sans 合成 SVG，本机渲染/字体与 Linux CI 环境不同；本次未改变字体、OCR 算法或阈值，不能将本机结果写为全绿。
 - 额外启动全量 Playwright：前 3 项通过，旧识别用例仍查找已移除的 Read region 和 /api/capture；运行未完成并停止，未宣称全量 E2E 通过。此失败路径与 2026-10-08 记录一致。标准 PR CI 不包含 Playwright。
