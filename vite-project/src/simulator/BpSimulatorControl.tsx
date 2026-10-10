@@ -523,7 +523,7 @@ export function BpSimulatorControl() {
     <header className="sim-control-page-header">
       <div>
         <h1>HOK Broadcast Simulator</h1>
-        <p>三个测试完全独立：BP 测 Draft 识别；换英雄只测最终英雄归属；选手 ID 只测 P1–P5 排序。</p>
+        <p>三个测试完全独立：选手 ID 只测 P1–P5 排序；BP 模拟只测 Draft 识别；角色交换只测最终英雄归属。</p>
       </div>
       <div className="sim-control-page-links">
         <button onClick={()=>window.open('/tools/bp-simulator','hok-bp-simulator-stage')}>打开 / 聚焦采集画面</button>
@@ -533,9 +533,9 @@ export function BpSimulatorControl() {
 
     <section className="sim-test-suite">
       <div className="sim-test-tabs" role="tablist" aria-label="Simulator test mode">
-        <button className={state.testMode==='bp'?'active':''} onClick={()=>setTestMode('bp')}><b>1</b> BP 识别</button>
-        <button className={state.testMode==='lineup'?'active':''} onClick={()=>setTestMode('lineup')}><b>2</b> 换英雄同步</button>
-        <button className={state.testMode==='player-order'?'active':''} onClick={()=>setTestMode('player-order')}><b>3</b> 选手 ID 排序</button>
+        <button className={state.testMode==='player-order'?'active':''} onClick={()=>setTestMode('player-order')}><b>1</b> 选手 ID 排序</button>
+        <button className={state.testMode==='bp'?'active':''} onClick={()=>setTestMode('bp')}><b>2</b> BP 模拟</button>
+        <button className={state.testMode==='lineup'?'active':''} onClick={()=>setTestMode('lineup')}><b>3</b> 角色交换</button>
       </div>
       <div className="sim-integration-bar">
         <label><input type="checkbox" checked={controlLink} onChange={event=>{
