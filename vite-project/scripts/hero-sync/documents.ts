@@ -71,17 +71,17 @@ export async function updateHeroDocuments(args: {
   const heroes = effectiveHeroes(args.baseHeroes, args.autoHeroes, args.overrides);
   const checkedDate = args.checkedAt.slice(0, 10);
 
-  const readmePath = resolve(repoRoot, 'README.md');
+  const heroRosterPath = resolve(repoRoot, 'docs/research/hero-roster.md');
   const heroSyncPath = resolve(repoRoot, 'docs/research/hero-sync.md');
   const milestonesPath = resolve(repoRoot, 'MILESTONES.md');
   const researchIndexPath = resolve(repoRoot, 'docs/research/README.md');
 
-  let readme = await readFile(readmePath, 'utf8');
+  let heroRoster = await readFile(heroRosterPath, 'utf8');
   const roster = `${START_ROSTER}\n${rosterBlock(heroes)}\n${END_ROSTER}`;
-  if (readme.includes(START_ROSTER)) {
-    readme = replaceManagedBlock(readme, START_ROSTER, END_ROSTER, rosterBlock(heroes));
+  if (heroRoster.includes(START_ROSTER)) {
+    heroRoster = replaceManagedBlock(heroRoster, START_ROSTER, END_ROSTER, rosterBlock(heroes));
   } else {
-    readme = readme.replace(/## 程序内英雄池[\s\S]*?(?=\n## 文档导航)/, roster);
+    heroRoster = heroRoster.replace(/## 程序内英雄池[\s\S]*?(?=\n## 说明|$)/, roster);
   }
 
   let heroSync = await readFile(heroSyncPath, 'utf8');
@@ -90,7 +90,7 @@ export async function updateHeroDocuments(args: {
 - 最近同步检查：**${checkedDate}**
 - 程序内有效英雄：**${heroes.length}**
 - 本次远端目录条目：**${args.remoteCount}**
-- README 英雄池、本文状态、研究索引和 M14 状态均由同步器自动刷新。
+- 独立英雄名单、本文状态、研究索引和 M14 状态均由同步器自动刷新。
 
 > 这些数字只描述最近一次成功生成候选更新时的仓库状态；是否允许进入具体赛事房仍需按赛事规则人工确认。`;
   if (heroSync.includes(START_STATUS)) {
@@ -100,7 +100,7 @@ export async function updateHeroDocuments(args: {
   }
 
   let milestones = await readFile(milestonesPath, 'utf8');
-  const m14Body = `当前自动同步基线：**${checkedDate}**；程序内 **${heroes.length}** 个有效英雄条目，最近远端目录返回 **${args.remoteCount}** 条。README 英雄池和相关 Hero Sync 文档会随候选同步 PR 自动刷新。`;
+  const m14Body = `当前自动同步基线：**${checkedDate}**；程序内 **${heroes.length}** 个有效英雄条目，最近远端目录返回 **${args.remoteCount}** 条。独立英雄名单和相关 Hero Sync 文档会随候选同步 PR 自动刷新。`;
   if (milestones.includes(START_M14)) {
     milestones = replaceManagedBlock(milestones, START_M14, END_M14, m14Body);
   } else {
@@ -123,7 +123,7 @@ export async function updateHeroDocuments(args: {
   }
 
   await Promise.all([
-    writeFile(readmePath, readme, 'utf8'),
+    writeFile(heroRosterPath, heroRoster, 'utf8'),
     writeFile(heroSyncPath, heroSync, 'utf8'),
     writeFile(milestonesPath, milestones, 'utf8'),
     writeFile(researchIndexPath, researchIndex, 'utf8'),
