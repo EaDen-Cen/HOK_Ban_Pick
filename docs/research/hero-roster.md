@@ -9,7 +9,7 @@
 
 当前 `main` 分支程序内共有 **119 个有效英雄条目**。英雄 ID 现在按国际服官网 **Launch Time 从旧到新连续编号**：ID 越大代表越晚上架；“上线时间（新→旧）”排序可直接使用 ID，不再依赖缺失的 releaseDate 数据。
 
-> 本表由 Hero Data Synchronizer 自动生成。头像文件路径与英雄 ID 已解耦，因此你刚整理好的 `public/heroesImg/` 不需要为了这次编号迁移重新命名。
+> 本表由 Hero Data Synchronizer 自动生成。头像资源文件名与英雄 ID 已解耦，历史 `public/heroesImg/` 文件无需随编号迁移重命名。
 
 | ID | 中文名 | English |
 | ---: | --- | --- |
