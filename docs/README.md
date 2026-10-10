@@ -2,7 +2,7 @@
 
 [返回项目首页](../README.md)
 
-> **v1.0.0 发布准备状态（2026-10-08）**：核心 BP / Auto BP / Player ID / 换英雄链路已进入 Release Candidate。局内 HUD `/overlay/game-hud` 仍为 **Experimental / 测试阶段**，可用于彩排和 OBS 预览，但真实比赛长时间稳定性、自动 HUD 数据识别与正式比分兜底尚未完成。
+> **v1.0.0 发布准备状态（2026-10-10）**：核心 BP / Auto BP / Player ID / 换英雄链路已进入 Release Candidate。局内 HUD `/overlay/game-hud` 仍为 **Experimental / 测试阶段**，可用于彩排和 OBS 预览。自动 HUD 识别尚未实现，真实比赛长时间稳定性待实机验收；正式比赛保留官方/人工比分兜底。
 
 | 类别 | 入口 | 用途 |
 | --- | --- | --- |
@@ -13,6 +13,12 @@
 | 研究资料 | [研究索引](research/README.md)、[英雄名单](research/hero-roster.md)、[英雄自动同步](research/hero-sync.md) | 当前英雄池、release-order ID、英雄核查、Panel/Side 公共裁切发布与原始 JSON 证据 |
 | 历史交接 | [归档索引](archive/README.md) | 版本交接、旧计划与原始说明 |
 
+## 按使用角色阅读
+
+- **首次使用**：[新手教程](guides/beginner-guide.md) → [运行指南](guides/getting-started.md) → Simulator：选手 ID 排序 → BP 模拟 → 角色交换。
+- **现场导播**：[操作指南](guides/operator-guide.md) → [屏幕识别](guides/screen-recognition.md) → [恢复与 MVP](guides/player-alignment-recovery-hud.md) → [发布边界](releases/v1.0.0.md)。
+- **开发者/维护者**：[应用命令](../vite-project/README.md) → [架构](design/architecture.md) → [API](design/api.md) → [Hero Sync](research/hero-sync.md) → [验证记录](validation/history.md)。
+
 ## 命名和维护规则
 
 - 根目录仅放项目 README（许可证保持原位）；应用目录 README 仅说明执行入口。
@@ -22,7 +28,3 @@
 - 研究叙述放在 `docs/research/`，原始证据继续放在根目录 `research/`。
 - 新增或移动文档同步修改本索引及相对链接；旧资料保留，不把历史需求当现状。
 - 文中源码、运行数据和产物路径默认以仓库根目录为基准；npm 命令在 `vite-project/` 执行。历史原文的路径仍按其注明的原上下文理解。
-
-## 选手对齐、恢复、HUD 与赛后 MVP
-
-已接入每局选手槽位映射、常驻本地 OCR、双队原子顺序更新、时间一致性复核、ID 区域预设、备份/停机恢复与赛后数据草稿/MVP 页面。局内 HUD 已有人工统计与 OBS Overlay，但**仍处于测试阶段**；其自动识别、真实比赛长时间运行和正式比分可靠性尚未验收。参见 [功能与操作说明](guides/player-alignment-recovery-hud.md) 与 [项目里程碑](../MILESTONES.md)。
