@@ -17,8 +17,6 @@ API 与未来 AI 提供者接口见 [协议文档](docs/design/api.md)，软件�
 
 ## 英雄数据与广播裁切同步
 
-英雄数据同步已补上 **Wang Wei / 王维（release-order ID 119，Camp ID 138）**。此前同步器已经从远端目录发现 Wang Wei，但辅助目录的英雄详情页返回 HTTP 502，旧逻辑因此跳过。当前人工整理后的标准小头像继续使用 `/heroesImg/120.png`；这里的 120 只是历史资产文件名，已经与程序 hero ID 解耦。
-
 Panel（底部横排）和 Side（左右竖排）的裁切有两层存储：
 
 - Control 中点击“保存英雄图片”后，当前机器的调整仍保存在 `data/match.json -> state.heroArtOverrides`，会进入本机备份，但 `data/` 被 Git 忽略，**不会自己上传 GitHub**。
